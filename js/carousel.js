@@ -1,20 +1,21 @@
-document.querySelectorAll(".carousel-container").forEach(carousel => {
-  const track = carousel.querySelector(".carousel-track");
-  const prev = carousel.querySelector(".prev");
-  const next = carousel.querySelector(".next");
-  let index = 0;
+// === Carrusel tipo Cards ===
+const cardsTrack = document.getElementById("carouselTrack");
+let cardIndex = 0;
 
-  const moveCarousel = () => {
-    track.style.transform = `translateX(${-index * 270}px)`; // ancho tarjeta + gap
-  };
+function autoSlideCards() {
+  if (!cardsTrack) return;
+  const cards = document.querySelectorAll(".card");
+  if (cards.length === 0) return;
 
-  next.addEventListener("click", () => {
-    if (index < track.children.length - 1) index++;
-    moveCarousel();
-  });
+  const cardWidth = cards[0].offsetWidth + 20; // ancho + gap
+  const visibleCards = Math.floor(cardsTrack.parentElement.offsetWidth / cardWidth);
 
-  prev.addEventListener("click", () => {
-    if (index > 0) index--;
-    moveCarousel();
-  });
-});
+  cardIndex++;
+  if (cardIndex > cards.length - visibleCards) {
+    cardIndex = 0; // reinicia
+  }
+
+  cardsTrack.style.transform = `translateX(-${cardIndex * cardWidth}px)`;
+}
+
+setInterval(autoSlideCards, 3000);
