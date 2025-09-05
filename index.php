@@ -9,7 +9,8 @@
 </head>
 <body>
   <!-- HEADER -->
-  <?php include("includes/header.php"); ?>
+<?php $activePage = "home"; ?>
+<?php include("includes/header.php"); ?>
   <?php include("includes/sidebar.php");?>
 
   <!-- HERO -->
