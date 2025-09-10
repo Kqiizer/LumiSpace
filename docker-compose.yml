@@ -32,8 +32,6 @@ services:
     container_name: pos_phpmyadmin
     environment:
       PMA_HOST: db
-      PMA_USER: ${MYSQL_USER}
-      PMA_PASSWORD: ${MYSQL_PASSWORD}
     depends_on:
       - db
     ports:
