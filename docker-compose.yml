@@ -27,7 +27,7 @@ services:
     volumes:
       - db_data:/var/lib/mysql
 
-  phpmyadmin:
+  phpmyadmin:   # 👈 ahora al mismo nivel que app y db
     image: phpmyadmin/phpmyadmin:latest
     container_name: pos_phpmyadmin
     environment:
