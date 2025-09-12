@@ -2,36 +2,27 @@
 declare(strict_types=1);
 session_start();
 
-require_once __DIR__ . '/../vendor/autoload.php';     // librería google-api-php-client
-require_once __DIR__ . '/../config/functions.php';   // helpers de BD
-
-/* =========================
-   Helpers para .env
-   ========================= */
-if (!function_exists('loadEnv')) {
-    function loadEnv(string $path): void {
-        if (!is_readable($path)) return;
-        foreach (file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
-            $line = trim($line);
-            if ($line === '' || $line[0] === '#') continue;
-            if (strpos($line, '=') === false) continue;
-            [$k, $v] = array_map('trim', explode('=', $line, 2));
-            $_ENV[$k] = $v;
-            putenv("$k=$v");
-        }
-    }
-}
-if (!function_exists('env')) {
-    function env(string $key, $default = null) {
-        return $_ENV[$key] ?? getenv($key) ?? $default;
-    }
-}
+require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/../config/functions.php';
 
 /* =========================
    Cargar .env
    ========================= */
-$envPath = __DIR__ . '/../.env';
-loadEnv($envPath);
+function loadEnv(string $path): void {
+    if (!is_readable($path)) return;
+    foreach (file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+        $line = trim($line);
+        if ($line === '' || $line[0] === '#') continue;
+        if (strpos($line, '=') === false) continue;
+        [$k, $v] = array_map('trim', explode('=', $line, 2));
+        $_ENV[$k] = $v;
+        putenv("$k=$v");
+    }
+}
+function env(string $key, $default = null) {
+    return $_ENV[$key] ?? getenv($key) ?? $default;
+}
+loadEnv(__DIR__ . '/../.env');
 
 /* =========================
    Configuración Google
@@ -39,7 +30,8 @@ loadEnv($envPath);
 $client = new Google_Client();
 $client->setClientId(env('GOOGLE_CLIENT_ID', 'dummy-client-id'));
 $client->setClientSecret(env('GOOGLE_CLIENT_SECRET', 'dummy-secret'));
-$client->setRedirectUri(env('GOOGLE_REDIRECT_URI', 'http://localhost/LumiSpace/oauth/google_callback.php'));
+$client->setRedirectUri(env('GOOGLE_REDIRECT_URI', 'http://localhost:8080/oauth/google_callback.php'));
+$client->addScope(['email', 'profile']);
 
 if (!isset($_GET['code'])) {
     header('Location: ../views/login.php?error=google');
@@ -50,17 +42,18 @@ if (!isset($_GET['code'])) {
    Intercambio token
    ========================= */
 $token = $client->fetchAccessTokenWithAuthCode($_GET['code']);
-if (isset($token['error'])) {
+if (!$token || isset($token['error'])) {
     header('Location: ../views/login.php?error=google_token');
     exit();
 }
 
-$client->setAccessToken($token);
+$client->setAccessToken($token['access_token']);
 $oauth2 = new Google_Service_Oauth2($client);
 $googleUser = $oauth2->userinfo->get();
 
 $email  = strtolower(trim($googleUser->email ?? ''));
 $nombre = $googleUser->name ?? $email;
+$gid    = $googleUser->id ?? null;
 
 if (!$email) {
     header('Location: ../views/login.php?error=google_no_email');
@@ -72,15 +65,18 @@ if (!$email) {
    ========================= */
 $user = obtenerUsuarioPorEmail($email);
 
-if (!$user) {
-    if (function_exists('registrarUsuarioSocial')) {
-        registrarUsuarioSocial($nombre ?: 'Usuario Google', $email, "google", "usuario");
-    }
-    $user = obtenerUsuarioPorEmail($email);
+if (!$user && function_exists('registrarUsuarioSocial')) {
+    $user = registrarUsuarioSocial(
+        $nombre ?: 'Usuario Google',
+        $email,
+        $gid,          // providerId correcto
+        "usuario",     // rol
+        "google"       // proveedor
+    );
 }
 
 /* =========================
-   Normalizar rol y crear sesión
+   Normalizar rol y sesión
    ========================= */
 function normalizarRol(?string $rol): string {
     $rol = strtolower(trim((string)$rol));
@@ -91,6 +87,11 @@ function normalizarRol(?string $rol): string {
         'usuario' => 'usuario', 'user' => 'usuario', 'cliente' => 'usuario',
     ];
     return $map[$rol] ?? 'usuario';
+}
+
+if (!$user) {
+    header('Location: ../views/login.php?error=google_register_failed');
+    exit();
 }
 
 $rol = normalizarRol($user['rol'] ?? 'usuario');

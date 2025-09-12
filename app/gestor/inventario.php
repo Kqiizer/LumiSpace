@@ -1,17 +1,30 @@
 <?php
 require_once __DIR__ . "/../config/db.php";
 
-// Consultar inventario
+/**
+ * Listar inventario
+ */
 function getInventario(): array {
     $db = getDBConnection();
-    $sql = "SELECT id, nombre, stock, categoria FROM productos ORDER BY stock ASC";
+    $sql = "
+        SELECT p.id, p.nombre, c.nombre AS categoria,
+               i.stock, p.precio,
+               (i.stock * p.precio) AS valor_total
+        FROM inventario i
+        JOIN productos p ON i.producto_id = p.id
+        LEFT JOIN categorias c ON p.categoria_id = c.id
+        ORDER BY p.nombre ASC
+    ";
     return $db->query($sql)->fetch_all(MYSQLI_ASSOC);
 }
 
-// Actualizar stock
-function actualizarStock(int $productoId, int $cantidad): bool {
+/**
+ * Actualizar stock
+ */
+function actualizarStock(int $productoId, int $nuevoStock): bool {
     $db = getDBConnection();
-    $sql = "UPDATE productos SET stock = stock + ? WHERE id = ?";
+    $sql = "UPDATE inventario SET stock = ?, actualizado_en = NOW() WHERE producto_id = ?";
     $stmt = $db->prepare($sql);
-    return $stmt->execute([$cantidad, $productoId]);
+    $stmt->bind_param("ii", $nuevoStock, $productoId);
+    return $stmt->execute();
 }

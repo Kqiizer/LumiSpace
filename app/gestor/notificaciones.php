@@ -1,19 +1,22 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) session_start();
-header('Content-Type: application/json');
+require_once __DIR__ . "/../config/db.php";
+header("Content-Type: application/json");
 
-require_once __DIR__ . "/ventas.php"; // aquí ya tienes getVentasRecientes()
-
-// 🚀 Obtenemos las últimas 5 ventas
-$ventas = getVentasRecientes(5);
-
-$notifs = [];
-foreach ($ventas as $venta) {
-    $notifs[] = [
-        "mensaje" => "💡 {$venta['nombre']} compró {$venta['producto']} x{$venta['cantidad']}",
-        "fecha"   => $venta['fecha'],
-        "total"   => $venta['total']
-    ];
+/**
+ * Notificaciones de ventas recientes
+ */
+function getNotificaciones(): array {
+    $db = getDBConnection();
+    $sql = "
+        SELECT v.id, v.fecha, u.nombre AS usuario, p.nombre AS producto, v.total
+        FROM ventas v
+        JOIN productos p ON v.producto_id = p.id
+        LEFT JOIN usuarios u ON v.usuario_id = u.id
+        ORDER BY v.fecha DESC
+        LIMIT 5
+    ";
+    return $db->query($sql)->fetch_all(MYSQLI_ASSOC);
 }
 
-echo json_encode($notifs);
+// Output JSON
+echo json_encode(getNotificaciones());

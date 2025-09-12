@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . "/../vendor/autoload.php"; // ajusta si tu vendor está en otra ruta
+require_once __DIR__ . "/../vendor/autoload.php"; 
 
 /* ===========================
    Funciones para .env
@@ -35,20 +35,23 @@ loadEnv($envPath);
 /* ===========================
    Redirect URI (CALLBACK)
    =========================== */
-// ⚠️ IMPORTANTE: Apuntar SIEMPRE al CALLBACK real, NO a login.php
-// Si no lo defines en .env, se construye automáticamente.
 $proto = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
 $host  = $_SERVER['HTTP_HOST'] ?? 'localhost';
 
-// Ruta por defecto del callback
+// Ruta por defecto: si no está en .env, usa esta
 $defaultCallbackPath = '/login-google/callback.php';
 
 /* ===========================
    Variables desde .env
    =========================== */
-$GOOGLE_CLIENT_ID     = env('GOOGLE_CLIENT_ID', 'dummy-client-id.apps.googleusercontent.com');
-$GOOGLE_CLIENT_SECRET = env('GOOGLE_CLIENT_SECRET', 'dummy-secret');
+$GOOGLE_CLIENT_ID     = env('GOOGLE_CLIENT_ID', '');
+$GOOGLE_CLIENT_SECRET = env('GOOGLE_CLIENT_SECRET', '');
 $GOOGLE_REDIRECT_URI  = env('GOOGLE_REDIRECT_URI', $proto . '://' . $host . $defaultCallbackPath);
+
+// Validación obligatoria
+if (!$GOOGLE_CLIENT_ID || !$GOOGLE_CLIENT_SECRET) {
+    throw new RuntimeException("❌ Falta configurar GOOGLE_CLIENT_ID o GOOGLE_CLIENT_SECRET en el archivo .env");
+}
 
 /* ===========================
    Configuración del cliente
@@ -58,14 +61,14 @@ $google_client->setClientId($GOOGLE_CLIENT_ID);
 $google_client->setClientSecret($GOOGLE_CLIENT_SECRET);
 $google_client->setRedirectUri($GOOGLE_REDIRECT_URI);
 
-// Scopes mínimos para email y nombre
+// Scopes básicos
 $google_client->addScope('email');
 $google_client->addScope('profile');
 
 // Opcionales
-$google_client->setAccessType('online');        // para login simple
+$google_client->setAccessType('online');        
 $google_client->setIncludeGrantedScopes(true);
-$google_client->setPrompt('select_account');    // muestra selección de cuenta
+$google_client->setPrompt('select_account');    
 
 /* ===========================
    Helper para obtener la URL
