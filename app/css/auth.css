@@ -7,25 +7,56 @@ body {
   align-items: center;
   justify-content: center;
   padding: 20px;
+  overflow: hidden;
 
-  /* Fondo degradado animado */
-  background: linear-gradient(-45deg, #f3efec, #eddfd2, #eceae4, #d1cfc7);
-  background-size: 400% 400%;
-  animation: gradientFlow 15s ease infinite;
+  /* Fondo degradado animado (modo claro) */
+  background: linear-gradient(-45deg, #f3efec, #eddfd2, #eceae4, #d1cfc7, #c2a98f);
+  background-size: 500% 500%;
+  animation: gradientFlow 20s ease infinite;
+  position: relative;
 }
 
-/* Fondo fluido */
 @keyframes gradientFlow {
   0%   { background-position: 0% 50%; }
+  25%  { background-position: 50% 50%; }
   50%  { background-position: 100% 50%; }
+  75%  { background-position: 50% 50%; }
   100% { background-position: 0% 50%; }
+}
+
+/* === EFECTO DE PARTÍCULAS SUAVES === */
+body::before,
+body::after {
+  content: "";
+  position: absolute;
+  width: 200%;
+  height: 200%;
+  top: -50%;
+  left: -50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.15) 2%, transparent 40%) repeat;
+  background-size: 220px 220px;
+  animation: floatParticles 80s linear infinite;
+  z-index: 0;
+}
+body::after {
+  background-size: 280px 280px;
+  animation: floatParticlesReverse 120s linear infinite;
+}
+
+@keyframes floatParticles {
+  from { transform: translateY(0) rotate(0deg); }
+  to   { transform: translateY(-15%) rotate(360deg); }
+}
+@keyframes floatParticlesReverse {
+  from { transform: translateY(0) rotate(0deg); }
+  to   { transform: translateY(15%) rotate(-360deg); }
 }
 
 /* === CONTENEDOR PRINCIPAL === */
 .auth-wrapper {
   display: flex;
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(18px) saturate(160%);
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(20px) saturate(180%);
   border-radius: 20px;
   overflow: hidden;
   max-width: 880px;
@@ -33,13 +64,14 @@ body {
   box-shadow: 0 15px 35px rgba(0, 0, 0, 0.25);
   animation: fadeIn 0.8s ease;
   transition: transform 0.4s ease, box-shadow 0.4s ease;
+  z-index: 1;
 }
 .auth-wrapper:hover {
   transform: translateY(-4px) scale(1.01);
-  box-shadow: 0 20px 55px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 20px 55px rgba(0, 0, 0, 0.35);
 }
 
-/* === COLUMNA IZQUIERDA === */
+/* === COLUMNA IZQUIERDA (imagen igual que original) === */
 .auth-image {
   flex: 1.2;
   background: url("../images/pos-login.jpg") no-repeat center center/cover;
@@ -49,7 +81,7 @@ body {
 .auth-image::after {
   content: "";
   position: absolute; inset: 0;
-  background: linear-gradient(180deg, rgba(0,0,0,0.2), rgba(0,0,0,0));
+  background: linear-gradient(180deg, rgba(0,0,0,0.25), rgba(0,0,0,0));
 }
 
 /* === COLUMNA DERECHA === */
@@ -83,31 +115,36 @@ body {
   text-decoration: underline;
 }
 
-/* === CAMPOS ESTILIZADOS === */
+/* === CAMPOS === */
 .input-group {
   position: relative;
   margin-bottom: 22px;
 }
 .input-group input {
   width: 100%;
-  padding: 10px 12px;
+  padding: 12px 14px;
   border: none;
-  border-bottom: 2px solid #ccc;
-  font-size: 14px;
+  border-bottom: 2px solid #bbb;
+  font-size: 15px;
   background: transparent;
   transition: all 0.3s ease;
 }
 .input-group input:focus {
   border-color: #7a6c50;
   outline: none;
-  box-shadow: 0 4px 10px -6px rgba(122, 108, 80, 0.6);
+  box-shadow: 0 6px 15px -4px rgba(122, 108, 80, 0.6);
+  animation: pulseInput 1s ease infinite alternate;
+}
+@keyframes pulseInput {
+  from { box-shadow: 0 6px 15px -4px rgba(122,108,80,0.4); }
+  to   { box-shadow: 0 6px 20px -4px rgba(122,108,80,0.8); }
 }
 .input-group .icon {
   position: absolute;
   right: 10px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 14px;
+  font-size: 15px;
   color: #aaa;
   pointer-events: none;
 }
@@ -115,26 +152,10 @@ body {
   color: #7a6c50;
 }
 
-/* === OPCIONES === */
-.form-options {
-  display: flex;
-  justify-content: space-between;
-  font-size: 13px;
-  margin-bottom: 20px;
-  color: #555;
-}
-.form-options a {
-  color: #7a6c50;
-  text-decoration: none;
-}
-.form-options a:hover {
-  text-decoration: underline;
-}
-
-/* === BOTÓN PRINCIPAL === */
+/* === BOTÓN === */
 .btn-login {
   width: 100%;
-  padding: 12px;
+  padding: 14px;
   border: none;
   border-radius: 10px;
   background: linear-gradient(135deg, #7a6c50, #5e543e);
@@ -161,8 +182,12 @@ body {
 }
 .btn-login:hover {
   background: linear-gradient(135deg, #5e543e, #3d3526);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+}
+.btn-login:active {
+  transform: scale(0.98);
+  box-shadow: 0 3px 10px rgba(0,0,0,0.25);
 }
 
 /* === MENSAJES === */
@@ -172,8 +197,8 @@ body {
   font-size: 13px;
   text-align: center;
 }
-.error { color: #c0392b; }
-.success { color: #27ae60; }
+.error { color: #c0392b; font-weight: 600; }
+.success { color: #27ae60; font-weight: 600; }
 
 /* === DIVIDER === */
 .divider {
@@ -246,4 +271,34 @@ body {
 @keyframes slideIn {
   from { opacity: 0; transform: translateX(40px); }
   to   { opacity: 1; transform: translateX(0); }
+}
+
+/* === 🌙 MODO OSCURO DINÁMICO === */
+@media (prefers-color-scheme: dark) {
+  body {
+    background: linear-gradient(-45deg, #1c1c1c, #2a2a2a, #3d3d3d, #2b2b2b, #5e543e);
+    background-size: 500% 500%;
+    animation: gradientDarkFlow 25s ease infinite;
+    color: #f1f1f1;
+  }
+
+  @keyframes gradientDarkFlow {
+    0%   { background-position: 0% 50%; }
+    25%  { background-position: 50% 50%; }
+    50%  { background-position: 100% 50%; }
+    75%  { background-position: 50% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  .auth-wrapper {
+    background: rgba(40, 40, 40, 0.85);
+    color: #f1f1f1;
+  }
+  .auth-form h2 { color: #f1f1f1; }
+  .auth-form .subtitle { color: #aaa; }
+  .input-group input { border-bottom: 2px solid #555; color: #eee; }
+  .input-group input:focus { border-color: #d4af7f; box-shadow: 0 6px 15px -4px rgba(212,175,127,0.7); }
+  .divider span { background: #2e2e2e; color: #aaa; }
+  .social-btn { background: #2b2b2b; color: #f1f1f1; border: 1px solid #444; }
+  .social-btn:hover { background: #3b3b3b; }
 }

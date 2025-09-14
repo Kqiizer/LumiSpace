@@ -1,76 +1,89 @@
-// === LOGO & MENÚ ACTIVO ===
-const logoLink = document.querySelector(".logo-link");
-const menuLinks = document.querySelectorAll(".menu a");
+// Evita inicializar dos veces
+if (!window.__LS_MAIN_INIT__) {
+  window.__LS_MAIN_INIT__ = true;
 
-// Detecta si estás en index
-if (window.location.pathname.includes("index.php") || window.location.pathname === "/") {
-  logoLink.classList.add("active");
-}
+  // === LOGO & MENÚ ACTIVO ===
+  const logoLink = document.querySelector(".logo-link");
+  const menuLinks = document.querySelectorAll(".menu a");
 
-// Links del menú
-menuLinks.forEach(link => {
-  link.addEventListener("click", () => {
-    document.querySelector(".menu a.active")?.classList.remove("active");
-    logoLink.classList.remove("active"); // al entrar a otra sección, se desmarca el logo
-    link.classList.add("active");
+  if (logoLink && (window.location.pathname.endsWith("index.php") || window.location.pathname === "/")) {
+    logoLink.classList.add("active");
+  }
+
+  menuLinks.forEach(link => {
+    link.addEventListener("click", () => {
+      document.querySelector(".menu a.active")?.classList.remove("active");
+      logoLink?.classList.remove("active");
+      link.classList.add("active");
+    });
   });
-});
 
-// Logo clicado
-if (logoLink) {
-  logoLink.addEventListener("click", () => {
+  logoLink?.addEventListener("click", () => {
     document.querySelector(".menu a.active")?.classList.remove("active");
     logoLink.classList.add("active");
   });
-}
 
-// === SIDEBAR ===
-const menuBtn = document.getElementById("menu-btn");
-const sidebar = document.getElementById("sidebar");
-const overlay = document.getElementById("overlay");
+  // === SIDEBAR ===
+  const menuBtn = document.getElementById("menu-btn");
+  const sidebar = document.getElementById("sidebar");
+  const overlay = document.getElementById("overlay");
 
-if (menuBtn && sidebar && overlay) {
-  menuBtn.addEventListener("click", () => {
-    sidebar.classList.toggle("active");
-    overlay.classList.toggle("active");
-    menuBtn.classList.toggle("active");
-  });
-
-  overlay.addEventListener("click", () => {
-    sidebar.classList.remove("active");
-    overlay.classList.remove("active");
-    menuBtn.classList.remove("active");
-  });
-}
-
-// === TEMA OSCURO (con persistencia) ===
-const themeBtn = document.getElementById("theme-toggle");
-if (themeBtn) {
-  const savedTheme = localStorage.getItem("theme");
-  if (savedTheme === "dark") {
-    document.body.classList.add("dark-mode");
+  function toggleSidebar(open) {
+    sidebar?.classList.toggle("active", open);
+    overlay?.classList.toggle("active", open);
+    menuBtn?.classList.toggle("active", open);
   }
-  themeBtn.textContent = document.body.classList.contains("dark-mode")
-    ? "Modo Claro"
-    : "Modo Oscuro";
 
-  themeBtn.addEventListener("click", () => {
-    document.body.classList.toggle("dark-mode");
-    if (document.body.classList.contains("dark-mode")) {
-      themeBtn.textContent = "Modo Claro";
-      localStorage.setItem("theme", "dark");
-    } else {
-      themeBtn.textContent = "Modo Oscuro";
-      localStorage.setItem("theme", "light");
+  if (menuBtn && sidebar && overlay) {
+    menuBtn.addEventListener("click", () => toggleSidebar(!sidebar.classList.contains("active")));
+    overlay.addEventListener("click", () => toggleSidebar(false));
+  }
+
+  // === TEMA OSCURO (persistente + sincronizado) ===
+  const themeBtn = document.getElementById("theme-toggle");
+
+  function applyTheme() {
+    const saved = localStorage.getItem("theme");
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+    const isDark = saved ? (saved === "dark") : prefersDark;
+
+    // 🔥 Aplica SIEMPRE en <html> y <body> para evitar parpadeos
+    document.documentElement.classList.toggle("dark-mode", isDark);
+    document.body.classList.toggle("dark-mode", isDark);
+
+    if (themeBtn) {
+      themeBtn.textContent = isDark ? "☀️ Modo Claro" : "🌙 Modo Oscuro";
+    }
+  }
+
+  // Aplica tema al cargar
+  applyTheme();
+
+  // Alternar con el botón
+  themeBtn?.addEventListener("click", () => {
+    const isDark = !document.documentElement.classList.contains("dark-mode");
+
+    document.documentElement.classList.toggle("dark-mode", isDark);
+    document.body.classList.toggle("dark-mode", isDark);
+
+    localStorage.setItem("theme", isDark ? "dark" : "light");
+
+    if (themeBtn) {
+      themeBtn.textContent = isDark ? "☀️ Modo Claro" : "🌙 Modo Oscuro";
     }
   });
-}
-// Cambia el header al hacer scroll
-window.addEventListener("scroll", () => {
+
+  // Sincroniza entre pestañas
+  window.addEventListener("storage", (e) => {
+    if (e.key === "theme") applyTheme();
+  });
+
+  // === HEADER SCROLL EFFECT ===
   const header = document.querySelector(".navbar");
-  if (window.scrollY > 50) {
-    header.classList.add("scrolled");
-  } else {
-    header.classList.remove("scrolled");
+  if (header) {
+    window.addEventListener("scroll", () => {
+      header.classList.toggle("scrolled", window.scrollY > 50);
+    });
   }
-});
+}

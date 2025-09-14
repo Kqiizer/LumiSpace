@@ -1,41 +1,24 @@
-<header class="main-header">
+<header class="navbar">
+  <!-- Logo -->
   <div class="logo">
-    <a href="index.php">
-      <img src="images/logo.png" alt="LumiSpace" class="logo-img">
-      <span class="logo-text">Lumi<span>Space</span></span>
+    <a href="index.php" class="logo-link <?= ($activePage ?? '')=='home' ? 'active' : '' ?>">
+      <img src="images/logo.png" alt="Lumi" class="logo-img" style="height:22px;">
+      <span><span>Space</span></span>
     </a>
   </div>
 
-  <!-- NAV -->
-  <nav class="navbar">
-    <ul>
-      <li><a href="index.php" class="<?= ($activePage == 'home') ? 'active' : '' ?>">Inicio</a></li>
-      <li><a href="categorias.php" class="<?= ($activePage == 'categorias') ? 'active' : '' ?>">Categorías</a></li>
-      <li><a href="marcas.php" class="<?= ($activePage == 'marcas') ? 'active' : '' ?>">Marcas</a></li>
-      <li><a href="proyectos.php" class="<?= ($activePage == 'proyectos') ? 'active' : '' ?>">Proyectos</a></li>
-      <li><a href="servicios.php" class="<?= ($activePage == 'servicios') ? 'active' : '' ?>">Servicios</a></li>
-    </ul>
+  <!-- Menú centrado (visible en desktop, oculto en mobile) -->
+  <nav class="menu">
+    <a href="categorias.php" class="<?= ($activePage ?? '')=='categorias' ? 'active' : '' ?>">Categorías</a>
+    <a href="marcas.php" class="<?= ($activePage ?? '')=='marcas' ? 'active' : '' ?>">Marcas</a>
+    <a href="proyectos.php" class="<?= ($activePage ?? '')=='proyectos' ? 'active' : '' ?>">Proyectos</a>
+    <a href="servicios.php" class="<?= ($activePage ?? '')=='servicios' ? 'active' : '' ?>">Servicios</a>
   </nav>
 
-  <!-- ACCIONES -->
-  <div class="header-actions">
-    <!-- Buscador -->
-    <form action="buscar.php" method="GET" class="search-form">
-      <input type="text" name="q" placeholder="Buscar..." required>
-      <button type="submit">🔍</button>
-    </form>
-
-    <!-- Botón de login -->
-    <a href="views/login.php" class="btn-login">Iniciar Sesión</a>
-
-    <!-- Botón dark/light -->
-    <button id="theme-toggle" class="theme-btn">🌙</button>
-
-    <!-- Menú móvil -->
-    <div class="menu-icon" id="menu-btn">
-      <span></span>
-      <span></span>
-      <span></span>
-    </div>
-  </div>
+  <!-- Botón hamburguesa SIEMPRE visible -->
+  <button class="menu-toggle" id="menu-btn" aria-label="Abrir menú">
+    <span class="top"></span>
+    <span class="middle"></span>
+    <span class="bottom"></span>
+  </button>
 </header>

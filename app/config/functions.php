@@ -1,5 +1,6 @@
 <?php
 include_once(__DIR__ . "/db.php");
+require_once __DIR__ . "/mail.php"; // 📩 para enviar correos
 
 /**
  * Normaliza y valida email.
@@ -58,7 +59,7 @@ function registrarUsuario(string $nombre, string $email, ?string $password, stri
         return false;
     }
 
-    // Hashea contraseña con algoritmo por defecto (bcrypt/argon2i según PHP)
+    // Hashea contraseña
     $hash = $password ? password_hash($password, PASSWORD_DEFAULT) : null;
 
     $sql  = "INSERT INTO usuarios (nombre, email, password, rol, proveedor, provider_id) 
@@ -71,7 +72,27 @@ function registrarUsuario(string $nombre, string $email, ?string $password, stri
         return false;
     }
 
-    return $stmt->insert_id;
+    $id = $stmt->insert_id;
+
+    // 📩 Enviar correo de bienvenida
+    if (function_exists('enviarCorreo')) {
+        $subject = "¡Bienvenido a LumiSpace!";
+        $body = "
+            <h2>Hola, " . htmlspecialchars($nombre) . "</h2>
+            <p>Tu cuenta en <b>LumiSpace</b> fue creada con éxito.</p>
+            <p>Correo registrado: <b>$email</b></p>
+            <p style='text-align:center;'>
+                <a href='" . ($_ENV['BASE_URL'] ?? 'http://localhost:8080') . "/views/login.php' 
+                   style='display:inline-block;background:#4CAF50;color:#fff;padding:10px 18px;text-decoration:none;border-radius:6px;'>
+                   Iniciar Sesión
+                </a>
+            </p>
+            <p>Gracias por confiar en nosotros ✨</p>
+        ";
+        enviarCorreo($email, $subject, $body);
+    }
+
+    return $id;
 }
 
 /**
@@ -115,6 +136,25 @@ function registrarUsuarioSocial(string $nombre, string $email, ?string $provider
     }
 
     $id = $stmt->insert_id;
+
+    // 📩 Enviar correo de bienvenida Google
+    if (function_exists('enviarCorreo')) {
+        $subject = "¡Bienvenido a LumiSpace con Google!";
+        $body = "
+            <h2>Hola, " . htmlspecialchars($nombre) . "</h2>
+            <p>Te has registrado en <b>LumiSpace</b> usando tu cuenta de Google.</p>
+            <p>A partir de ahora puedes iniciar sesión directamente con tu correo: <b>$email</b></p>
+            <p style='text-align:center;'>
+                <a href='" . ($_ENV['BASE_URL'] ?? 'http://localhost:8080') . "/views/login.php' 
+                   style='display:inline-block;background:#4285F4;color:#fff;padding:10px 18px;text-decoration:none;border-radius:6px;'>
+                   Iniciar con Google
+                </a>
+            </p>
+            <p>Gracias por confiar en nosotros ✨</p>
+        ";
+        enviarCorreo($email, $subject, $body);
+    }
+
     return [
         "id"          => $id,
         "nombre"      => htmlspecialchars($nombre, ENT_QUOTES, 'UTF-8'),
