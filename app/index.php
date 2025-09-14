@@ -1,12 +1,9 @@
 <?php
-// Inicia sesión y valida
+// Inicia sesión
 session_start();
 
-// Si quieres proteger con login descomenta esto:
-// if (!isset($_SESSION['usuario_id'])) {
-//     header("Location: views/login.php");
-//     exit();
-// }
+// Página activa
+$activePage = "home";
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -18,22 +15,23 @@ session_start();
   <link rel="stylesheet" href="css/carousel.css"> 
 </head>
 <body>
-  <!-- HEADER -->
   <?php 
-    $activePage = "home"; 
+    include("includes/sidebar.php"); 
     include("includes/header.php"); 
-    include("includes/sidebar.php");
   ?>
 
   <!-- HERO -->
   <section class="hero">
     <div class="hero-text">
       <h1 class="brand">Lumi<span>Space</span></h1>
-      <p class="tagline">Inspiración y diseño para tus espacios ✨</p>
-      <a href="views/login.php" class="btn-primary">Empieza ahora</a>
+      <p class="tagline">ILUMINA TU ESPACIO. INSPIRA TU ESTILO.</p>
+      <p>
+        En Lumispace creemos que la luz no solo transforma ambientes, transforma emociones.  
+        Diseñamos lámparas, gadgets y soluciones inteligentes que combinan tecnología, elegancia y funcionalidad.
+      </p>
+      <a href="categorias.php" class="btn-light">Ver Productos</a>
     </div>
     <div class="hero-img">
-      <img src="images/hero-lamps.png" alt="Decoración LumiSpace">
     </div>
   </section>
 
@@ -73,9 +71,11 @@ session_start();
 
   <!-- FOOTER -->
   <footer>
-    <p>© <?php echo date("Y"); ?> LumiSpace. Todos los derechos reservados.</p>
+    <p>© <?= date("Y"); ?> LumiSpace. Todos los derechos reservados.</p>
   </footer>
 
+  <!-- Scripts -->
   <script src="js/carousel.js"></script>
+  <script src="js/main.js"></script>
 </body>
 </html>

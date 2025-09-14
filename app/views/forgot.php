@@ -3,6 +3,17 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 require_once __DIR__ . "/../config/functions.php";
 require_once __DIR__ . "/../config/mail.php";
 
+/* 🚨 Evitar cache para que no se pueda volver con el botón atrás */
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Pragma: no-cache");
+header("Expires: 0");
+
+/* 🚨 Si ya hay sesión → manda al index */
+if (isset($_SESSION['usuario_id'])) {
+    header("Location: ../index.php");
+    exit();
+}
+
 $msg = "";
 $alertClass = "";
 
@@ -32,8 +43,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $upd->bind_param("ssi", $token, $expira, $user["id"]);
             $upd->execute();
 
-            // Construir enlace
-            $baseUrl = getenv("BASE_URL") ?: "http://localhost/LumiSpace";
+            // ✅ Construir enlace con Docker en puerto 8080
+            $baseUrl = getenv("BASE_URL") ?: "http://localhost:8080";
             $link = $baseUrl . "/views/reset.php?token=" . urlencode($token);
 
             // Enviar correo con helper
@@ -63,6 +74,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
   <meta charset="UTF-8">
   <title>Olvidé mi contraseña</title>
   <link rel="stylesheet" href="../css/auth.css">
+  <style>
+    .error { background:#ffe6e6; color:#b10000; padding:.75rem 1rem; border-radius:.5rem; margin:.5rem 0; }
+    .success { background:#e6ffe6; color:#006400; padding:.75rem 1rem; border-radius:.5rem; margin:.5rem 0; }
+  </style>
 </head>
 <body>
   <div class="auth-wrapper">

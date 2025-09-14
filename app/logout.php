@@ -1,12 +1,26 @@
 <?php
-session_start();
-session_unset();
-session_destroy();
+if (session_status() === PHP_SESSION_NONE) session_start();
 
-/* Evitar cache */
-header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
-header("Pragma: no-cache");
-header("Expires: 0");
+/* =========================
+   Destruir Sesión
+   ========================= */
+$_SESSION = [];               // Limpia variables
+if (ini_get("session.use_cookies")) {
+    $params = session_get_cookie_params();
+    setcookie(session_name(), '', time() - 42000,
+        $params["path"], $params["domain"],
+        $params["secure"], $params["httponly"]
+    );
+}
+session_destroy();            // Destruye la sesión
 
-header("Location: index.php");
+/* =========================
+   Eliminar cookies de Google
+   ========================= */
+setcookie("g_state", "", time() - 3600, "/");
+
+/* =========================
+   Redirigir al login
+   ========================= */
+header("Location: ../views/login.php?logout=1");
 exit();

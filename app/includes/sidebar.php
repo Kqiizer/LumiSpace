@@ -3,23 +3,19 @@
 
 <!-- Sidebar -->
 <aside class="sidebar" id="sidebar">
-  <button id="theme-toggle" class="theme-btn">Modo Oscuro</button>
-  <a href="index.php">Categorías</a>
-  <a href="#">Marcas</a>
-  <a href="producto.php">Proyectos</a>
-  <a href="#">Servicios</a>
-  
+  <button id="theme-toggle" class="theme-btn">🌙 Modo Oscuro</button>
+  <a href="categorias.php">Categorías</a>
+  <a href="marcas.php">Marcas</a>
+  <a href="proyectos.php">Proyectos</a>
+  <a href="servicios.php">Servicios</a>
   <hr>
-  
-  <?php
-  session_start();
-  if (isset($_SESSION['usuario_id'])): ?>
-      <!-- Si ya inició sesión -->
-      <p style="margin:10px 0; font-weight:bold;">👋 Hola, <?= htmlspecialchars($_SESSION['usuario_nombre']) ?></p>
-      <a href="logout.php">🚪 Cerrar Sesión</a>
+  <?php if (isset($_SESSION['usuario_id'])): ?>
+    <p style="margin:10px 0; font-weight:bold;">
+      👋 Hola, <?= htmlspecialchars($_SESSION['usuario_nombre']) ?>
+    </p>
+    <a href="logout.php">🚪 Cerrar Sesión</a>
   <?php else: ?>
-      <!-- Si NO ha iniciado sesión -->
-      <a href="views/login.php">🔑 Iniciar Sesión</a>
-      <a href="views/register.php">📝 Registrarse</a>
+    <a href="views/login.php">🔑 Iniciar Sesión</a>
+    <a href="views/register.php">📝 Registrarse</a>
   <?php endif; ?>
 </aside>
