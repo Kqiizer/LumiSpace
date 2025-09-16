@@ -43,3 +43,4 @@ function getDBConnection(): mysqli {
     global $conn;
     return $conn;
 }
+?>

@@ -89,16 +89,22 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             if (!$user) {
                 $error = "❌ No estás registrado.";
                 $extraMsg = "<a href='register.php'>Regístrate aquí</a>";
+                // ⚠️ Guardar correo usado en intento fallido
+                $_SESSION['last_login_email'] = $emailVal;
             } elseif (!empty($user['password']) && password_verify($password, (string)$user['password'])) {
                 $rol = normalizarRol($user['rol'] ?? 'usuario');
                 session_regenerate_id(true);
                 $_SESSION['usuario_id']     = (int)$user['id'];
                 $_SESSION['usuario_nombre'] = (string)$user['nombre'];
                 $_SESSION['usuario_rol']    = $rol;
+                // ✅ Limpiamos last_login_email si inicia sesión correctamente
+                unset($_SESSION['last_login_email']);
                 redirSegunRol($rol);
             } else {
                 $error = "❌ Contraseña incorrecta.";
-                $extraMsg = "<a href='forgot.php?email=" . urlencode($emailVal) . "'>¿Olvidaste tu contraseña?</a>";
+                $extraMsg = "<a href='forgot.php'>¿Olvidaste tu contraseña?</a>";
+                // ⚠️ Guardar correo usado en intento fallido
+                $_SESSION['last_login_email'] = $emailVal;
             }
         } catch (Throwable $e) {
             $error = "⚠️ Error al autenticar.";
@@ -131,8 +137,6 @@ if (isset($google_client) && $google_client instanceof Google_Client) {
     .info  { background:#eef6ff; color:#0b5394; padding:.75rem 1rem; border-radius:.5rem; margin:.5rem 0; animation: fadeIn .5s; }
     @keyframes fadeIn { from{opacity:0; transform:translateY(-5px);} to{opacity:1; transform:translateY(0);} }
     .toggle-pass { cursor:pointer; position:absolute; right:12px; top:38px; color:#666; font-size:.9rem; }
-
-    /* 🔙 Flechita */
     .back-arrow {
       display: inline-flex;
       align-items: center;
@@ -151,7 +155,6 @@ if (isset($google_client) && $google_client instanceof Google_Client) {
     <div class="auth-image"></div>
     <div class="auth-form">
 
-      <!-- 🔙 Flechita dinámica -->
       <a href="../index.php" class="back-arrow">
         <i class="fa-solid fa-arrow-left"></i> Volver al inicio
       </a>
@@ -181,7 +184,7 @@ if (isset($google_client) && $google_client instanceof Google_Client) {
           <label for="password">Contraseña</label>
           <input type="password" id="password" name="password" required autocomplete="current-password" />
           <i class="fa-solid fa-lock icon"></i>
-          <span class="toggle-pass" onclick="togglePassword()"><i class=""></i></span>
+          <span class="toggle-pass" onclick="togglePassword()"><i class=></i></span>
         </div>
 
         <button type="submit" class="btn-login">Entrar</button>
