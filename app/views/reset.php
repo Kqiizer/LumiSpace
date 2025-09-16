@@ -4,6 +4,7 @@ require_once __DIR__ . "/../config/functions.php";
 
 $msg = "";
 $alertClass = "";
+$showForm = false;
 
 $conn  = getDBConnection();
 $token = $_GET["token"] ?? "";
@@ -21,12 +22,13 @@ $stmt->bind_param("s", $token);
 $stmt->execute();
 $user = $stmt->get_result()->fetch_assoc();
 
-if (!$user) {
-    $msg = "❌ Token inválido o expirado. Solicita uno nuevo.";
-    $alertClass = "error";
-} elseif ($_SERVER["REQUEST_METHOD"] === "POST") {
-    $password  = $_POST["password"] ?? "";
-    $password2 = $_POST["password2"] ?? "";
+if ($user) {
+    $showForm = true;
+}
+
+if ($_SERVER["REQUEST_METHOD"] === "POST" && $user) {
+    $password  = trim($_POST["password"] ?? "");
+    $password2 = trim($_POST["password2"] ?? "");
 
     if ($password === $password2 && strlen($password) >= 6) {
         $hash = password_hash($password, PASSWORD_BCRYPT);
@@ -36,13 +38,14 @@ if (!$user) {
                                SET password=?, reset_token=NULL, reset_expira=NULL 
                                WHERE id=?");
         $upd->bind_param("si", $hash, $user["id"]);
-        $upd->execute();
-
-        $msg = "✅ Contraseña actualizada. Serás redirigido al login...";
-        $alertClass = "success";
-
-        // Redirigir al login después de 3 segundos
-        header("Refresh: 3; URL=login.php");
+        if ($upd->execute()) {
+            // ✅ Redirigir inmediatamente al login
+            header("Location: login.php?success=password_updated");
+            exit();
+        } else {
+            $msg = "❌ Error al actualizar. Intenta de nuevo.";
+            $alertClass = "error";
+        }
     } else {
         $msg = "❌ Las contraseñas no coinciden o son muy cortas (mínimo 6 caracteres).";
         $alertClass = "error";
@@ -58,8 +61,11 @@ if (!$user) {
   <style>
     .error { background:#ffe6e6; color:#b10000; padding:.75rem 1rem; border-radius:.5rem; margin:.5rem 0; animation:fadeIn .3s; }
     .success { background:#e6ffe6; color:#006400; padding:.75rem 1rem; border-radius:.5rem; margin:.5rem 0; animation:fadeIn .3s; }
-    .toggle-pass { cursor:pointer; position:absolute; right:10px; top:36px; font-size:.9rem; color:#666; }
-    .input-group { position:relative; }
+    .input-group { margin-bottom: 1rem; }
+    .input-wrapper { position: relative; display: flex; align-items: center; }
+    .input-wrapper input { flex: 1; padding: .6rem; border: 1px solid #444; border-radius: 6px; background: #1e1e1e; color: #fff; }
+    .toggle-pass { margin-left: .5rem; font-size: .85rem; background: none; border: none; color: #ccc; cursor: pointer; }
+    .toggle-pass:hover { color: #fff; }
     @keyframes fadeIn { from{opacity:0; transform:translateY(-5px);} to{opacity:1; transform:translateY(0);} }
   </style>
 </head>
@@ -74,17 +80,21 @@ if (!$user) {
         <div class="<?= $alertClass; ?>"><?= $msg; ?></div>
       <?php endif; ?>
 
-      <?php if ($user): // ✅ solo mostrar formulario si el token es válido ?>
+      <?php if ($showForm): ?>
       <form method="POST">
         <div class="input-group">
-          <input type="password" id="password" name="password" placeholder="Nueva contraseña" required minlength="6">
-          <span class="icon">🔑</span>
-          <span class="toggle-pass" onclick="togglePass('password')"></span>
+          <label for="password">Nueva contraseña</label>
+          <div class="input-wrapper">
+            <input type="password" id="password" name="password" required minlength="6">
+            <button type="button" class="toggle-pass" onclick="togglePass('password')">Mostrar</button>
+          </div>
         </div>
         <div class="input-group">
-          <input type="password" id="password2" name="password2" placeholder="Confirmar contraseña" required minlength="6">
-          <span class="icon">🔑</span>
-          <span class="toggle-pass" onclick="togglePass('password2')"></span>
+          <label for="password2">Confirmar contraseña</label>
+          <div class="input-wrapper">
+            <input type="password" id="password2" name="password2" required minlength="6">
+            <button type="button" class="toggle-pass" onclick="togglePass('password2')">Mostrar</button>
+          </div>
         </div>
         <button type="submit" class="btn-login">Actualizar</button>
       </form>
@@ -101,7 +111,14 @@ if (!$user) {
   <script>
     function togglePass(id){
       const input = document.getElementById(id);
-      input.type = input.type === "password" ? "text" : "password";
+      const btn = input.parentElement.querySelector(".toggle-pass");
+      if (input.type === "password") {
+        input.type = "text";
+        btn.textContent = "Ocultar";
+      } else {
+        input.type = "password";
+        btn.textContent = "Mostrar";
+      }
     }
   </script>
 </body>
