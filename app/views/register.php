@@ -12,7 +12,7 @@ if (isset($_SESSION['usuario_id'], $_SESSION['usuario_rol'])) {
     $rutas = [
         'admin'   => 'dashboard-admin.php',
         'gestor'  => 'dashboard-gestor.php',
-        'dueno'   => 'dashboard-dueno.php',
+        'dueno'   => 'pos.php',
         'usuario' => '../index.php'
     ];
     header("Location: " . ($rutas[$rol] ?? '../index.php'));
@@ -161,7 +161,7 @@ if (isset($google_client) && $google_client instanceof Google_Client) {
             <option value="">-- Selecciona un rol --</option>
             <option value="admin"   <?= (field('rol')==='admin'   ? 'selected' : '') ?>>Administrador</option>
             <option value="usuario" <?= (field('rol')==='usuario' ? 'selected' : '') ?>>Usuario</option>
-            <option value="dueno"   <?= (field('rol')==='dueno'   ? 'selected' : '') ?>>Dueño del POS</option>
+            <option value="dueno"   <?= (field('rol')==='dueno'   ? 'selected' : '') ?>>POS</option>
             <option value="gestor"  <?= (field('rol')==='gestor'  ? 'selected' : '') ?>>Gestor</option>
           </select>
           <i class="fa-solid fa-user-shield icon"></i>

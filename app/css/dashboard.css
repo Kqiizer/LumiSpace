@@ -24,7 +24,7 @@ body {
 
 /* ===== LAYOUT ===== */
 .main { margin-left:270px; padding:20px 24px 32px; }
-.content { max-width:1240px; margin:0 auto; }
+.content { max-width:1240px; margin:0 auto; overflow:visible; }
 
 .grid { display:grid; }
 .grid-4 { grid-template-columns:repeat(4,1fr); }
@@ -90,6 +90,10 @@ body {
   padding: 14px 20px;
   margin-bottom: 24px;
   display:flex; align-items:center; justify-content:space-between;
+
+  /* stacking context para el botón del perfil */
+  position: relative;
+  z-index: 10;
 }
 .topbar .left h1 { margin:0; font-size:22px; font-weight:700; color:var(--text); }
 .topbar .left p { margin:0; font-size:.95rem; color:var(--muted); }
@@ -107,12 +111,41 @@ body {
   text-shadow:0 0 6px rgba(143,94,75,.5);
 }
 
+/* Avatar mini (botón) */
 .user-mini {
   width:40px; height:40px; border-radius:50%; overflow:hidden;
   display:grid; place-items:center; background: rgba(0,0,0,.05);
   font-weight:700; color:var(--text);
 }
 .user-mini img { width:100%; height:100%; object-fit:cover; }
+
+/* Contenedor dropdown perfil */
+.user-dropdown{
+  position: relative;
+}
+
+/* ===== FIX DEFINITIVO: menú de perfil por encima de todo ===== */
+.user-menu{
+  position: fixed;          /* ignora z-index/overflow/transform de cards/canvas */
+  min-width: 220px;
+  background: var(--card-bg-1);
+  border: 1px solid var(--card-bd);
+  border-radius: 12px;
+  box-shadow: 0 12px 28px rgba(0,0,0,.25);
+  padding: 8px;
+  z-index: 999999;          /* sobre todo */
+  display: none;            /* oculto por defecto; JS aplica .show y setea top/left */
+}
+.user-menu.show{ display:block; }
+.user-menu.hidden{ display:none; } /* por compatibilidad si ya lo usabas */
+.user-menu a{
+  display:block;
+  padding:.45rem .6rem;
+  border-radius:8px;
+  color: var(--text);
+  text-decoration: none;
+}
+.user-menu a:hover{ background: var(--card-bg-2); }
 
 /* ===== CARD / METRIC ===== */
 .card {
@@ -121,10 +154,12 @@ body {
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   transition: all .3s ease;
+  overflow: visible; /* evita recortes de elementos flotantes */
 }
 .card:hover {
   transform: translateY(-4px);
   box-shadow: 0 12px 28px rgba(0,0,0,.25);
+  will-change: transform;
 }
 .metric { padding:16px 16px 14px; text-align:center; }
 .metric-title { color:var(--muted); font-weight:600; }
@@ -138,6 +173,7 @@ body {
   background: var(--card-bg-1);
   border:1px solid var(--card-bd);
   transition: all .3s ease;
+  overflow: visible;
 }
 .ava,.num {
   width:36px; height:36px; border-radius:50%; display:grid; place-items:center;
@@ -192,6 +228,11 @@ body.dark {
 
   --act1:#d4a373; --act2:#c7925b; --act3:#a67845;
 }
-body.dark .menu .item.active {
-  background: linear-gradient(90deg,#d4a373,#c7925b);
+body.dark .menu .item.active { background: linear-gradient(90deg,#d4a373,#c7925b); }
+.ripple{
+  position:absolute; border-radius:50%; pointer-events:none;
+  background: var(--act1); opacity:.35; transform: scale(0);
+  animation: rippleAnim .6s ease-out;
 }
+@keyframes rippleAnim{ to{ transform: scale(1); opacity:0; } }
+.clickable, .action, .menu .item{ position:relative; overflow:hidden; }

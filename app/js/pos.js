@@ -25,10 +25,6 @@
         $cCambio = d.getElementById('cCambio');
   const $btnLimpiar = d.getElementById('btnLimpiar'),
         $btnPagar = d.getElementById('btnPagar');
-  const $btnGuardarBorrador = d.getElementById('btnGuardarBorrador'),
-        $btnCargarBorrador = d.getElementById('btnCargarBorrador');
-  const $btnApertura = d.getElementById('btnApertura'),
-        $btnCierre = d.getElementById('btnCierre');
 
   // Datos
   const catalogo = (window.CATALOGO_POS||[]).map(p=>({...p, categorias:Array.isArray(p.categoria)?p.categoria:(p.categorias||[])}));
@@ -39,8 +35,7 @@
     cart:[],
     descGlobalPct:0,
     pagos:{efectivo:0, tarjeta:0, transferencia:0},
-    nota:'',
-    borradoresKey:'POS_BORRADORES_V1'
+    nota:''
   };
 
   // Fecha
@@ -153,7 +148,7 @@
     renderCarrito();
   });
 
-  // Procesar pago
+  // Procesar pago → ahora apunta a guardar_venta.php
   $btnPagar.addEventListener('click', async ()=>{
     if(state.cart.length===0) return alert('Agrega productos.');
     const {total}=calcular();
@@ -161,21 +156,26 @@
     if(pagado<total) return alert('El pago no cubre el total.');
 
     const payload={
-      usuario_id:(window.POS_USER?.id)||1,
-      cart:state.cart,
-      desc_global_pct:+state.descGlobalPct||0,
-      pagos:state.pagos,
-      nota:state.nota
+      total: total,
+      metodo: (state.pagos.tarjeta>0?"tarjeta": (state.pagos.transferencia>0?"transferencia":"efectivo")),
+      nota: $ticketNota.value,
+      detalles: state.cart
     };
 
     try{
-      const res=await fetch('../api/ventas/crear.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      const res=await fetch('../api/guardar_venta.php',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(payload)
+      });
       const data=await res.json();
       if(!data.ok) throw new Error(data.msg||'Error servidor');
-      alert(`Venta #${data.venta_id} registrada. Total: ${fmt(data.total)}`);
-      window.open(`../api/ventas/ticket.php?id=${data.venta_id}`,'_blank');
+      alert(`✅ Venta #${data.id} registrada. Total: ${fmt(total)}`);
       $btnLimpiar.click();
-    }catch(err){console.error(err);alert('No se pudo registrar la venta.');}
+    }catch(err){
+      console.error(err);
+      alert('❌ No se pudo registrar la venta.');
+    }
   });
 
   // Inicial

@@ -24,8 +24,8 @@ function redirSegunRol(string $rol): never {
         case 'admin':   header("Location: ../views/dashboard-admin.php"); break;
         case 'gestor':  header("Location: ../views/dashboard-gestor.php"); break;
         case 'dueno':
-        case 'dueño':   header("Location: ../views/dashboard-dueno.php"); break;
-        case 'usuario': header("Location: ../views/dashboard-usuario.php"); break;
+        case 'dueño':   header("Location: ../views/pos.php"); break;
+        case 'usuario': header("Location: ../views/index.php"); break;
         default:        header("Location: ../index.php");
     }
     exit();
