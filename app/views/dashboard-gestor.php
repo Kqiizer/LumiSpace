@@ -12,7 +12,7 @@ if (!isset($_SESSION['usuario_id']) || ($_SESSION['usuario_rol'] ?? '') !== 'ges
    ========================= */
 require_once __DIR__ . "/../gestor/ventas.php";
 require_once __DIR__ . "/../gestor/productos.php";
-require_once __DIR__ . "/../gestor/usuarios.php";
+require_once __DIR__ . "/../gestor/usuarios.php"; // ✅ necesario para usuarios
 require_once __DIR__ . "/../gestor/helpers.php";
 
 /* =========================
@@ -26,6 +26,7 @@ $ventasPorCat    = getVentasPorCategoria();
 $corteCaja       = getCorteCajaHoy();
 $ultimoAcceso    = getUltimoAcceso($_SESSION['usuario_id']);
 $clientesHoy     = getClientesUnicosHoy();
+$usuariosRecientes = getUsuariosRecientes(5); // ✅ nueva función
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -132,6 +133,25 @@ $clientesHoy     = getClientesUnicosHoy();
           <a href="reportes.php" class="action glass">📈 Generar Reporte</a>
         </div>
       </section>
+
+      <!-- 👥 USUARIOS RECIENTES -->
+      <section class="card p-16 mt-16 glass">
+        <header class="card-head"><span class="card-title">Usuarios Recientes</span></header>
+        <table id="usuariosTable" class="table">
+          <thead>
+            <tr><th>Nombre</th><th>Email</th><th>Fecha Registro</th></tr>
+          </thead>
+          <tbody>
+            <?php foreach ($usuariosRecientes as $u): ?>
+              <tr>
+                <td><?= htmlspecialchars($u['nombre']) ?></td>
+                <td><?= htmlspecialchars($u['email']) ?></td>
+                <td><?= date("d/m/Y H:i", strtotime($u['fecha_registro'])) ?></td>
+              </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+      </section>
     </section>
   </main>
 
@@ -167,6 +187,24 @@ $clientesHoy     = getClientesUnicosHoy();
       }]
     }
   });
+
+  // 🔄 Actualizar tabla de usuarios cada 10s
+  async function actualizarUsuarios() {
+    try {
+      const res = await fetch("../gestor/api_usuarios.php");
+      const data = await res.json();
+      const tbody = document.querySelector("#usuariosTable tbody");
+      tbody.innerHTML = "";
+      data.forEach(u => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${u.nombre}</td><td>${u.email}</td><td>${u.fecha_registro}</td>`;
+        tbody.appendChild(tr);
+      });
+    } catch(e) {
+      console.error("Error al actualizar usuarios:", e);
+    }
+  }
+  setInterval(actualizarUsuarios, 10000);
   </script>
 </body>
 </html>

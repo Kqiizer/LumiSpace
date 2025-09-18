@@ -1,9 +1,14 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) session_start();
+
 // Detecta página activa automáticamente
 $currentPage = basename($_SERVER['PHP_SELF']);
 function activeClass($page, $current) {
   return $page === $current ? 'active' : '';
 }
+
+// Rol actual
+$rol = strtolower($_SESSION['usuario_rol'] ?? 'usuario');
 ?>
 <aside class="sidebar" id="sidebar">
   <!-- Marca -->
@@ -15,25 +20,48 @@ function activeClass($page, $current) {
     </div>
   </div>
 
-  <!-- Menú -->
+  <!-- Menú dinámico -->
   <nav class="menu" aria-label="Menú principal">
-    <a class="item <?= activeClass('dashboard-gestor.php', $currentPage) ?>" href="dashboard-gestor.php">🏠 <span>Dashboard</span></a>
-    <a class="item <?= activeClass('pos.php', $currentPage) ?>" href="pos.php">🧾 <span>Punto de Venta</span></a>
-    <a class="item <?= activeClass('productos.php', $currentPage) ?>" href="productos.php">📚 <span>Catálogo</span></a>
-    <a class="item <?= activeClass('inventario.php', $currentPage) ?>" href="inventario.php">📦 <span>Inventario</span></a>
-    <a class="item <?= activeClass('facturacion.php', $currentPage) ?>" href="facturacion.php">💳 <span>Facturación</span></a>
-    <a class="item <?= activeClass('reportes.php', $currentPage) ?>" href="reportes.php">📊 <span>Estadísticas</span></a>
+    <?php if ($rol === 'admin'): ?>
+      <div class="menu-section">⚙️ Administración</div>
+      <a class="item <?= activeClass('dashboard-admin.php', $currentPage) ?>" href="dashboard-admin.php">🏠 Dashboard</a>
+      <a class="item <?= activeClass('usuarios.php', $currentPage) ?>" href="usuarios.php">👥 Usuarios</a>
+      <a class="item <?= activeClass('roles.php', $currentPage) ?>" href="roles.php">🛡️ Roles</a>
+      <a class="item <?= activeClass('configuracion.php', $currentPage) ?>" href="configuracion.php">🔧 Configuración</a>
+      <a class="item <?= activeClass('reportes.php', $currentPage) ?>" href="reportes.php">📊 Reportes</a>
+
+    <?php elseif ($rol === 'gestor'): ?>
+      <a class="item <?= activeClass('dashboard-gestor.php', $currentPage) ?>" href="dashboard-gestor.php">🏠 Dashboard</a>
+      <a class="item <?= activeClass('productos.php', $currentPage) ?>" href="productos.php">📚 Catálogo</a>
+      <a class="item <?= activeClass('inventario.php', $currentPage) ?>" href="inventario.php">📦 Inventario</a>
+      <a class="item <?= activeClass('proveedores.php', $currentPage) ?>" href="proveedores.php">🚚 Proveedores</a>
+      <a class="item <?= activeClass('reportes.php', $currentPage) ?>" href="reportes.php">📊 Reportes</a>
+
+    <?php elseif ($rol === 'cajero'): ?>
+      <div class="menu-section">💰 Punto de Venta</div>
+      <a class="item <?= activeClass('dashboard-cajero.php', $currentPage) ?>" href="dashboard-cajero.php">🏠 Dashboard</a>
+      <a class="item <?= activeClass('pos.php', $currentPage) ?>" href="pos.php">🧾 Punto de Venta</a>
+      <a class="item <?= activeClass('facturacion.php', $currentPage) ?>" href="facturacion.php">💳 Facturación</a>
+      <a class="item <?= activeClass('corte-caja.php', $currentPage) ?>" href="corte-caja.php">📋 Corte de Caja</a>
+
+    <?php else: ?> <!-- Usuario normal -->
+      <div class="menu-section">🛍️ Mi Cuenta</div>
+      <a class="item <?= activeClass('dashboard-usuario.php', $currentPage) ?>" href="dashboard-usuario.php">🏠 Inicio</a>
+      <a class="item <?= activeClass('catalogo.php', $currentPage) ?>" href="catalogo.php">🛒 Catálogo</a>
+      <a class="item <?= activeClass('carrito.php', $currentPage) ?>" href="carrito.php">🛍️ Carrito</a>
+      <a class="item <?= activeClass('pedidos.php', $currentPage) ?>" href="pedidos.php">📦 Mis Pedidos</a>
+      <a class="item <?= activeClass('soporte.php', $currentPage) ?>" href="soporte.php">💬 Soporte</a>
+    <?php endif; ?>
+
     <hr>
     <!-- Modo oscuro -->
-    <button id="darkToggle" class="item toggle-theme" type="button">🌙 <span>Modo Oscuro</span></button>
-    <!-- Cierre de sesión -->
-    <a class="item logout" href="../logout.php">🚪 <span>Cerrar Sesión</span></a>
+    <button id="darkToggle" class="item toggle-theme" type="button">🌙 Modo Oscuro</button>
   </nav>
 
   <!-- Info inferior -->
   <div class="floating-card">
-    <div class="fc-title">Corte de Caja</div>
-    <div class="fc-sub">Sistema Activo en línea</div>
+    <div class="fc-title">Sistema en línea</div>
+    <div class="fc-sub">Rol: <strong><?= ucfirst($rol) ?></strong></div>
     <div class="fc-small">© <?= date('Y') ?> LUMISPACE</div>
   </div>
 </aside>
@@ -66,9 +94,19 @@ function activeClass($page, $current) {
 }
 .sidebar .brand-meta small { color: rgba(255,255,255,.7); }
 
+/* Secciones */
+.menu-section {
+  font-size: .8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin: 10px 0 4px;
+  opacity: .8;
+  letter-spacing: .5px;
+}
+
 /* Menú */
 .sidebar .menu {
-  flex: 1; display: flex; flex-direction: column; gap: 8px;
+  flex: 1; display: flex; flex-direction: column; gap: 6px;
 }
 .sidebar .menu .item {
   display: flex; align-items: center; gap: 10px;
@@ -85,10 +123,6 @@ function activeClass($page, $current) {
   font-weight: 600;
   box-shadow: inset 4px 0 var(--act3,#7a5a43);
 }
-.sidebar .menu .logout {
-  margin-top: auto; background: var(--danger,#e74c3c); color: #fff; text-align: center;
-}
-.sidebar .menu .logout:hover { background: #c0392b; }
 .sidebar .menu .toggle-theme {
   cursor: pointer; background: transparent; border: none; text-align: left;
   font-size: 1rem; color: inherit;
@@ -126,13 +160,11 @@ body.dark .sidebar .floating-card { background: rgba(255,255,255,0.08); }
 const body = document.body;
 const darkToggle = document.getElementById("darkToggle");
 
-// Cargar preferencia
 if (localStorage.getItem("theme") === "dark") {
   body.classList.add("dark");
   darkToggle.textContent = "☀️ Modo Claro";
 }
 
-// Alternar tema
 darkToggle?.addEventListener("click", () => {
   body.classList.toggle("dark");
   const dark = body.classList.contains("dark");

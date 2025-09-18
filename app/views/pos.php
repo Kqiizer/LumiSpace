@@ -1,6 +1,8 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) session_start();
 
+require_once __DIR__ . "/../config/functions.php";
+
 // Catálogo DEMO (cámbialo por SELECT real en producción)
 $productos = [
   ['id'=>101,'nombre'=>'LED Bombillo 12W','precio'=>250,'stock'=>35,'categoria'=>['LED','Interiores'],'estado'=>'disponible','img'=>'../images/prod_bombillo_12w.jpg'],

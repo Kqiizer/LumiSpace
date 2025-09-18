@@ -14,7 +14,7 @@ $iniciales = strtoupper(substr($usuarioNombre, 0, 2));
 
   <div class="right">
     <!-- Hora local -->
-    <div id="header-time" class="chip-time" aria-label="Hora local">🕒 Cargando...</div>
+    <div id="header-time" class="chip-time" aria-label="Hora local">🕒</div>
 
     <!-- Avatar con menú -->
     <div class="user-dropdown">
@@ -65,6 +65,8 @@ $iniciales = strtoupper(substr($usuarioNombre, 0, 2));
   color:var(--act1);
   box-shadow: var(--shadow);
   backdrop-filter: blur(8px);
+  min-width: 100px;
+  text-align:center;
 }
 
 /* Avatar */
@@ -127,11 +129,30 @@ if(btn && menu){
     menu.classList.toggle("hidden");
     btn.setAttribute("aria-expanded", menu.classList.contains("hidden") ? "false" : "true");
   });
+
+  // Cierra si clic fuera
   document.addEventListener("click",(e)=>{
     if(!btn.contains(e.target) && !menu.contains(e.target)) {
       menu.classList.add("hidden");
       btn.setAttribute("aria-expanded", "false");
     }
   });
+
+  // 🔹 Cierra el menú si haces clic en un enlace
+  menu.querySelectorAll("a").forEach(link=>{
+    link.addEventListener("click", ()=>{
+      menu.classList.add("hidden");
+      btn.setAttribute("aria-expanded", "false");
+    });
+  });
 }
+
+// 🔹 Actualizar hora local
+function updateTime(){
+  const now = new Date();
+  const options = { hour: "2-digit", minute: "2-digit", second: "2-digit" };
+  document.getElementById("header-time").textContent = now.toLocaleTimeString([], options);
+}
+setInterval(updateTime, 1000);
+updateTime();
 </script>
