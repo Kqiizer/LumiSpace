@@ -8,13 +8,13 @@ function getVentasHoy(): float {
     $conn = getDBConnection();
     $sql  = "SELECT IFNULL(SUM(total),0) AS total FROM ventas WHERE DATE(fecha)=CURDATE()";
     $res  = $conn->query($sql);
+    if (!$res) return 0.0;
     $row  = $res->fetch_assoc();
     return (float)$row['total'];
 }
 
 /**
  * Ventas recientes (una fila por venta).
- * Devuelve: id venta, cliente, productos, total, fecha.
  */
 function getVentasRecientes(int $limit = 6): array {
     $conn = getDBConnection();
@@ -22,7 +22,7 @@ function getVentasRecientes(int $limit = 6): array {
     $sql = "
         SELECT 
             v.id,
-            u.nombre AS cliente,
+            u.nombre AS nombre,
             v.total,
             v.fecha,
             (
@@ -45,16 +45,16 @@ function getVentasRecientes(int $limit = 6): array {
     ";
 
     $stmt = $conn->prepare($sql);
+    if (!$stmt) return [];
     $stmt->bind_param("i", $limit);
     $stmt->execute();
     $res = $stmt->get_result();
-
+    if (!$res) return [];
     return $res->fetch_all(MYSQLI_ASSOC);
 }
 
 /**
  * Tendencia de ventas del año actual por mes.
- * Devuelve 12 elementos: [ ['mes'=>1,'total'=>0.0], ... ]
  */
 function getVentasMensuales(?int $year = null): array {
     $conn = getDBConnection();
@@ -67,21 +67,26 @@ function getVentasMensuales(?int $year = null): array {
         GROUP BY MONTH(fecha)
         ORDER BY MONTH(fecha)
     ";
+
     $stmt = $conn->prepare($sql);
+    if (!$stmt) return [];
     $stmt->bind_param("i", $year);
     $stmt->execute();
     $res = $stmt->get_result();
 
     // Inicializar meses 1..12 en 0
     $out = [];
-    for ($m = 1; $m <= 12; $m++) $out[$m] = ['mes'=>$m, 'total'=>0.0];
-
-    while ($row = $res->fetch_assoc()) {
-        $m = (int)$row['mes'];
-        $out[$m]['total'] = (float)$row['total'];
+    for ($m = 1; $m <= 12; $m++) {
+        $out[$m] = ['mes' => $m, 'total' => 0.0];
     }
 
-    // Reindexar en orden 1..12
+    if ($res) {
+        while ($row = $res->fetch_assoc()) {
+            $m = (int)$row['mes'];
+            $out[$m]['total'] = (float)$row['total'];
+        }
+    }
+
     return array_values($out);
 }
 
@@ -91,56 +96,38 @@ function getVentasMensuales(?int $year = null): array {
 function getVentasPorCategoria(): array {
     $conn = getDBConnection();
 
-    // Intento 1: con tabla categorias
-    try {
-        $sql = "
-            SELECT 
-                COALESCE(cat.nombre, 'Sin categoría') AS categoria,
-                IFNULL(SUM(dv.cantidad * dv.precio_unitario), 0) AS total
-            FROM productos p
-            LEFT JOIN categorias cat ON cat.id = p.categoria_id
-            LEFT JOIN detalle_ventas dv ON dv.producto_id = p.id
-            GROUP BY COALESCE(cat.nombre, 'Sin categoría')
-            ORDER BY total DESC
-        ";
-        $res = $conn->query($sql);
+    // Intento con tabla categorias
+    $sql = "
+        SELECT 
+            COALESCE(cat.nombre, 'Sin categoría') AS categoria,
+            IFNULL(SUM(dv.cantidad * dv.precio), 0) AS total
+        FROM productos p
+        LEFT JOIN categorias cat ON cat.id = p.categoria_id
+        LEFT JOIN detalle_ventas dv ON dv.producto_id = p.id
+        GROUP BY COALESCE(cat.nombre, 'Sin categoría')
+        ORDER BY total DESC
+    ";
+    $res = $conn->query($sql);
+    if ($res) {
         return $res->fetch_all(MYSQLI_ASSOC);
-
-    } catch (mysqli_sql_exception $e) {
-        // Intento 2: usar columna categoria en productos
-        try {
-            $sql2 = "
-                SELECT 
-                    COALESCE(p.categoria, 'Sin categoría') AS categoria,
-                    IFNULL(SUM(dv.cantidad * dv.precio_unitario), 0) AS total
-                FROM productos p
-                LEFT JOIN detalle_ventas dv ON dv.producto_id = p.id
-                GROUP BY COALESCE(p.categoria, 'Sin categoría')
-                ORDER BY total DESC
-            ";
-            $res2 = $conn->query($sql2);
-            return $res2->fetch_all(MYSQLI_ASSOC);
-
-        } catch (mysqli_sql_exception $e2) {
-            // Intento 3: agrupar por categoria_id
-            $sql3 = "
-                SELECT 
-                    CONCAT('Cat #', COALESCE(p.categoria_id, 0)) AS categoria,
-                    IFNULL(SUM(dv.cantidad * dv.precio_unitario), 0) AS total
-                FROM productos p
-                LEFT JOIN detalle_ventas dv ON dv.producto_id = p.id
-                GROUP BY COALESCE(p.categoria_id, 0)
-                ORDER BY total DESC
-            ";
-            $res3 = $conn->query($sql3);
-            return $res3->fetch_all(MYSQLI_ASSOC);
-        }
     }
+
+    // Fallback: usar campo categoria en productos
+    $sql2 = "
+        SELECT 
+            COALESCE(p.categoria, 'Sin categoría') AS categoria,
+            IFNULL(SUM(dv.cantidad * dv.precio), 0) AS total
+        FROM productos p
+        LEFT JOIN detalle_ventas dv ON dv.producto_id = p.id
+        GROUP BY COALESCE(p.categoria, 'Sin categoría')
+        ORDER BY total DESC
+    ";
+    $res2 = $conn->query($sql2);
+    return $res2 ? $res2->fetch_all(MYSQLI_ASSOC) : [];
 }
 
 /**
  * Corte de caja del día de hoy agrupado por método de pago.
- * Devuelve: ['efectivo'=>123.45, 'tarjeta'=>89.00, ...]
  */
 function getCorteCajaHoy(): array {
     $conn = getDBConnection();
@@ -151,6 +138,7 @@ function getCorteCajaHoy(): array {
         GROUP BY metodo_pago
     ";
     $res = $conn->query($sql);
+    if (!$res) return [];
     $out = [];
     while ($row = $res->fetch_assoc()) {
         $out[$row['metodo_pago']] = (float)$row['total'];
@@ -165,6 +153,7 @@ function getClientesUnicosHoy(): int {
     $conn = getDBConnection();
     $sql  = "SELECT COUNT(DISTINCT usuario_id) AS c FROM ventas WHERE DATE(fecha)=CURDATE()";
     $res  = $conn->query($sql);
+    if (!$res) return 0;
     $row  = $res->fetch_assoc();
     return (int)$row['c'];
 }
@@ -174,7 +163,6 @@ function getClientesUnicosHoy(): int {
  */
 function getResumenHoy(): array {
     $conn = getDBConnection();
-
     $sql = "
         SELECT 
             IFNULL(SUM(v.total),0) AS total,
@@ -185,8 +173,8 @@ function getResumenHoy(): array {
         WHERE DATE(v.fecha) = CURDATE()
     ";
     $res = $conn->query($sql);
+    if (!$res) return ['total'=>0.0,'transacciones'=>0,'productos'=>0];
     $row = $res->fetch_assoc();
-
     return [
         'total'         => (float)$row['total'],
         'transacciones' => (int)$row['transacciones'],
