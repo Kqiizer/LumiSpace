@@ -106,9 +106,9 @@ $_SESSION['usuario_rol']    = $rol;
    ========================= */
 $rutas = [
     'admin'   => '../views/dashboard-admin.php',
-    'usuario' => '../views/dashboard-usuario.php',
+    'usuario' => '../views/index.php',
     'gestor'  => '../views/dashboard-gestor.php',
-    'dueno'   => '../views/dashboard-dueno.php'
+    'dueno'   => '../views/pos.php'
 ];
 
 header('Location: ' . ($rutas[$rol] ?? '../index.php'));

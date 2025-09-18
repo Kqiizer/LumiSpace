@@ -36,7 +36,7 @@ if (!isset($_SESSION["last_login_email"])) {
                      Este enlace caduca en 1 hora.";
 
             if (enviarCorreo($user["email"], $subject, $body)) {
-                $msg = "✅ Hemos enviado un enlace a <strong>{$user["email"]}</strong>";
+                $msg = "✅ Hemos enviado un enlace de recuperación a tu correo registrado.";
                 $alertClass = "success";
             } else {
                 $msg = "❌ Error al enviar el correo.";
@@ -58,8 +58,6 @@ if (!isset($_SESSION["last_login_email"])) {
   <style>
     .error { background:#ffe6e6; color:#b10000; padding:.75rem 1rem; border-radius:.5rem; margin:.5rem 0; animation:fadeIn .3s; }
     .success { background:#e6ffe6; color:#006400; padding:.75rem 1rem; border-radius:.5rem; margin:.5rem 0; animation:fadeIn .3s; }
-    .input-group { margin-bottom: 1rem; }
-    .input-wrapper input { flex: 1; padding: .6rem; border: 1px solid #444; border-radius: 6px; background: #1e1e1e; color: #fff; }
     @keyframes fadeIn { from{opacity:0; transform:translateY(-5px);} to{opacity:1; transform:translateY(0);} }
   </style>
 </head>
@@ -68,7 +66,7 @@ if (!isset($_SESSION["last_login_email"])) {
     <div class="auth-image"></div>
     <div class="auth-form">
       <h2>🔑 Recuperar contraseña</h2>
-      <p class="subtitle">Te enviaremos un enlace al correo que intentaste usar en el login</p>
+      <p class="subtitle">Haz clic en el botón para enviarte un enlace de recuperación</p>
 
       <?php if ($msg): ?>
         <div class="<?= $alertClass; ?>"><?= $msg; ?></div>
@@ -76,10 +74,6 @@ if (!isset($_SESSION["last_login_email"])) {
 
       <?php if (isset($_SESSION["last_login_email"])): ?>
       <form method="POST">
-        <div class="input-group">
-          <label>Tu correo registrado</label>
-          <input type="email" value="<?= htmlspecialchars($_SESSION["last_login_email"] ?? '') ?>" disabled>
-        </div>
         <button type="submit" class="btn-login">Enviar enlace</button>
       </form>
       <?php endif; ?>
