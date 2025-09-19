@@ -1,10 +1,13 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 /* =========================
    Destruir Sesión
    ========================= */
-$_SESSION = [];               // Limpia variables
+$_SESSION = [];  // Limpia variables de sesión
+
 if (ini_get("session.use_cookies")) {
     $params = session_get_cookie_params();
     setcookie(session_name(), '', time() - 42000,
@@ -12,15 +15,18 @@ if (ini_get("session.use_cookies")) {
         $params["secure"], $params["httponly"]
     );
 }
-session_destroy();            // Destruye la sesión
+
+session_destroy();  // Destruye la sesión
 
 /* =========================
    Eliminar cookies de Google
    ========================= */
-setcookie("g_state", "", time() - 3600, "/");
+if (isset($_COOKIE['g_state'])) {
+    setcookie("g_state", "", time() - 3600, "/");
+}
 
 /* =========================
    Redirigir al login
    ========================= */
-header("Location: ../views/login.php?logout=1");
+header("Location: views/login.php?logout=1");
 exit();
