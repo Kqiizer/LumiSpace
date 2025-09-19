@@ -2,23 +2,44 @@
 if (session_status() === PHP_SESSION_NONE) session_start();
 
 require_once __DIR__ . "/../config/functions.php";
+require_once __DIR__ . "/../gestor/ventas.php"; // ✅ Incluye funciones de ventas
 
-// Catálogo DEMO (cámbialo por SELECT real en producción)
-$productos = [
-  ['id'=>101,'nombre'=>'LED Bombillo 12W','precio'=>250,'stock'=>35,'categoria'=>['LED','Interiores'],'estado'=>'disponible','img'=>'../images/prod_bombillo_12w.jpg'],
-  ['id'=>102,'nombre'=>'Lámpara Colgante Modern','precio'=>1200,'stock'=>12,'categoria'=>['Interiores'],'estado'=>'disponible','img'=>'../images/prod_colgante_modern.jpg'],
-  ['id'=>103,'nombre'=>'Foco Jardín LED','precio'=>680,'stock'=>8,'categoria'=>['LED','Exteriores'],'estado'=>'poco','img'=>'../images/prod_foco_jardin.jpg'],
-  ['id'=>104,'nombre'=>'Lámpara Techo Redonda','precio'=>890,'stock'=>3,'categoria'=>['Interiores'],'estado'=>'bajo','img'=>'../images/prod_techo_redonda.jpg'],
-  ['id'=>105,'nombre'=>'Tira LED RGB 5m','precio'=>420,'stock'=>45,'categoria'=>['LED','Interiores'],'estado'=>'disponible','img'=>'../images/prod_tira_rgb.jpg'],
-  ['id'=>106,'nombre'=>'Reflector LED 50W','precio'=>850,'stock'=>15,'categoria'=>['LED','Exteriores'],'estado'=>'poco','img'=>'../images/prod_reflector_50w.jpg'],
-  ['id'=>107,'nombre'=>'Lámpara Colgante W81','precio'=>380,'stock'=>28,'categoria'=>['Interiores'],'estado'=>'disponible','img'=>'../images/prod_colgante_w81.jpg']
-];
+// ============================
+// 📦 Cargar productos reales
+// ============================
+$conn = getDBConnection();
+$sql = "SELECT id, nombre, precio, stock, categoria_id 
+        FROM productos 
+        ORDER BY nombre ASC";
+$res = $conn->query($sql);
+$productos = [];
+while ($row = $res->fetch_assoc()) {
+    $productos[] = [
+        'id'       => (int)$row['id'],
+        'nombre'   => $row['nombre'],
+        'precio'   => (float)$row['precio'],
+        'stock'    => (int)$row['stock'],
+        'categoria'=> [$row['categoria_id']], 
+        'estado'   => $row['stock'] > 20 ? 'disponible' : ($row['stock'] > 5 ? 'poco' : 'bajo'),
+        'img'      => "../images/prod_" . $row['id'] . ".jpg" // opcional
+    ];
+}
 
-// Métricas demo
-$metaDiaria = 60000;
-$ventasDia = 46290;
-$ventasCantidad = 127;
-$promedioVenta = 356;
+// ============================
+// 📊 Métricas reales
+// ============================
+$metaDiaria     = 60000; // fija o configurable en BD
+$ventasHoy      = getVentasHoy();
+$resumenHoy     = getResumenHoy();
+$ventasCantidad = $resumenHoy['transacciones'] ?? 0;
+$promedioVenta  = $ventasCantidad > 0 
+                    ? round($ventasHoy / $ventasCantidad, 2) 
+                    : 0;
+
+// ============================
+// 🕒 Últimas ventas
+// ============================
+$ventasRecientes = getVentasRecientes(5);
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -26,7 +47,7 @@ $promedioVenta = 356;
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Punto de Venta</title>
-  <link rel="stylesheet" href="../css/pos.css?v=<?php echo time(); ?>">
+  <link rel="stylesheet" href="../css/pos.css?v=<?= time(); ?>">
 </head>
 <body>
 <div class="pos-wrapper">
@@ -39,21 +60,30 @@ $promedioVenta = 356;
     </div>
     <div class="stats">
       <div class="stat">
-        <div class="stat-top"><span>Meta Diaria</span><strong class="money">$<?= number_format($metaDiaria,0); ?></strong></div>
-        <?php $pct=min(100,round(($ventasDia/$metaDiaria)*100)); ?>
+        <div class="stat-top"><span>Meta Diaria</span>
+          <strong class="money">$<?= number_format($metaDiaria,0); ?></strong>
+        </div>
+        <?php $pct = min(100, round(($ventasHoy/$metaDiaria)*100)); ?>
         <div class="bar"><span id="barMeta" style="width:<?= $pct; ?>%"></span></div>
         <small id="metaPct"><?= $pct; ?>% cumplido</small>
       </div>
       <div class="stat">
-        <div class="stat-top"><span>Promedio x Venta</span><strong class="money">$<?= number_format($promedioVenta,0); ?></strong></div>
-      </div>
-      <div class="stat">
-        <div class="stat-top"><span>Ventas hoy</span>
-          <div class="pill"><strong class="money" id="ventasHoy">$<?= number_format($ventasDia,0); ?></strong> <em id="ventasCant"><?= $ventasCantidad; ?> ventas</em></div>
+        <div class="stat-top"><span>Promedio x Venta</span>
+          <strong class="money">$<?= number_format($promedioVenta,0); ?></strong>
         </div>
       </div>
       <div class="stat">
-        <div class="stat-top"><span>Carrito</span><strong id="statItems">0 ítems</strong></div>
+        <div class="stat-top"><span>Ventas hoy</span>
+          <div class="pill">
+            <strong class="money" id="ventasHoy">$<?= number_format($ventasHoy,0); ?></strong> 
+            <em id="ventasCant"><?= $ventasCantidad; ?> ventas</em>
+          </div>
+        </div>
+      </div>
+      <div class="stat">
+        <div class="stat-top"><span>Carrito</span>
+          <strong id="statItems">0 ítems</strong>
+        </div>
         <small id="statTotal" class="money">$0</small>
       </div>
     </div>
@@ -118,9 +148,7 @@ $promedioVenta = 356;
 
     <!-- CARRITO -->
     <aside class="carrito">
-      <header>
-        <h2>Carrito</h2>
-      </header>
+      <header><h2>Carrito</h2></header>
       <ul id="carritoLista" class="cart-list"></ul>
 
       <!-- Descuentos y notas -->
@@ -163,7 +191,13 @@ $promedioVenta = 356;
       <!-- Historial -->
       <div class="historial">
         <h3>Últimas ventas</h3>
-        <ul id="ventasRecientes"></ul>
+        <ul id="ventasRecientes">
+          <?php foreach ($ventasRecientes as $v): ?>
+            <li>#<?= $v['id']; ?> - <?= htmlspecialchars($v['nombre']); ?> 
+              <strong>$<?= number_format($v['total'],0); ?></strong>
+            </li>
+          <?php endforeach; ?>
+        </ul>
       </div>
     </aside>
   </main>

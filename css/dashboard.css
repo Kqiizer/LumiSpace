@@ -41,12 +41,14 @@ body {
   background: linear-gradient(180deg, #4b4035, #6a5a48, #8a735c);
   color:#fff;
   position:fixed; top:0; left:0; bottom:0;
-  display:flex; flex-direction:column; justify-content:space-between;
+  display:flex; flex-direction:column;
   padding:20px;
   box-shadow: var(--shadow);
+  overflow:hidden;
 }
 
 .sidebar .brand {
+  flex-shrink:0;
   display:flex; align-items:center; gap:10px;
   margin-bottom:20px;
 }
@@ -59,7 +61,22 @@ body {
 .sidebar .brand-meta strong { font-size:1rem; }
 .sidebar .brand-meta small { color:rgba(255,255,255,.7); font-size:.8rem; }
 
-.menu { display:flex; flex-direction:column; gap:8px; }
+/* 👇 Menú scrolleable */
+.sidebar .menu {
+  flex:1;
+  display:flex; flex-direction:column; gap:8px;
+  overflow-y:auto;
+  padding-right:6px;
+}
+.sidebar .menu::-webkit-scrollbar { width:6px; }
+.sidebar .menu::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,.3);
+  border-radius:3px;
+}
+.sidebar .menu::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,.5);
+}
+
 .menu .item {
   display:flex; align-items:center; gap:10px;
   padding:10px 14px; border-radius:10px;
@@ -76,6 +93,7 @@ body {
 .menu .logout:hover { background:#c0392b; }
 
 .floating-card {
+  flex-shrink:0;
   margin-top:20px; padding:10px;
   background: rgba(255,255,255,.15); border-radius:12px;
   font-size:.85rem; text-align:center;
@@ -91,7 +109,6 @@ body {
   margin-bottom: 24px;
   display:flex; align-items:center; justify-content:space-between;
 
-  /* stacking context para el botón del perfil */
   position: relative;
   z-index: 10;
 }
@@ -120,24 +137,21 @@ body {
 .user-mini img { width:100%; height:100%; object-fit:cover; }
 
 /* Contenedor dropdown perfil */
-.user-dropdown{
-  position: relative;
-}
+.user-dropdown{ position: relative; }
 
-/* ===== FIX DEFINITIVO: menú de perfil por encima de todo ===== */
+/* Menú perfil */
 .user-menu{
-  position: fixed;          /* ignora z-index/overflow/transform de cards/canvas */
+  position: fixed;
   min-width: 220px;
   background: var(--card-bg-1);
   border: 1px solid var(--card-bd);
   border-radius: 12px;
   box-shadow: 0 12px 28px rgba(0,0,0,.25);
   padding: 8px;
-  z-index: 999999;          /* sobre todo */
-  display: none;            /* oculto por defecto; JS aplica .show y setea top/left */
+  z-index: 999999;
+  display: none;
 }
 .user-menu.show{ display:block; }
-.user-menu.hidden{ display:none; } /* por compatibilidad si ya lo usabas */
 .user-menu a{
   display:block;
   padding:.45rem .6rem;
@@ -154,7 +168,7 @@ body {
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   transition: all .3s ease;
-  overflow: visible; /* evita recortes de elementos flotantes */
+  overflow: visible;
 }
 .card:hover {
   transform: translateY(-4px);
@@ -173,7 +187,6 @@ body {
   background: var(--card-bg-1);
   border:1px solid var(--card-bd);
   transition: all .3s ease;
-  overflow: visible;
 }
 .ava,.num {
   width:36px; height:36px; border-radius:50%; display:grid; place-items:center;
@@ -229,6 +242,7 @@ body.dark {
   --act1:#d4a373; --act2:#c7925b; --act3:#a67845;
 }
 body.dark .menu .item.active { background: linear-gradient(90deg,#d4a373,#c7925b); }
+
 .ripple{
   position:absolute; border-radius:50%; pointer-events:none;
   background: var(--act1); opacity:.35; transform: scale(0);

@@ -26,6 +26,8 @@
   const $btnLimpiar = d.getElementById('btnLimpiar'),
         $btnPagar = d.getElementById('btnPagar');
 
+  const $ventasRecientes = d.getElementById("ventasRecientes");
+
   // Datos
   const catalogo = (window.CATALOGO_POS||[]).map(p=>({...p, categorias:Array.isArray(p.categoria)?p.categoria:(p.categorias||[])}));
 
@@ -39,7 +41,12 @@
   };
 
   // Fecha
-  if ($fecha) $fecha.textContent = new Date().toLocaleString('es-MX',{weekday:'long',year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  if ($fecha) {
+    $fecha.textContent = new Date().toLocaleString('es-MX',{
+      weekday:'long',year:'numeric',month:'long',day:'numeric',
+      hour:'2-digit',minute:'2-digit'
+    });
+  }
 
   // Helpers
   const fmt = v=>MX.format(Math.round(v));
@@ -117,6 +124,17 @@
     }
   });
 
+  $carritoLista.addEventListener("click", e=>{
+    if(!e.target.dataset.act) return;
+    const id=e.target.dataset.id;
+    const item=state.cart.find(i=>String(i.id)===String(id));
+    if(!item) return;
+    if(e.target.dataset.act==="mas") item.qty++;
+    if(e.target.dataset.act==="menos") item.qty=Math.max(1,item.qty-1);
+    if(e.target.dataset.act==="del") state.cart=state.cart.filter(i=>String(i.id)!==String(id));
+    renderCarrito();
+  });
+
   $quick.forEach(btn=>btn.addEventListener('click',()=> addToCart(btn.dataset.id)));
 
   $chips.forEach(ch=>ch.addEventListener('click',()=>{
@@ -148,7 +166,7 @@
     renderCarrito();
   });
 
-  // Procesar pago → ahora apunta a guardar_venta.php
+  // Procesar pago
   $btnPagar.addEventListener('click', async ()=>{
     if(state.cart.length===0) return alert('Agrega productos.');
     const {total}=calcular();
@@ -156,21 +174,30 @@
     if(pagado<total) return alert('El pago no cubre el total.');
 
     const payload={
-      total: total,
-      metodo: (state.pagos.tarjeta>0?"tarjeta": (state.pagos.transferencia>0?"transferencia":"efectivo")),
-      nota: $ticketNota.value,
-      detalles: state.cart
+      usuario_id: window.USUARIO_ID || 0,
+      cart: state.cart,
+      desc_global_pct: state.descGlobalPct,
+      pagos: state.pagos,
+      nota: $ticketNota.value
     };
 
     try{
-      const res=await fetch('../api/guardar_venta.php',{
+      const res=await fetch('../api/ventas/guardar.php',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify(payload)
       });
       const data=await res.json();
       if(!data.ok) throw new Error(data.msg||'Error servidor');
-      alert(`✅ Venta #${data.id} registrada. Total: ${fmt(total)}`);
+
+      alert(`✅ Venta #${data.venta_id} registrada. Total: ${fmt(total)}`);
+
+      // Refrescar dashboard del POS
+      cargarDashboard();
+
+      // Abrir ticket PDF en nueva pestaña
+      window.open(`../api/ventas/ticket.php?id=${data.venta_id}`,'_blank');
+
       $btnLimpiar.click();
     }catch(err){
       console.error(err);
@@ -178,7 +205,29 @@
     }
   });
 
+  // === Dashboard POS (meta, ventas recientes) ===
+  async function cargarDashboard(){
+    try {
+      const res=await fetch("../api/ventas/dashboard.php");
+      const data=await res.json();
+
+      // Ventas recientes
+      if($ventasRecientes){
+        $ventasRecientes.innerHTML="";
+        data.ventasRecientes.forEach(v=>{
+          const li=d.createElement("li");
+          li.textContent=`#${v.id} - ${v.cliente||"Cliente"} - $${Number(v.total).toLocaleString()}`;
+          $ventasRecientes.appendChild(li);
+        });
+      }
+    } catch(e){
+      console.error("Error cargando dashboard POS:",e);
+    }
+  }
+
   // Inicial
   renderProductos();
   renderCarrito();
+  cargarDashboard();
+  setInterval(cargarDashboard,15000); // refrescar cada 15s
 })();

@@ -18,7 +18,7 @@ if (isset($_SESSION['usuario_id'], $_SESSION['usuario_rol'])) {
     $rutas = [
         'admin'   => 'dashboard-admin.php',
         'gestor'  => 'dashboard-gestor.php',
-        'dueno'   => 'pos.php',
+        'cajero'  => 'pos.php',
         'usuario' => 'dashboard-usuario.php'
     ];
     header("Location: " . ($rutas[$rol] ?? '../index.php'));
@@ -54,7 +54,7 @@ function normalizarRol(?string $rol): string {
     $map = [
         'admin'   => 'admin',
         'gestor'  => 'gestor', 'manager' => 'gestor',
-        'dueno'   => 'dueno', 'dueño' => 'dueno', 'owner' => 'dueno',
+        'cajero'  => 'cajero', 'cashier' => 'cajero',
         'usuario' => 'usuario', 'user' => 'usuario', 'cliente' => 'usuario',
     ];
     return $map[$rol] ?? 'usuario';
@@ -63,9 +63,8 @@ function redirSegunRol(string $rol): never {
     switch ($rol) {
         case 'admin':   header("Location: dashboard-admin.php"); break;
         case 'gestor':  header("Location: dashboard-gestor.php"); break;
-        case 'dueno':
-        case 'dueño':   header("Location: pos.php"); break;
-        case 'usuario': header("Location: index.php"); break;
+        case 'cajero':  header("Location: pos.php"); break;
+        case 'usuario': header("Location: dashboard-usuario.php"); break;
         default:        header("Location: ../index.php");
     }
     exit();
@@ -89,7 +88,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             if (!$user) {
                 $error = "❌ No estás registrado.";
                 $extraMsg = "<a href='register.php'>Regístrate aquí</a>";
-                // ⚠️ Guardar correo usado en intento fallido
                 $_SESSION['last_login_email'] = $emailVal;
             } elseif (!empty($user['password']) && password_verify($password, (string)$user['password'])) {
                 $rol = normalizarRol($user['rol'] ?? 'usuario');
@@ -97,13 +95,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 $_SESSION['usuario_id']     = (int)$user['id'];
                 $_SESSION['usuario_nombre'] = (string)$user['nombre'];
                 $_SESSION['usuario_rol']    = $rol;
-                // ✅ Limpiamos last_login_email si inicia sesión correctamente
                 unset($_SESSION['last_login_email']);
                 redirSegunRol($rol);
             } else {
                 $error = "❌ Contraseña incorrecta.";
                 $extraMsg = "<a href='forgot.php'>¿Olvidaste tu contraseña?</a>";
-                // ⚠️ Guardar correo usado en intento fallido
                 $_SESSION['last_login_email'] = $emailVal;
             }
         } catch (Throwable $e) {
@@ -138,14 +134,9 @@ if (isset($google_client) && $google_client instanceof Google_Client) {
     @keyframes fadeIn { from{opacity:0; transform:translateY(-5px);} to{opacity:1; transform:translateY(0);} }
     .toggle-pass { cursor:pointer; position:absolute; right:12px; top:38px; color:#666; font-size:.9rem; }
     .back-arrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      font-size: .95rem;
-      margin-bottom: 1rem;
-      text-decoration: none;
-      color: #555;
-      transition: all .3s;
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: .95rem; margin-bottom: 1rem;
+      text-decoration: none; color: #555; transition: all .3s;
     }
     .back-arrow:hover { color:#0b5394; transform: translateX(-3px); }
   </style>
