@@ -1,19 +1,22 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) session_start();
 
+// 🔹 Definir BASE_URL (ajústala según tu entorno)
+if (!defined('BASE_URL')) {
+    define('BASE_URL', '/LumiSpace/');
+}
+
 // Detecta página activa automáticamente
 $currentPage = basename($_SERVER['PHP_SELF']);
 function activeClass(string $page, string $current): string {
   return $page === $current ? 'active' : '';
 }
-
-// Helper: si la página actual está en un grupo → mantener submenu abierto
 function isGroupActive(array $pages, string $current): string {
   return in_array($current, $pages) ? 'show group-active' : '';
 }
 ?>
 <aside class="sidebar" id="sidebar">
-  <!-- Marca + botón colapsar -->
+  <!-- Marca -->
   <div class="brand">
     <div class="logo">A</div>
     <div class="brand-meta">
@@ -22,29 +25,39 @@ function isGroupActive(array $pages, string $current): string {
     </div>
   </div>
 
-  <!-- Menú del Administrador -->
+  <!-- Menú -->
   <nav class="menu" aria-label="Menú Administrador">
 
-    <a class="item <?= activeClass('dashboard-admin.php', $currentPage) ?>" href="dashboard-admin.php">🏠 Dashboard</a>
+    <!-- Dashboard -->
+    <a class="item <?= activeClass('dashboard-admin.php', $currentPage) ?>" 
+       href="<?= BASE_URL ?>views/dashboard-admin.php">🏠 Dashboard</a>
 
     <!-- Usuarios -->
     <button class="item has-submenu <?= isGroupActive(['usuarios.php','usuarios-crear.php','usuarios-roles.php'], $currentPage) ?>">
       👥 Usuarios
     </button>
     <div class="submenu-group <?= isGroupActive(['usuarios.php','usuarios-crear.php','usuarios-roles.php'], $currentPage) ?>">
-      <a class="subitem <?= activeClass('usuarios.php', $currentPage) ?>" href="usuarios.php">📋 Listar</a>
-      <a class="subitem <?= activeClass('usuarios-crear.php', $currentPage) ?>" href="usuarios-crear.php">➕ Crear</a>
-      <a class="subitem <?= activeClass('usuarios-roles.php', $currentPage) ?>" href="usuarios-roles.php">🛡️ Roles</a>
+      <a class="subitem <?= activeClass('usuarios.php', $currentPage) ?>" 
+         href="<?= BASE_URL ?>views/usuarios/usuarios.php">📋 Listar</a>
+      <a class="subitem <?= activeClass('usuarios-crear.php', $currentPage) ?>" 
+         href="<?= BASE_URL ?>views/usuarios/usuarios-crear.php">➕ Crear</a>
+      <a class="subitem <?= activeClass('usuarios-roles.php', $currentPage) ?>" 
+         href="<?= BASE_URL ?>views/usuarios/usuarios-roles.php">🛡️ Roles</a>
     </div>
 
     <!-- Catálogo -->
-    <button class="item has-submenu <?= isGroupActive(['productos.php','inventario.php','proveedores.php'], $currentPage) ?>">
+    <button class="item has-submenu <?= isGroupActive(['productos.php','inventario.php','proveedores.php','categorias.php'], $currentPage) ?>">
       📦 Catálogo
     </button>
-    <div class="submenu-group <?= isGroupActive(['productos.php','inventario.php','proveedores.php'], $currentPage) ?>">
-      <a class="subitem <?= activeClass('productos.php', $currentPage) ?>" href="productos.php">📚 Productos</a>
-      <a class="subitem <?= activeClass('inventario.php', $currentPage) ?>" href="inventario.php">📦 Inventario</a>
-      <a class="subitem <?= activeClass('proveedores.php', $currentPage) ?>" href="proveedores.php">🚚 Proveedores</a>
+    <div class="submenu-group <?= isGroupActive(['productos.php','inventario.php','proveedores.php','categorias.php'], $currentPage) ?>">
+      <a class="subitem <?= activeClass('productos.php', $currentPage) ?>" 
+         href="<?= BASE_URL ?>views/catalogo/productos.php">📚 Productos</a>
+      <a class="subitem <?= activeClass('inventario.php', $currentPage) ?>" 
+         href="<?= BASE_URL ?>views/inventario/inventario.php">📦 Inventario</a>
+      <a class="subitem <?= activeClass('proveedores.php', $currentPage) ?>" 
+         href="<?= BASE_URL ?>views/proveedores/proveedores.php">🚚 Proveedores</a>
+      <a class="subitem <?= activeClass('categorias.php', $currentPage) ?>" 
+         href="<?= BASE_URL ?>views/categorias/categorias.php">🏷️ Categorías</a>
     </div>
 
     <!-- Roles -->
@@ -52,8 +65,10 @@ function isGroupActive(array $pages, string $current): string {
       🛡️ Roles
     </button>
     <div class="submenu-group <?= isGroupActive(['gestores.php','cajeros.php'], $currentPage) ?>">
-      <a class="subitem <?= activeClass('gestores.php', $currentPage) ?>" href="gestores.php">📊 Gestores</a>
-      <a class="subitem <?= activeClass('cajeros.php', $currentPage) ?>" href="cajeros.php">💰 Cajeros</a>
+      <a class="subitem <?= activeClass('gestores.php', $currentPage) ?>" 
+         href="<?= BASE_URL ?>views/roles/gestores.php">📊 Gestores</a>
+      <a class="subitem <?= activeClass('cajeros.php', $currentPage) ?>" 
+         href="<?= BASE_URL ?>views/roles/cajeros.php">💰 Cajeros</a>
     </div>
 
     <!-- Reportes -->
@@ -61,13 +76,16 @@ function isGroupActive(array $pages, string $current): string {
       📊 Reportes
     </button>
     <div class="submenu-group <?= isGroupActive(['reportes.php','reportes-ventas.php','reportes-inventario.php'], $currentPage) ?>">
-      <a class="subitem <?= activeClass('reportes.php', $currentPage) ?>" href="reportes.php">📑 Generales</a>
-      <a class="subitem <?= activeClass('reportes-ventas.php', $currentPage) ?>" href="reportes-ventas.php">📈 Ventas</a>
-      <a class="subitem <?= activeClass('reportes-inventario.php', $currentPage) ?>" href="reportes-inventario.php">📦 Inventario</a>
+      <a class="subitem <?= activeClass('reportes.php', $currentPage) ?>" 
+         href="<?= BASE_URL ?>views/reportes/reportes.php">📑 Generales</a>
+      <a class="subitem <?= activeClass('reportes-ventas.php', $currentPage) ?>" 
+         href="<?= BASE_URL ?>views/reportes/reportes-ventas.php">📈 Ventas</a>
+      <a class="subitem <?= activeClass('reportes-inventario.php', $currentPage) ?>" 
+         href="<?= BASE_URL ?>views/reportes/reportes-inventario.php">📦 Inventario</a>
     </div>
   </nav>
 
-  <!-- Controles inferiores -->
+  <!-- Footer -->
   <div class="sidebar-footer">
     <button id="darkToggle" class="item toggle-theme" type="button">🌙 Modo Oscuro</button>
     <div class="floating-card">
@@ -89,7 +107,7 @@ function isGroupActive(array $pages, string $current): string {
   --glow: 0 0 12px rgba(161, 104, 58, .6);
 }
 
-/* === Sidebar base === */
+/* Sidebar */
 .sidebar {
   width: 270px;
   background: var(--sidebar-bg);
@@ -116,14 +134,6 @@ function isGroupActive(array $pages, string $current): string {
   box-shadow: var(--glow);
 }
 .brand-meta small { color: rgba(255,255,255,.7); font-size: .85rem; }
-.collapse-btn {
-  margin-left: auto;
-  background: none;
-  border: none;
-  color: #fff;
-  font-size: 1.2rem;
-  cursor: pointer;
-}
 
 /* Items */
 .menu .item, .subitem, .toggle-theme {
@@ -205,27 +215,18 @@ darkToggle?.addEventListener("click", () => {
   updateThemeBtn();
 });
 
-// 📂 Submenús tipo acordeón (solo uno abierto a la vez)
+// 📂 Submenús tipo acordeón
 document.querySelectorAll(".item.has-submenu").forEach(btn => {
   btn.addEventListener("click", () => {
     const allSubmenus = document.querySelectorAll(".submenu-group");
     const allButtons = document.querySelectorAll(".item.has-submenu");
     const submenu = btn.nextElementSibling;
 
-    // cerrar todos
     allSubmenus.forEach(s => s.classList.remove("show"));
     allButtons.forEach(b => b.classList.remove("group-active"));
 
-    // abrir el que corresponde
     submenu.classList.add("show");
     btn.classList.add("group-active");
   });
-});
-
-// 🔄 Colapsar Sidebar
-const sidebar = document.getElementById("sidebar");
-const toggleSidebar = document.getElementById("toggleSidebar");
-toggleSidebar?.addEventListener("click", () => {
-  sidebar.classList.toggle("collapsed");
 });
 </script>

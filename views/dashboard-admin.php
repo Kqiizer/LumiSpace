@@ -1,69 +1,24 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) session_start();
+require_once __DIR__ . "/../config/functions.php";
 
-// 🚨 Validación: solo usuarios con rol "admin" pueden entrar
+// 🚨 Validación: solo rol admin
 if (!isset($_SESSION['usuario_id']) || ($_SESSION['usuario_rol'] ?? '') !== 'admin') {
     header("Location: ../views/login.php?error=unauthorized");
     exit();
 }
 
 /* ======================================================
-   FUNCIONES TEMPORALES (quita esto cuando uses tu BD real)
+   DATOS DESDE LA BD
    ====================================================== */
-function getTotalUsuarios() { return 120; }
-function getTotalGestores() { return 5; }
-function getTotalProductos() { return 450; }
-function getIngresosMes() { return 154000.75; }
-function getUsuariosRecientes($limit = 5) {
-    return [
-        ["nombre"=>"Carlos Pérez","email"=>"carlos@example.com","fecha_registro"=>"2025-09-08 10:30:00"],
-        ["nombre"=>"Ana López","email"=>"ana@example.com","fecha_registro"=>"2025-09-07 15:10:00"],
-        ["nombre"=>"María Gómez","email"=>"maria@example.com","fecha_registro"=>"2025-09-06 11:45:00"],
-    ];
-}
-function getInventarioResumen() {
-    return [
-        ["categoria"=>"Iluminación LED","cantidad"=>120],
-        ["categoria"=>"Exteriores","cantidad"=>80],
-        ["categoria"=>"Interiores","cantidad"=>250],
-    ];
-}
-function getUsuariosMensuales() {
-    return [
-        ["mes"=>"Enero","total"=>15],
-        ["mes"=>"Febrero","total"=>22],
-        ["mes"=>"Marzo","total"=>30],
-        ["mes"=>"Abril","total"=>28],
-        ["mes"=>"Mayo","total"=>35],
-        ["mes"=>"Junio","total"=>40],
-        ["mes"=>"Julio","total"=>50],
-        ["mes"=>"Agosto","total"=>45],
-        ["mes"=>"Septiembre","total"=>20],
-    ];
-}
-function formatCurrency($amount) { return "$" . number_format($amount, 2, '.', ','); }
-function timeAgo($date) {
-    $timestamp = strtotime($date);
-    $diff = time() - $timestamp;
-    if ($diff < 60) return "justo ahora";
-    $minutes = floor($diff / 60);
-    if ($minutes < 60) return "hace $minutes min";
-    $hours = floor($minutes / 60);
-    if ($hours < 24) return "hace $hours horas";
-    $days = floor($hours / 24);
-    return "hace $days días";
-}
-
-/* ======================================================
-   DATOS
-   ====================================================== */
-$totalUsuarios   = getTotalUsuarios();
-$totalGestores   = getTotalGestores();
-$totalProductos  = getTotalProductos();
-$ingresosMes     = getIngresosMes();
+$totalUsuarios     = getTotalUsuarios();
+$totalGestores     = getTotalGestores();
+$totalProductos    = getTotalProductos();
+$ingresosMes       = getIngresosMes();
 $usuariosRecientes = getUsuariosRecientes(5);
 $inventarioResumen = getInventarioResumen();
 $usuariosMensuales = getUsuariosMensuales();
+$ventasMensuales   = getVentasMensuales();
 
 // 📌 Última conexión
 if (!isset($_SESSION['ultima_conexion'])) {
@@ -79,17 +34,84 @@ $ultimaConexion = $_SESSION['ultima_conexion'];
   <title>Dashboard Admin - LumiSpace</title>
   <link rel="stylesheet" href="../css/dashboard.css" />
   <style>
-    .time-box {
-      display:flex; justify-content:space-between; align-items:center;
-      padding:12px 18px; margin:0 0 20px 0;
-      border-radius:8px;
-      background:linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,255,255,0.6));
-      box-shadow:var(--shadow);
+    /* ===== PALETA CLARA POR DEFECTO ===== */
+    body {
+      background: linear-gradient(135deg, #f5f5f7, #ffffff, #ececec);
+      font-family: "Segoe UI", Arial, sans-serif;
+      color: #222;
     }
-    .time-box span {
-      font-weight:700; font-size:1rem; color:var(--act1);
-      text-shadow:0 0 6px rgba(143,94,75,.5);
+    .content { padding: 24px; }
+    .page-title {
+      font-size: 1.8rem; font-weight: 700;
+      margin-bottom: 12px; color: #ff8c42;
     }
+
+    /* ===== GRID & CARDS ===== */
+    .grid { display: grid; gap: 20px; }
+    .grid-4 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+    .grid-2 { grid-template-columns: 1fr 1fr; }
+
+    .card {
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: 0 6px 14px rgba(0,0,0,.08);
+      transition: transform .2s ease;
+    }
+    .card:hover { transform: translateY(-4px); }
+
+    /* ===== MÉTRICAS ===== */
+    .metric { text-align: center; }
+    .metric-title { font-size: .95rem; color: #666; margin-bottom: 8px; display:block; }
+    .metric-val { font-size: 1.8rem; font-weight: 700; color: #222; }
+    .metric-val::after {
+      content:""; display:block; height:2px; width:30px;
+      background:#ff8c42; margin:6px auto 0; border-radius:2px;
+    }
+
+    /* ===== LISTAS ===== */
+    .list { list-style: none; margin: 0; padding: 0; }
+    .list li {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px; border-bottom: 1px solid #eee;
+    }
+    .ava {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: #ff8c42; color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: bold;
+    }
+    .pill {
+      background: #ff8c42; color: #fff;
+      font-size: .8rem; padding: 4px 10px;
+      border-radius: 20px;
+    }
+
+    /* ===== CHARTS ===== */
+    canvas {
+      background: #fafafa;
+      border: 1px solid #eee;
+      border-radius: 12px;
+      padding: 10px;
+    }
+
+    /* ===== MODO OSCURO (se activa con body.dark) ===== */
+    body.dark {
+      background: linear-gradient(135deg, #1c1b1a, #2e2620, #3d322b);
+      color: #fff;
+    }
+    body.dark .card {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: #fff;
+    }
+    body.dark .metric-title { color: #ccc; }
+    body.dark .metric-val { color: #fff; }
+    body.dark .list li { border-bottom: 1px solid rgba(255,255,255,0.1); }
+    body.dark .ava { background: #ffb366; color: #1c1b1a; }
+    body.dark .pill { background: #ffb366; color: #1c1b1a; }
+    body.dark canvas { background: rgba(255,255,255,0.05); border:none; }
   </style>
 </head>
 <body>
@@ -97,118 +119,78 @@ $ultimaConexion = $_SESSION['ultima_conexion'];
   <main class="main">
     <?php include("../includes/header-admin.php"); ?>
 
-    <!-- Hora y última conexión -->
-    <div class="time-box">
-      <span id="local-time">⏳ Cargando hora...</span>
-      <span id="last-conn" data-time="<?= $ultimaConexion ?>">Última conexión: ...</span>
-    </div>
-
     <section class="content">
+      <h1 class="page-title">📊 Panel de Control</h1>
+
       <!-- MÉTRICAS -->
-      <div class="grid grid-4 gap-16">
-        <article class="card metric"><div class="metric-top"><span class="metric-title">Usuarios Totales</span></div><div class="metric-val"><?= $totalUsuarios ?></div></article>
-        <article class="card metric"><div class="metric-top"><span class="metric-title">Gestores Activos</span></div><div class="metric-val"><?= $totalGestores ?></div></article>
-        <article class="card metric"><div class="metric-top"><span class="metric-title">Productos</span></div><div class="metric-val"><?= $totalProductos ?></div></article>
-        <article class="card metric"><div class="metric-top"><span class="metric-title">Ingresos Mes</span></div><div class="metric-val"><?= formatCurrency($ingresosMes) ?></div></article>
+      <div class="grid grid-4">
+        <article class="card metric">
+          <span class="metric-title">Usuarios Totales</span>
+          <div class="metric-val"><?= $totalUsuarios ?></div>
+        </article>
+        <article class="card metric">
+          <span class="metric-title">Gestores Activos</span>
+          <div class="metric-val"><?= $totalGestores ?></div>
+        </article>
+        <article class="card metric">
+          <span class="metric-title">Productos</span>
+          <div class="metric-val"><?= $totalProductos ?></div>
+        </article>
+        <article class="card metric">
+          <span class="metric-title">Ingresos Mes</span>
+          <div class="metric-val"><?= formatCurrency($ingresosMes) ?></div>
+        </article>
       </div>
 
-      <!-- GRÁFICO DE CRECIMIENTO -->
-      <div class="grid grid-1 gap-16 mt-16">
-        <article class="card p-16 clickable">
-          <header class="card-head"><span class="card-title">Crecimiento de Usuarios</span></header>
+      <!-- GRÁFICOS -->
+      <div class="grid grid-2 mt-16">
+        <article class="card">
+          <h3>📈 Crecimiento de Usuarios</h3>
           <canvas id="usuariosChart" height="120"></canvas>
+        </article>
+        <article class="card">
+          <h3>💵 Ventas Mensuales</h3>
+          <canvas id="ventasChart" height="120"></canvas>
         </article>
       </div>
 
       <!-- LISTAS -->
-      <div class="grid grid-2 gap-16 mt-16">
-        <article class="card p-16 clickable">
-          <header class="card-head"><span class="card-title">Usuarios Recientes</span></header>
+      <div class="grid grid-2 mt-16">
+        <article class="card">
+          <h3>👤 Usuarios Recientes</h3>
           <ul class="list">
             <?php foreach ($usuariosRecientes as $u): ?>
-              <li class="row clickable">
-                <span class="ava"><?= strtoupper(substr($u['nombre'],0,2)) ?></span>
-                <div class="info"><div class="title"><?= htmlspecialchars($u['nombre']) ?></div><div class="sub"><?= htmlspecialchars($u['email']) ?></div></div>
-                <div class="time"><?= timeAgo($u['fecha_registro']) ?></div>
+              <li>
+                <div style="display:flex; gap:10px; align-items:center;">
+                  <span class="ava"><?= strtoupper(substr($u['nombre'],0,2)) ?></span>
+                  <div>
+                    <div><strong><?= htmlspecialchars($u['nombre']) ?></strong></div>
+                    <div style="font-size:.85rem; color:#666;"><?= htmlspecialchars($u['email']) ?></div>
+                  </div>
+                </div>
+                <div style="font-size:.8rem; color:#999;"><?= timeAgo($u['fecha_registro']) ?></div>
               </li>
             <?php endforeach; ?>
           </ul>
         </article>
 
-        <article class="card p-16 clickable">
-          <header class="card-head"><span class="card-title">Resumen Inventario</span></header>
+        <article class="card">
+          <h3>📦 Resumen Inventario</h3>
           <ul class="list">
             <?php foreach ($inventarioResumen as $item): ?>
-              <li class="row clickable">
-                <span class="title"><?= htmlspecialchars($item['categoria']) ?></span>
-                <span class="pill"><?= (int)$item['cantidad'] ?> items</span>
+              <li>
+                <span><?= htmlspecialchars($item['categoria']) ?></span>
+                <span class="pill"><?= (int)$item['cantidad'] ?> ítems</span>
               </li>
             <?php endforeach; ?>
           </ul>
         </article>
       </div>
-
-      <!-- ACCIONES -->
-      <section class="card p-16 mt-16">
-        <header class="card-head">
-          <span class="card-title">Acciones Administrativas 
-            <button id="toggle-dark" class="action" style="padding:6px 14px;height:auto;font-size:.8rem;">🌙</button>
-          </span>
-        </header>
-        <div class="actions">
-          <a href="usuarios.php" class="action"><i>👥</i> Gestionar Usuarios</a>
-          <a href="productos.php" class="action"><i>📦</i> Gestionar Productos</a>
-          <a href="reportes.php" class="action"><i>📈</i> Reportes Globales</a>
-          <a href="../logout.php" class="action"><i>🚪</i> Cerrar Sesión</a>
-        </div>
-      </section>
     </section>
   </main>
 
-  <!-- Panel Notificaciones -->
-  <div id="notif-panel" class="notif-panel hidden">
-    <h3>🔔 Notificaciones</h3>
-    <ul id="notif-list"><li>Cargando...</li></ul>
-  </div>
-
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script>
-  // 🕒 Hora en vivo
-  function updateTime() {
-    const now = new Date();
-    const fecha = now.toLocaleDateString("es-ES",{ weekday:"long", month:"short", day:"numeric" });
-    const hora  = now.toLocaleTimeString("es-ES",{ hour:"2-digit", minute:"2-digit", second:"2-digit", hour12:true });
-    document.getElementById("local-time").textContent = `${fecha} - ${hora}`;
-  }
-  setInterval(updateTime, 1000); updateTime();
-
-  // 📌 Última conexión -> "hace X tiempo"
-  function timeAgo(dateString) {
-    const date = new Date(dateString.replace(" ", "T"));
-    const now = new Date();
-    const seconds = Math.floor((now - date) / 1000);
-
-    let interval = Math.floor(seconds / 31536000);
-    if (interval >= 1) return `hace ${interval} año${interval>1?'s':''}`;
-    interval = Math.floor(seconds / 2592000);
-    if (interval >= 1) return `hace ${interval} mes${interval>1?'es':''}`;
-    interval = Math.floor(seconds / 86400);
-    if (interval >= 1) return `hace ${interval} día${interval>1?'s':''}`;
-    interval = Math.floor(seconds / 3600);
-    if (interval >= 1) return `hace ${interval} hora${interval>1?'s':''}`;
-    interval = Math.floor(seconds / 60);
-    if (interval >= 1) return `hace ${interval} minuto${interval>1?'s':''}`;
-    return "justo ahora";
-  }
-
-  function updateLastConn() {
-    const el = document.getElementById("last-conn");
-    const rawTime = el.getAttribute("data-time");
-    if (rawTime) el.textContent = "Última conexión: " + timeAgo(rawTime);
-  }
-  setInterval(updateLastConn, 60000);
-  updateLastConn();
-
   // 📈 Gráfico de usuarios mensuales
   new Chart(document.getElementById('usuariosChart'), {
     type: 'line',
@@ -217,11 +199,26 @@ $ultimaConexion = $_SESSION['ultima_conexion'];
       datasets: [{
         label: "Usuarios nuevos",
         data: <?= json_encode(array_column($usuariosMensuales, 'total')) ?>,
-        borderColor: "#6c63ff",
-        fill:false,
-        tension:0.3
+        borderColor: "#ff8c42",
+        backgroundColor: "rgba(255,140,66,0.2)",
+        fill:true,
+        tension:0.4
       }]
     }
+  });
+
+  // 📊 Gráfico de ventas mensuales
+  new Chart(document.getElementById('ventasChart'), {
+    type: 'bar',
+    data: {
+      labels: <?= json_encode(array_column($ventasMensuales, 'mes')) ?>,
+      datasets: [{
+        label: "Ingresos ($)",
+        data: <?= json_encode(array_column($ventasMensuales, 'total')) ?>,
+        backgroundColor: "#6c63ff"
+      }]
+    },
+    options: { plugins:{legend:{display:false}} }
   });
   </script>
 </body>

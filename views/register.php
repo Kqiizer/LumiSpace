@@ -10,10 +10,9 @@ require_once __DIR__ . "/../login-google/config.php"; // $google_client
 if (isset($_SESSION['usuario_id'], $_SESSION['usuario_rol'])) {
     $rol = strtolower($_SESSION['usuario_rol']);
     $rutas = [
-        'admin'   => 'dashboard-admin.php',
-        'gestor'  => 'dashboard-gestor.php',
-        'dueno'   => 'pos.php',
-        'usuario' => '../index.php'
+        'admin'  => 'dashboard-admin.php',
+        'gestor' => 'dashboard-gestor.php',
+        'cajero' => 'dashboard-cajero.php',
     ];
     header("Location: " . ($rutas[$rol] ?? '../index.php'));
     exit();
@@ -49,10 +48,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !$error) {
     if (!hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'] ?? '')) {
         $error = "Solicitud inválida.";
     } else {
-        $nombre   = trim($_POST['nombre'] ?? '');
-        $email    = strtolower(trim($_POST['email'] ?? ''));
-        $password = (string)($_POST['password'] ?? '');
-        $rol      = $isGoogle ? 'usuario' : trim($_POST['rol'] ?? '');
+        $nombre    = trim($_POST['nombre'] ?? '');
+        $email     = strtolower(trim($_POST['email'] ?? ''));
+        $password  = (string)($_POST['password'] ?? '');
+        $rol       = $isGoogle ? 'cajero' : trim($_POST['rol'] ?? ''); // por defecto cajero con Google
         $proveedor = $isGoogle ? 'google' : 'manual';
 
         // Validaciones
@@ -66,7 +65,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !$error) {
             $error = "⚠️ Este correo ya está registrado. <a href='login.php'>Inicia sesión aquí</a>.";
         } else {
             // Registrar con proveedor
-            $res = registrarUsuario($nombre, $email, $isGoogle ? null : $password, $rol, );
+            $res = registrarUsuario($nombre, $email, $isGoogle ? null : $password, $rol);
             if ($res === false) {
                 $error = "Error en el registro. Inténtalo de nuevo.";
             } else {
@@ -160,9 +159,8 @@ if (isset($google_client) && $google_client instanceof Google_Client) {
           <select name="rol" <?= $isGoogle ? "disabled" : "" ?> required>
             <option value="">-- Selecciona un rol --</option>
             <option value="admin"   <?= (field('rol')==='admin'   ? 'selected' : '') ?>>Administrador</option>
-            <option value="usuario" <?= (field('rol')==='usuario' ? 'selected' : '') ?>>Usuario</option>
-            <option value="dueno"   <?= (field('rol')==='dueno'   ? 'selected' : '') ?>>POS</option>
             <option value="gestor"  <?= (field('rol')==='gestor'  ? 'selected' : '') ?>>Gestor</option>
+            <option value="cajero"  <?= (field('rol')==='cajero'  ? 'selected' : '') ?>>Cajero</option>
           </select>
           <i class="fa-solid fa-user-shield icon"></i>
         </div>
