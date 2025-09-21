@@ -54,49 +54,11 @@ function getVentasRecientes(int $limit = 6): array {
 }
 
 /**
- * Tendencia de ventas del año actual por mes.
- */
-function getVentasMensuales(?int $year = null): array {
-    $conn = getDBConnection();
-    $year = $year ?? (int)date('Y');
-
-    $sql = "
-        SELECT MONTH(fecha) AS mes, IFNULL(SUM(total),0) AS total
-        FROM ventas
-        WHERE YEAR(fecha)=?
-        GROUP BY MONTH(fecha)
-        ORDER BY MONTH(fecha)
-    ";
-
-    $stmt = $conn->prepare($sql);
-    if (!$stmt) return [];
-    $stmt->bind_param("i", $year);
-    $stmt->execute();
-    $res = $stmt->get_result();
-
-    // Inicializar meses 1..12 en 0
-    $out = [];
-    for ($m = 1; $m <= 12; $m++) {
-        $out[$m] = ['mes' => $m, 'total' => 0.0];
-    }
-
-    if ($res) {
-        while ($row = $res->fetch_assoc()) {
-            $m = (int)$row['mes'];
-            $out[$m]['total'] = (float)$row['total'];
-        }
-    }
-
-    return array_values($out);
-}
-
-/**
  * Ventas por categoría (monto).
  */
 function getVentasPorCategoria(): array {
     $conn = getDBConnection();
 
-    // Intento con tabla categorias
     $sql = "
         SELECT 
             COALESCE(cat.nombre, 'Sin categoría') AS categoria,
@@ -112,7 +74,7 @@ function getVentasPorCategoria(): array {
         return $res->fetch_all(MYSQLI_ASSOC);
     }
 
-    // Fallback: usar campo categoria en productos
+    // Fallback
     $sql2 = "
         SELECT 
             COALESCE(p.categoria, 'Sin categoría') AS categoria,

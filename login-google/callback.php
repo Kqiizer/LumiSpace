@@ -13,7 +13,7 @@ function normalizarRol(?string $rol): string {
     $map = [
         'admin'   => 'admin',
         'gestor'  => 'gestor', 'manager' => 'gestor',
-        'dueno'   => 'dueno', 'dueño' => 'dueno', 'owner' => 'dueno',
+        'cajero'  => 'cajero', 'cashier' => 'cajero',
         'usuario' => 'usuario', 'user' => 'usuario', 'cliente' => 'usuario',
     ];
     return $map[$rol] ?? 'usuario';
@@ -21,12 +21,20 @@ function normalizarRol(?string $rol): string {
 
 function redirSegunRol(string $rol): never {
     switch ($rol) {
-        case 'admin':   header("Location: ../views/dashboard-admin.php"); break;
-        case 'gestor':  header("Location: ../views/dashboard-gestor.php"); break;
-        case 'dueno':
-        case 'dueño':   header("Location: ../views/pos.php"); break;
-        case 'usuario': header("Location: ../views/index.php"); break;
-        default:        header("Location: ../index.php");
+        case 'admin':
+            header("Location: ../views/dashboard-admin.php"); 
+            break;
+        case 'gestor':
+            header("Location: ../views/dashboard-gestor.php"); 
+            break;
+        case 'cajero':
+            header("Location: ../views/pos.php"); 
+            break;
+        case 'usuario':
+            header("Location: ../views/index.php"); 
+            break;
+        default:
+            header("Location: ../index.php");
     }
     exit();
 }
@@ -85,12 +93,6 @@ try {
         header("Location: $url");
         exit();
     }
-
-    // 🚨 Si no existe campo 'proveedor' en tu tabla → ignora este check
-    // if (!isset($user['proveedor']) || $user['proveedor'] !== 'google') {
-    //     header("Location: ../views/login.php?error=manual_account&email=" . urlencode($email));
-    //     exit();
-    // }
 
     // 4) Crear sesión
     $rol = normalizarRol($user['rol'] ?? 'usuario');

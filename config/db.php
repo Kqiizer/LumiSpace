@@ -4,24 +4,26 @@ declare(strict_types=1);
 /* ============================
    Configuración DB local (XAMPP)
    ============================ */
-$host = "127.0.0.1"; // o "localhost"
-$port = 3306;
-$user = "root";      // usuario por defecto en XAMPP
-$pass = "";          // contraseña (vacía por defecto en XAMPP)
-$db   = "LumiSpace"; // nombre de tu base de datos
+$DB_HOST = "127.0.0.1"; // o "localhost"
+$DB_PORT = 3306;
+$DB_USER = "root";      // usuario por defecto en XAMPP
+$DB_PASS = "";          // contraseña (vacía por defecto en XAMPP)
+$DB_NAME = "LumiSpace"; // nombre de tu base de datos
 
 /**
- * Devuelve SIEMPRE una conexión nueva a MySQL.
+ * Devuelve una conexión MySQLi.
  */
-function getDBConnection(): mysqli {
-    global $host, $port, $user, $pass, $db;
+if (!function_exists('getDBConnection')) {
+    function getDBConnection(): mysqli {
+        global $DB_HOST, $DB_PORT, $DB_USER, $DB_PASS, $DB_NAME;
 
-    $conn = new mysqli($host, $user, $pass, $db, $port);
+        $conn = new mysqli($DB_HOST, $DB_USER, $DB_PASS, $DB_NAME, $DB_PORT);
 
-    if ($conn->connect_error) {
-        die("❌ Error en la conexión a MySQL: " . $conn->connect_error);
+        if ($conn->connect_error) {
+            die("❌ Error en la conexión a MySQL: " . $conn->connect_error);
+        }
+
+        $conn->set_charset("utf8mb4");
+        return $conn;
     }
-
-    $conn->set_charset("utf8mb4");
-    return $conn;
 }

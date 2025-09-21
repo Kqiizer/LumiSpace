@@ -2,15 +2,18 @@
 if (session_status() === PHP_SESSION_NONE) session_start();
 
 require_once __DIR__ . "/../config/functions.php";
-require_once __DIR__ . "/../gestor/ventas.php"; // ✅ Incluye funciones de ventas
+require_once __DIR__ . "/../gestor/ventas.php"; // ✅ Funciones de ventas
 
 // ============================
 // 📦 Cargar productos reales
 // ============================
 $conn = getDBConnection();
-$sql = "SELECT id, nombre, precio, stock, categoria_id 
-        FROM productos 
-        ORDER BY nombre ASC";
+$sql = "SELECT p.id, p.nombre, p.precio, p.stock, 
+               c.nombre AS categoria, 
+               p.imagen
+        FROM productos p
+        LEFT JOIN categorias c ON p.categoria_id = c.id
+        ORDER BY p.nombre ASC";
 $res = $conn->query($sql);
 $productos = [];
 while ($row = $res->fetch_assoc()) {
@@ -19,9 +22,9 @@ while ($row = $res->fetch_assoc()) {
         'nombre'   => $row['nombre'],
         'precio'   => (float)$row['precio'],
         'stock'    => (int)$row['stock'],
-        'categoria'=> [$row['categoria_id']], 
+        'categoria'=> $row['categoria'] ?? 'General',
         'estado'   => $row['stock'] > 20 ? 'disponible' : ($row['stock'] > 5 ? 'poco' : 'bajo'),
-        'img'      => "../images/prod_" . $row['id'] . ".jpg" // opcional
+        'img'      => !empty($row['imagen']) ? "../" . $row['imagen'] : "../images/default.png"
     ];
 }
 
@@ -93,7 +96,10 @@ $ventasRecientes = getVentasRecientes(5);
   <section class="quick">
     <div class="quick-grid">
       <?php foreach(array_slice($productos,0,4) as $p): ?>
-        <button class="quick-item" data-id="<?= $p['id']; ?>" data-precio="<?= $p['precio']; ?>">
+        <button class="quick-item" 
+                data-id="<?= $p['id']; ?>" 
+                data-precio="<?= $p['precio']; ?>"
+                data-nombre="<?= htmlspecialchars($p['nombre']); ?>">
           <span><?= htmlspecialchars($p['nombre']); ?></span>
           <strong>$<?= number_format($p['precio'],0); ?></strong>
         </button>
@@ -105,9 +111,12 @@ $ventasRecientes = getVentasRecientes(5);
   <section class="filters">
     <div class="chips">
       <button class="chip is-active" data-filter="todos">Todos</button>
-      <button class="chip" data-filter="LED">LED</button>
-      <button class="chip" data-filter="Interiores">Interiores</button>
-      <button class="chip" data-filter="Exteriores">Exteriores</button>
+      <?php 
+      // 🔹 Generar chips de categorías automáticamente
+      $cats = array_unique(array_column($productos, 'categoria'));
+      foreach ($cats as $cat): ?>
+        <button class="chip" data-filter="<?= htmlspecialchars($cat); ?>"><?= htmlspecialchars($cat); ?></button>
+      <?php endforeach; ?>
     </div>
     <input type="text" id="buscador" placeholder="Buscar productos (F2)">
   </section>
@@ -120,15 +129,15 @@ $ventasRecientes = getVentasRecientes(5);
           data-id="<?= $p['id']; ?>"
           data-nombre="<?= htmlspecialchars($p['nombre']); ?>"
           data-precio="<?= $p['precio']; ?>"
-          data-categorias='<?= json_encode($p['categoria']); ?>'>
+          data-categoria="<?= htmlspecialchars($p['categoria']); ?>">
+          
           <div class="thumb" style="background-image:url('<?= htmlspecialchars($p['img']); ?>')">
             <div class="labels">
-              <?php foreach ($p['categoria'] as $c): ?>
-                <span class="label"><?= htmlspecialchars($c); ?></span>
-              <?php endforeach; ?>
+              <span class="label"><?= htmlspecialchars($p['categoria']); ?></span>
             </div>
             <button class="preview">Vista previa</button>
           </div>
+          
           <div class="info">
             <h3><?= htmlspecialchars($p['nombre']); ?></h3>
             <div class="row">

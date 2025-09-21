@@ -83,7 +83,7 @@ function normalizarRol(?string $rol): string {
     $map = [
         'admin'   => 'admin',
         'gestor'  => 'gestor', 'manager' => 'gestor',
-        'dueno'   => 'dueno', 'dueño' => 'dueno', 'owner' => 'dueno',
+        'cajero'  => 'cajero', 'cashier' => 'cajero',
         'usuario' => 'usuario', 'user' => 'usuario', 'cliente' => 'usuario',
     ];
     return $map[$rol] ?? 'usuario';
@@ -108,7 +108,7 @@ $rutas = [
     'admin'   => '../views/dashboard-admin.php',
     'usuario' => '../views/index.php',
     'gestor'  => '../views/dashboard-gestor.php',
-    'dueno'   => '../views/pos.php'
+    'cajero'   => '../views/pos.php'
 ];
 
 header('Location: ' . ($rutas[$rol] ?? '../index.php'));
