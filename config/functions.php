@@ -190,6 +190,15 @@ function registrarVenta(int $usuario_id, int $cajero_id, array $cart, float $des
         return null;
     }
 }
+function getVentasHoy(): array {
+    $conn = getDBConnection();
+    $sql = "SELECT COUNT(*) as transacciones, SUM(total) as total 
+            FROM ventas 
+            WHERE DATE(fecha) = CURDATE()";
+    $res = $conn->query($sql);
+    return $res->fetch_assoc() ?: ["transacciones" => 0, "total" => 0];
+}
+
 
 /* ============================================================
    Funciones para el Dashboard Admin
@@ -470,6 +479,37 @@ function getMovimientos(): array {
 /* ============================================================
    Productos
    ============================================================ */
+   function getProductosMasVendidos(int $limit = 10): array {
+    $conn = getDBConnection();
+    $sql = "SELECT p.id, p.nombre, p.precio, p.stock, p.imagen, 
+                   SUM(dv.cantidad) as total_vendido
+            FROM productos p
+            JOIN detalle_ventas dv ON p.id = dv.producto_id
+            GROUP BY p.id
+            ORDER BY total_vendido DESC
+            LIMIT ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("i", $limit);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    return $res->fetch_all(MYSQLI_ASSOC);
+}
+
+   function getProductosPublicos($limit = 12): array {
+    $conn = getDBConnection();
+    $sql = "SELECT p.id, p.nombre, p.descripcion, p.precio, p.precio_original, 
+                   p.descuento, p.imagen, c.nombre AS categoria
+            FROM productos p
+            LEFT JOIN categorias c ON p.categoria_id = c.id
+            WHERE p.estado = 'activo'
+            ORDER BY p.creado_en DESC
+            LIMIT ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("i", $limit);
+    $stmt->execute();
+    return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+}
+
 function getProductos(): array {
     $conn = getDBConnection();
     $sql = "SELECT p.*, c.nombre as categoria, pr.nombre as proveedor
@@ -566,6 +606,30 @@ function inactivarProducto(int $id): bool {
     $stmt->bind_param("i", $id);
     return $stmt->execute();
 }
+function getProductosPorCategoria($categoria = null, $limit = 12) {
+    $conn = getDBConnection();
+    $limit = (int)$limit; // ✅ Sanitizamos el límite
+
+    if ($categoria) {
+        $sql = "SELECT * FROM productos WHERE categoria = ? ORDER BY creado_en DESC LIMIT $limit";
+        $stmt = $conn->prepare($sql);
+        if (!$stmt) {
+            die("Error en prepare: " . $conn->error);
+        }
+        $stmt->bind_param("s", $categoria);
+    } else {
+        $sql = "SELECT * FROM productos ORDER BY creado_en DESC LIMIT $limit";
+        $stmt = $conn->prepare($sql);
+        if (!$stmt) {
+            die("Error en prepare: " . $conn->error);
+        }
+    }
+
+    $stmt->execute();
+    $res = $stmt->get_result();
+    return $res->fetch_all(MYSQLI_ASSOC);
+}
+
 
 
 /* ============================================================
@@ -601,12 +665,17 @@ function insertarProveedor(string $nombre, ?string $contacto, ?string $telefono,
 /* ============================================================
    Categorías
    ============================================================ */
+
 function getCategorias(): array {
     $conn = getDBConnection();
-    $sql = "SELECT id, nombre, descripcion FROM categorias ORDER BY nombre ASC";
+    $sql = "SELECT id, nombre FROM categorias ORDER BY nombre ASC";
     $res = $conn->query($sql);
     return $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
 }
+
+
+// 🔹 función para traer productos por categoría
+
 
 
 function insertarCategoria($nombre, $descripcion, $imagenPath = null): bool {
