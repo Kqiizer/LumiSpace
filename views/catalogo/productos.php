@@ -102,6 +102,7 @@ $categorias  = getCategorias();
               <th>Proveedor</th>
               <th>Precio</th>
               <th>Stock</th>
+              <th>Creado en</th> <!-- 🔹 Nueva columna -->
               <th>Acciones</th>
             </tr>
           </thead>
@@ -128,6 +129,7 @@ $categorias  = getCategorias();
                     ?>
                     <span class="badge <?= $class ?>"><?= $stock ?></span>
                   </td>
+                  <td><?= !empty($p['creado_en']) ? date("d/m/Y H:i", strtotime($p['creado_en'])) : '-' ?></td> <!-- 📅 Fecha -->
                   <td>
                     <a href="producto-editar.php?id=<?= $p['id'] ?>" class="btn btn-sm">✏️</a>
                     <a href="producto-eliminar.php?id=<?= $p['id'] ?>" class="btn btn-sm btn-danger" onclick="return confirm('¿Eliminar producto?')">🗑️</a>
@@ -135,7 +137,7 @@ $categorias  = getCategorias();
                 </tr>
               <?php endforeach; ?>
             <?php else: ?>
-              <tr><td colspan="8" style="text-align:center;">No hay productos registrados.</td></tr>
+              <tr><td colspan="9" style="text-align:center;">No hay productos registrados.</td></tr>
             <?php endif; ?>
           </tbody>
         </table>
