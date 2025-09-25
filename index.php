@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>LumiSpace</title>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/style.css">
 </head>
 
 <body>
@@ -67,7 +67,7 @@
             </p>
 
             <div class="hero-buttons">
-              <a href="#" class="btn-primary">Shop Now <i class="fas fa-arrow-right"></i></a>
+              <a href="#" class="btn-primary">Compra Ahora <i class="fas fa-arrow-right"></i></a>
               <a href="#" class="btn-secondary">View All Products</a>
             </div>
 
