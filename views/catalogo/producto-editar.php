@@ -97,7 +97,8 @@ $proveedores = getProveedores();
 
           <label>Imagen actual</label>
           <?php if (!empty($producto['imagen'])): ?>
-            <img src="../../<?= htmlspecialchars($producto['imagen']) ?>" alt="Imagen actual" class="prod-img">
+            <img src="<?= BASE_URL ?>images/productos/<?= htmlspecialchars($producto['imagen']) ?>" 
+                 alt="Imagen actual" class="prod-img">
           <?php else: ?>
             <p style="color:#aaa;">Sin imagen</p>
           <?php endif; ?>

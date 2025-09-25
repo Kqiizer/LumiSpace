@@ -35,66 +35,18 @@ $proveedores = getProveedores();
       grid-template-columns: 1fr 1fr; 
       gap: 18px; 
     }
-    form label { 
-      font-weight: 600; 
-      margin-bottom: 6px; 
-      display: block; 
-      color: var(--text); 
-    }
+    form label { font-weight: 600; margin-bottom: 6px; display: block; color: var(--text); }
     form input, form textarea, form select {
-      width: 100%; 
-      padding: 10px 12px;
-      border: 1px solid var(--card-bd); 
-      border-radius: 8px;
-      background: var(--card-bg-2); 
-      font-size: .95rem;
-      transition: all .2s ease;
+      width: 100%; padding: 10px 12px;
+      border: 1px solid var(--card-bd); border-radius: 8px;
+      background: var(--card-bg-2); font-size: .95rem;
     }
-    form input:focus, form textarea:focus, form select:focus {
-      border-color: var(--act1);
-      outline: none;
-      box-shadow: 0 0 0 2px rgba(161, 104, 58, .3);
-    }
-    form textarea { 
-      resize: vertical; 
-      min-height: 90px; 
-      grid-column: span 2; 
-    }
+    form textarea { resize: vertical; min-height: 90px; grid-column: span 2; }
 
-    .form-actions { 
-      grid-column: span 2; 
-      display: flex; 
-      justify-content: flex-end; 
-      gap: 12px; 
-      margin-top: 10px; 
-    }
-
-    .btn { 
-      padding: 10px 18px; 
-      border-radius: 8px; 
-      border: none; 
-      cursor: pointer; 
-      font-weight: 600; 
-      transition: all .25s ease; 
-      text-decoration: none; 
-      display: inline-block; 
-      text-align: center; 
-    }
-    .btn-primary { 
-      background: linear-gradient(90deg, var(--act1), var(--act2)); 
-      color: #fff; 
-    }
-    .btn-primary:hover { 
-      filter: brightness(1.1); 
-      transform: translateY(-2px); 
-    }
-    .btn-secondary { 
-      background: var(--card-bg-2); 
-      color: var(--text); 
-    }
-    .btn-secondary:hover { 
-      background: var(--card-bg-1); 
-    }
+    .form-actions { grid-column: span 2; display: flex; justify-content: flex-end; gap: 12px; margin-top: 10px; }
+    .btn { padding: 10px 18px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; }
+    .btn-primary { background: linear-gradient(90deg, var(--act1), var(--act2)); color: #fff; }
+    .btn-secondary { background: var(--card-bg-2); color: var(--text); }
   </style>
 </head>
 <body>
@@ -107,68 +59,52 @@ $proveedores = getProveedores();
         <h2>➕ Nuevo Producto</h2>
 
         <form method="POST" action="producto-guardar.php" enctype="multipart/form-data">
-          
-          <!-- Nombre -->
           <div>
             <label for="nombre">Nombre</label>
-            <input type="text" id="nombre" name="nombre" placeholder="Ej. Foco LED 12W" required>
+            <input type="text" id="nombre" name="nombre" required>
           </div>
 
-          <!-- Precio -->
           <div>
             <label for="precio">Precio ($)</label>
-            <input type="number" step="0.01" min="0" id="precio" name="precio" placeholder="0.00" required>
+            <input type="number" step="0.01" min="0" id="precio" name="precio" required>
           </div>
 
-          <!-- Stock -->
           <div>
             <label for="stock">Stock inicial</label>
-            <input type="number" min="0" id="stock" name="stock" placeholder="0" required>
+            <input type="number" min="0" id="stock" name="stock" required>
           </div>
 
-          <!-- Categoría -->
           <div>
             <label for="categoria">Categoría</label>
             <select id="categoria" name="categoria_id" required>
               <option value="">-- Seleccionar categoría --</option>
-              <?php if (!empty($categorias)): ?>
-                <?php foreach($categorias as $c): ?>
-                  <option value="<?= $c['id'] ?>"><?= htmlspecialchars($c['nombre']) ?></option>
-                <?php endforeach; ?>
-              <?php else: ?>
-                <option value="">(No hay categorías registradas)</option>
-              <?php endif; ?>
+              <?php foreach($categorias as $c): ?>
+                <option value="<?= $c['id'] ?>"><?= htmlspecialchars($c['nombre']) ?></option>
+              <?php endforeach; ?>
             </select>
           </div>
 
-          <!-- Proveedor -->
           <div>
             <label for="proveedor">Proveedor</label>
             <select id="proveedor" name="proveedor_id">
               <option value="">-- Ninguno --</option>
-              <?php if (!empty($proveedores)): ?>
-                <?php foreach($proveedores as $pr): ?>
-                  <option value="<?= $pr['id'] ?>"><?= htmlspecialchars($pr['nombre']) ?></option>
-                <?php endforeach; ?>
-              <?php else: ?>
-                <option value="">(No hay proveedores registrados)</option>
-              <?php endif; ?>
+              <?php foreach($proveedores as $pr): ?>
+                <option value="<?= $pr['id'] ?>"><?= htmlspecialchars($pr['nombre']) ?></option>
+              <?php endforeach; ?>
             </select>
           </div>
 
-          <!-- Imagen -->
           <div style="grid-column: span 2;">
-            <label for="imagen">Imagen del producto (opcional)</label>
+            <label for="imagen">Imagen del producto</label>
             <input type="file" id="imagen" name="imagen" accept="image/*">
+            <small>Se guardará en <code>/images/productos/</code></small>
           </div>
 
-          <!-- Descripción -->
           <div style="grid-column: span 2;">
             <label for="descripcion">Descripción</label>
-            <textarea id="descripcion" name="descripcion" placeholder="Ej. Bombilla LED de bajo consumo, 12W, luz cálida."></textarea>
+            <textarea id="descripcion" name="descripcion"></textarea>
           </div>
 
-          <!-- Acciones -->
           <div class="form-actions">
             <button type="submit" class="btn btn-primary">💾 Guardar</button>
             <a href="productos.php" class="btn btn-secondary">Cancelar</a>

@@ -16,7 +16,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $categoria_id = (int)($_POST['categoria_id'] ?? 0);
     $proveedor_id = !empty($_POST['proveedor_id']) ? (int)$_POST['proveedor_id'] : null;
 
-    $imagenPath = null;
+    $imagenNombre = null;
 
     // 📂 Subida de imagen opcional
     if (!empty($_FILES["imagen"]["name"])) {
@@ -31,8 +31,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $targetFile = $uploadDir . $filename;
 
             if (move_uploaded_file($_FILES["imagen"]["tmp_name"], $targetFile)) {
-                // ✅ Guardar ruta accesible desde el navegador
-                $imagenPath = "/LumiSpace/images/productos/" . $filename;
+                // ✅ Guardamos solo el nombre
+                $imagenNombre = $filename;
             } else {
                 header("Location: productos.php?error=" . urlencode("❌ Error al subir la imagen."));
                 exit();
@@ -45,7 +45,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     // 📌 Validación básica
     if ($nombre && $precio > 0 && $categoria_id > 0) {
-        $ok = insertarProducto($nombre, $descripcion, $precio, $stock, $categoria_id, $proveedor_id, $imagenPath);
+        $ok = insertarProducto($nombre, $descripcion, $precio, $stock, $categoria_id, $proveedor_id, $imagenNombre);
 
         if ($ok) {
             header("Location: productos.php?msg=" . urlencode("Producto creado con éxito."));
