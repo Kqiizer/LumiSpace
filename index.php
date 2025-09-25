@@ -16,7 +16,7 @@
       <?php include "includes/features.php"; ?>
       <?php include "includes/categories.php"; ?>
       <?php include "includes/statistics.php"; ?>
-      <?php include "includes/collection.php"; ?> <!-- 🔹 Aquí aparecen los productos -->
+      <?php include "includes/collection.php"; ?> <!-- 🔹 Aquí aparecen los productos se equivoco fatima jejejjej-->
 
     </div>
     <?php include "includes/footer.php"; ?>
