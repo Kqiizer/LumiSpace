@@ -1,0 +1,117 @@
+/* ==== FEATURES SECTION ==== */
+.features {
+  padding: 60px 0;
+  background-color: #fff;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  position: relative;   /* 🔑 evita que se encime al scrollear */
+  z-index: 1;           /* 🔑 siempre queda debajo de header o sidebar */
+}
+
+.features .container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* Encabezado centrado */
+.section-header {
+  text-align: center;
+  margin-bottom: 50px;
+}
+
+.section-title {
+  font-size: 32px;
+  font-weight: bold;
+  color: #8b7355;
+  margin-bottom: 10px;
+}
+
+.section-subtitle {
+  color: #a0896b;
+  font-size: 16px;
+}
+
+/* Features en fila horizontal */
+.features-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 40px;
+  flex-wrap: wrap; /* 🔑 para que en pantallas pequeñas baje a otra línea */
+}
+
+/* Cada feature */
+.feature {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 20px;
+  border-radius: 12px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  background: #faf8f6;
+}
+
+.feature:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+}
+
+/* Icono */
+.feature-icon {
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, #d4c4a8, #c9b896);
+  border-radius: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: #8b7355;
+  flex-shrink: 0;
+  transition: transform 0.3s ease, background 0.3s ease, color 0.3s ease;
+}
+
+.feature:hover .feature-icon {
+  transform: rotate(15deg) scale(1.1);
+  background: linear-gradient(135deg, #c9b896, #b8a584);
+}
+
+/* Texto */
+.feature-text h3 {
+  color: #8b7355;
+  font-size: 18px;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+.feature-text p {
+  color: #a0896b;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* 🌙 Dark Mode */
+body.dark .features {
+  background-color: #1e1e1e;
+}
+
+body.dark .feature {
+  background: #2a2a2a;
+}
+
+body.dark .feature-icon {
+  background: linear-gradient(135deg, #8b7355, #6e5b43);
+  color: #fff;
+}
+
+body.dark .feature:hover .feature-icon {
+  background: linear-gradient(135deg, #6e5b43, #5a4633);
+}
+
+body.dark .feature-text h3 {
+  color: #f0e6d6;
+}
+
+body.dark .feature-text p {
+  color: #cbbba0;
+}

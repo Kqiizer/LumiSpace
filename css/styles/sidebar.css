@@ -1,0 +1,191 @@
+/* === Sidebar lateral fijo con animación fluida === */
+.sidebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 260px;
+  height: 100%;
+  background: #fff;
+  box-shadow: -2px 0 12px rgba(0,0,0,.15);
+  padding: 25px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  transform: translateX(100%);
+  transition: transform 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+  z-index: 2000;
+}
+
+.sidebar.active {
+  transform: translateX(0);
+}
+
+/* === Links del sidebar (estilo limpio, no botones) === */
+.sidebar-menu a,
+.sidebar-session a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #5a4a3b;
+  text-decoration: none;
+  opacity: 0;
+  transform: translateX(20px);
+  transition: color 0.3s ease;
+}
+
+.sidebar-menu a:hover,
+.sidebar-session a:hover {
+  color: #a0896b;
+}
+
+/* Animación de aparición escalonada */
+.sidebar.active .sidebar-menu a,
+.sidebar.active .sidebar-session a {
+  animation: slideIn 0.4s forwards;
+}
+
+.sidebar.active .sidebar-menu a:nth-child(1) { animation-delay: 0.1s; }
+.sidebar.active .sidebar-menu a:nth-child(2) { animation-delay: 0.2s; }
+.sidebar.active .sidebar-menu a:nth-child(3) { animation-delay: 0.3s; }
+.sidebar.active .sidebar-menu a:nth-child(4) { animation-delay: 0.4s; }
+.sidebar.active .sidebar-menu a:nth-child(5) { animation-delay: 0.5s; }
+.sidebar.active .sidebar-menu a:nth-child(6) { animation-delay: 0.6s; }
+.sidebar.active .sidebar-menu a:nth-child(7) { animation-delay: 0.7s; }
+
+@keyframes slideIn {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* === Texto usuario === */
+.sidebar-user {
+  margin: 12px 0;
+  font-size: 14px;
+  font-weight: bold;
+  color: #333;
+}
+
+/* === Botón de Modo Oscuro (único con estilo especial) === */
+#theme-toggle {
+  outline: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #a0896b;
+  border: none;
+  border-radius: 6px;
+  padding: 12px 18px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,.1);
+  opacity: 0;
+  transform: translateX(20px);
+  transition: background 0.3s ease, transform 0.25s ease;
+}
+
+.sidebar.active #theme-toggle {
+  animation: slideIn 0.4s forwards;
+  animation-delay: 0s;
+}
+
+#theme-toggle:hover {
+  background: #8b7355;
+  transform: translateY(-2px) scale(1.03);
+  opacity: 0.95;
+}
+
+/* === Overlay === */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(2px);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.4s ease;
+  z-index: 1500;
+}
+
+.overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* === Bloquear scroll === */
+body.no-scroll {
+  overflow: hidden;
+}
+
+/* === Botón Hamburguesa === */
+.menu-toggle {
+  position: relative;
+  width: 28px;
+  height: 22px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border: none;
+  background: none;
+  cursor: pointer;
+  z-index: 2100;
+}
+
+.menu-toggle span {
+  display: block;
+  height: 3px;
+  width: 100%;
+  background: #333;
+  border-radius: 2px;
+  transition: all 0.3s ease;
+}
+
+.menu-toggle.open .top {
+  transform: rotate(45deg) translate(5px, 5px);
+}
+.menu-toggle.open .middle {
+  opacity: 0;
+}
+.menu-toggle.open .bottom {
+  transform: rotate(-45deg) translate(6px, -6px);
+}
+
+/* === Dark mode === */
+body.dark .sidebar {
+  background: #1e1e1e;
+}
+
+body.dark .sidebar-menu a,
+body.dark .sidebar-session a,
+body.dark .sidebar-user {
+  color: #ddd;
+}
+
+body.dark .sidebar-menu a:hover,
+body.dark .sidebar-session a:hover {
+  color: #c7a97a;
+}
+
+body.dark #theme-toggle {
+  background: #8b7355;
+}
+
+body.dark #theme-toggle:hover {
+  background: #6e5b43;
+}
+
+body.dark .menu-toggle span {
+  background: #fff;
+}

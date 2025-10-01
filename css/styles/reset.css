@@ -1,0 +1,106 @@
+/* ==== RESET GENERAL ==== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* ==== BASE DE DOCUMENTO ==== */
+html, body {
+  height: 100%;
+  width: 100%;
+  font-family: 'Arial', sans-serif;
+  background-color: #faf8f6; /* 🌞 Claro */
+  color: #8b7355;
+  line-height: 1.5;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* ==== IMÁGENES Y MULTIMEDIA ==== */
+img, picture, video, canvas, svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+/* ==== TIPOGRAFÍA ==== */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: inherit;
+  font-size: inherit;
+}
+
+p {
+  margin: 0;
+}
+
+/* ==== LISTAS ==== */
+ul, ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* ==== ENLACES ==== */
+a {
+  text-decoration: none;
+  color: inherit;
+  transition: color 0.3s ease;
+}
+
+/* ==== FORMULARIOS ==== */
+button, input, select, textarea {
+  font: inherit;
+  border: none;
+  outline: none;
+  background: none;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+button {
+  cursor: pointer;
+}
+
+/* ==== TABLAS ==== */
+table {
+  border-collapse: collapse;
+  border-spacing: 0;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* ==== CONTENEDORES PRINCIPALES ==== */
+.page-wrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.main-content {
+  flex: 1;
+}
+
+/* ==== 🌙 MODO OSCURO ==== */
+body.dark {
+  background-color: #1e1e1e; /* Fondo oscuro */
+  color: #f0f0f0;           /* Texto claro */
+}
+
+/* Links en dark mode */
+body.dark a {
+  color: #f0f0f0;
+}
+
+/* Formularios en dark mode */
+body.dark input,
+body.dark select,
+body.dark textarea,
+body.dark button {
+  background: #2b2b2b;
+  color: #f0f0f0;
+  border-radius: 4px;
+}
+
+/* Tablas en dark mode */
+body.dark table {
+  background: #2b2b2b;
+  color: #f0f0f0;
+}
