@@ -1,396 +1,327 @@
-// Newsletter form functionality
-document.querySelector('.newsletter-form').addEventListener('submit', function(e) {
+/* ================== NEWSLETTER ================== */
+const newsletterForm = document.querySelector('.newsletter-form');
+if (newsletterForm) {
+  newsletterForm.addEventListener('submit', function (e) {
     e.preventDefault();
-    
+
     const email = this.querySelector('.newsletter-input').value;
     const btn = this.querySelector('.newsletter-btn');
-    
+
     if (email) {
-        const originalText = btn.innerHTML;
-        btn.innerHTML = 'Subscribing... <i class="fas fa-spinner fa-spin"></i>';
-        btn.disabled = true;
-        
+      const originalText = btn.innerHTML;
+      btn.innerHTML = 'Subscribing... <i class="fas fa-spinner fa-spin"></i>';
+      btn.disabled = true;
+
+      setTimeout(() => {
+        btn.innerHTML = 'Subscribed! <i class="fas fa-check"></i>';
+        btn.style.background = 'linear-gradient(135deg, #28a745, #20c997)';
+
         setTimeout(() => {
-            btn.innerHTML = 'Subscribed! <i class="fas fa-check"></i>';
-            btn.style.background = 'linear-gradient(135deg, #28a745, #20c997)';
-            
-            setTimeout(() => {
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-                btn.style.background = 'linear-gradient(135deg, #a0896b, #8b7355)';
-                this.querySelector('.newsletter-input').value = '';
-            }, 2000);
-        }, 1500);
+          btn.innerHTML = originalText;
+          btn.disabled = false;
+          btn.style.background = 'linear-gradient(135deg, #a0896b, #8b7355)';
+          this.querySelector('.newsletter-input').value = '';
+        }, 2000);
+      }, 1500);
     }
-});
+  });
+}
 
-// Footer animations
-const footerObserver = new IntersectionObserver(function(entries) {
-    entries.forEach(entry => {
-        if (entry.isIntersecting) {
-            const footerSections = entry.target.querySelectorAll('.footer-section');
-            footerSections.forEach((section, index) => {
-                setTimeout(() => {
-                    section.style.opacity = '1';
-                    section.style.transform = 'translateY(0)';
-                }, index * 200);
-            });
-        }
-    });
-}, { threshold: 0.2 });
-
+/* ================== FOOTER ANIMATIONS ================== */
 const footer = document.querySelector('.footer');
 if (footer) {
-    document.querySelectorAll('.footer-section').forEach(section => {
-        section.style.opacity = '0';
-        section.style.transform = 'translateY(30px)';
-        section.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+  const footerSections = footer.querySelectorAll('.footer-section');
+  footerSections.forEach(section => section.classList.add('hidden'));
+
+  const footerObserver = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        footerSections.forEach((section, index) => {
+          setTimeout(() => section.classList.add('visible'), index * 200);
+        });
+        footerObserver.unobserve(entry.target);
+      }
     });
-    
-    footerObserver.observe(footer);
+  }, { threshold: 0.2 });
+
+  footerObserver.observe(footer);
 }
 
-// Payment icons hover effect
+/* ================== PAYMENT ICONS ================== */
 document.querySelectorAll('.payment-icons i').forEach(icon => {
-    icon.addEventListener('mouseenter', function() {
-        this.style.transform = 'scale(1.2) rotateY(180deg)';
-    });
-    
-    icon.addEventListener('mouseleave', function() {
-        this.style.transform = 'scale(1) rotateY(0deg)';
-    });
+  icon.addEventListener('mouseenter', function () {
+    this.style.transform = 'scale(1.2) rotateY(180deg)';
+  });
+  icon.addEventListener('mouseleave', function () {
+    this.style.transform = 'scale(1) rotateY(0deg)';
+  });
 });
 
-// Animated counter for statistics
+/* ================== COUNTERS ================== */
 function animateCounter(element, target, duration = 2000) {
-    const start = 0;
-    const increment = target / (duration / 16);
-    let current = start;
-    
-    const timer = setInterval(() => {
-        current += increment;
-        if (current >= target) {
-            current = target;
-            clearInterval(timer);
-        }
-        element.textContent = Math.floor(current).toLocaleString();
-    }, 16);
+  let current = 0;
+  const increment = target / (duration / 16);
+
+  const timer = setInterval(() => {
+    current += increment;
+    if (current >= target) {
+      current = target;
+      clearInterval(timer);
+    }
+    element.textContent = Math.floor(current).toLocaleString();
+  }, 16);
 }
 
-// Start counter animation when statistics section comes into view
-const statsObserver = new IntersectionObserver(function(entries) {
-    entries.forEach(entry => {
-        if (entry.isIntersecting) {
-            const statNumbers = entry.target.querySelectorAll('.stat-number');
-            statNumbers.forEach(statNumber => {
-                const target = parseInt(statNumber.getAttribute('data-target'));
-                animateCounter(statNumber, target, 2500);
-            });
-            
-            // Animate stat items with stagger effect
-            const statItems = entry.target.querySelectorAll('.stat-item');
-            statItems.forEach((item, index) => {
-                setTimeout(() => {
-                    item.style.opacity = '1';
-                    item.style.transform = 'translateY(0)';
-                }, index * 200);
-            });
-            
-            statsObserver.unobserve(entry.target);
-        }
-    });
-}, { threshold: 0.5 });
-
-// Initialize stats animation
 const statsSection = document.querySelector('.statistics');
 if (statsSection) {
-    // Set initial state for stat items
-    document.querySelectorAll('.stat-item').forEach(item => {
-        item.style.opacity = '0';
-        item.style.transform = 'translateY(50px)';
-        item.style.transition = 'opacity 0.8s ease, transform 0.8s ease';
+  const statsObserver = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.querySelectorAll('.stat-number').forEach(statNumber => {
+          const target = parseInt(statNumber.getAttribute('data-target')) || 0;
+          animateCounter(statNumber, target, 2500);
+        });
+
+        entry.target.querySelectorAll('.stat-item').forEach((item, index) => {
+          setTimeout(() => item.classList.add('visible'), index * 200);
+        });
+
+        statsObserver.unobserve(entry.target);
+      }
     });
-    
-    statsObserver.observe(statsSection);
+  }, { threshold: 0.5 });
+
+  statsObserver.observe(statsSection);
 }
 
-// Add floating animation to stat icons
+/* ================== FLOATING ICONS ================== */
 document.querySelectorAll('.stat-icon').forEach((icon, index) => {
-    icon.style.animation = `float 3s ease-in-out infinite ${index * 0.5}s`;
+  icon.style.animation = `float 3s ease-in-out infinite ${index * 0.5}s`;
 });
 
-// Add floating keyframes
 const style = document.createElement('style');
 style.textContent = `
-    @keyframes float {
-        0%, 100% { transform: translateY(0px); }
-        50% { transform: translateY(-10px); }
-    }
-    
-    @keyframes pulse {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.05); }
-    }
-    
-    .stat-number {
-        animation: pulse 2s ease-in-out infinite;
-    }
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+  }
+  .stat-number { animation: pulse 2s ease-in-out infinite; }
 `;
 document.head.appendChild(style);
 
-// Simple interactivity
-document.querySelectorAll('.filter-tab').forEach(tab => {
-    tab.addEventListener('click', function() {
-        document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
-        this.classList.add('active');
-    });
+/* ================== SCROLL ANIMATIONS ================== */
+const scrollObserver = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+      scrollObserver.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.2 });
+
+document.querySelectorAll('.product-card, .feature, .product-category').forEach(el => {
+  el.classList.add('hidden');
+  scrollObserver.observe(el);
 });
 
-// Countdown timer simulation
+/* ================== COUNTDOWN SIMULATION ================== */
 function updateCountdown() {
-    const countdownItems = document.querySelectorAll('.countdown-number');
-    countdownItems.forEach(item => {
-        let current = parseInt(item.textContent);
-        if (current > 0) {
-            current--;
-            item.textContent = current.toString().padStart(2, '0');
-        }
-    });
+  document.querySelectorAll('.countdown-number').forEach(item => {
+    let current = parseInt(item.textContent);
+    if (!isNaN(current) && current > 0) {
+      current--;
+      item.textContent = current.toString().padStart(2, '0');
+    }
+  });
 }
-
 setInterval(updateCountdown, 1000);
 
-// Hover effects for cards
-document.querySelectorAll('.product-card, .room-card, .product-category').forEach(card => {
-    card.addEventListener('mouseenter', function() {
-        this.style.transform = 'translateY(-8px)';
-    });
-    
-    card.addEventListener('mouseleave', function() {
-        this.style.transform = 'translateY(0)';
-    });
-});
+/* ================== HEADER & SIDEBAR ================== */
+document.addEventListener("DOMContentLoaded", () => {
+  const menuBtn = document.getElementById("menu-btn");
+  const sidebar = document.getElementById("sidebar");
+  const overlay = document.getElementById("overlay");
+  const themeToggle = document.getElementById("theme-toggle");
 
-// Navigation arrows functionality
-document.querySelectorAll('.nav-arrow').forEach(arrow => {
-    arrow.addEventListener('click', function() {
-        // Simple animation feedback
-        this.style.transform = 'scale(0.95)';
-        setTimeout(() => {
-            this.style.transform = 'scale(1)';
-        }, 100);
+  // Sidebar toggle
+  if (menuBtn && sidebar && overlay) {
+    menuBtn.addEventListener("click", () => {
+      const isActive = sidebar.classList.toggle("active");
+      overlay.classList.toggle("active", isActive);
+      menuBtn.classList.toggle("open", isActive);
     });
-});
 
-// Action buttons functionality
-document.querySelectorAll('.action-btn').forEach(btn => {
-    btn.addEventListener('click', function(e) {
-        e.stopPropagation();
-        
-        // Visual feedback
-        this.style.transform = 'scale(0.9)';
-        this.style.backgroundColor = '#d4c4a8';
-        
-        setTimeout(() => {
-            this.style.transform = 'scale(1)';
-            this.style.backgroundColor = 'white';
-        }, 150);
-        
-        // Handle different actions
-        const icon = this.querySelector('i');
-        if (icon.classList.contains('fa-heart')) {
-            icon.style.color = icon.style.color === 'red' ? '#8b7355' : 'red';
-        }
+    overlay.addEventListener("click", () => {
+      sidebar.classList.remove("active");
+      overlay.classList.remove("active");
+      menuBtn.classList.remove("open");
     });
-});
+  }
 
-// Smooth scroll for navigation
-document.querySelectorAll('.nav-menu a, .btn-primary, .btn-secondary').forEach(link => {
-    link.addEventListener('click', function(e) {
-        e.preventDefault();
-        
-        // Simple loading animation
-        if (this.classList.contains('btn-primary')) {
-            const originalText = this.innerHTML;
-            this.innerHTML = 'Loading... <i class="fas fa-spinner fa-spin"></i>';
-            
-            setTimeout(() => {
-                this.innerHTML = originalText;
-            }, 1500);
-        }
-    });
-});
-
-// Header scroll effect
-let lastScrollTop = 0;
-window.addEventListener('scroll', function() {
-    let scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-    const header = document.querySelector('.header');
-    
-    if (scrollTop > lastScrollTop && scrollTop > 100) {
-        header.style.transform = 'translateY(-100%)';
-    } else {
-        header.style.transform = 'translateY(0)';
+  // Dark mode con localStorage
+  if (themeToggle) {
+    if (localStorage.getItem("theme") === "dark") {
+      document.body.classList.add("dark");
+      themeToggle.textContent = "☀️ Modo Claro";
     }
-    
-    lastScrollTop = scrollTop;
-});
 
-// Search functionality simulation
-document.querySelector('.fa-search').addEventListener('click', function() {
-    const searchOverlay = document.createElement('div');
-    searchOverlay.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(139, 115, 85, 0.9);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 1000;
-    `;
-    
-    const searchBox = document.createElement('div');
-    searchBox.style.cssText = `
-        background: white;
-        padding: 40px;
-        border-radius: 20px;
-        width: 90%;
-        max-width: 500px;
-        text-align: center;
-    `;
-    
-    searchBox.innerHTML = `
-        <h3 style="color: #8b7355; margin-bottom: 20px;">Search Products</h3>
-        <input type="text" placeholder="What are you looking for?" style="
-            width: 100%;
-            padding: 15px;
-            border: 2px solid #d4c4a8;
-            border-radius: 10px;
-            font-size: 16px;
-            margin-bottom: 20px;
-            outline: none;
-        ">
-        <button onclick="this.parentElement.parentElement.remove()" style="
-            background: #a0896b;
-            color: white;
-            border: none;
-            padding: 12px 30px;
-            border-radius: 25px;
-            cursor: pointer;
-            margin-right: 10px;
-        ">Search</button>
-        <button onclick="this.parentElement.parentElement.remove()" style="
-            background: transparent;
-            color: #8b7355;
-            border: 2px solid #d4c4a8;
-            padding: 10px 30px;
-            border-radius: 25px;
-            cursor: pointer;
-        ">Cancel</button>
-    `;
-    
-    searchOverlay.appendChild(searchBox);
-    document.body.appendChild(searchOverlay);
-    
-    // Focus on input
-    setTimeout(() => {
-        searchBox.querySelector('input').focus();
-    }, 100);
-    
-    // Close on overlay click
-    searchOverlay.addEventListener('click', function(e) {
-        if (e.target === searchOverlay) {
-            searchOverlay.remove();
-        }
+    themeToggle.addEventListener("click", () => {
+      const isDark = document.body.classList.toggle("dark");
+      themeToggle.textContent = isDark ? "☀️ Modo Claro" : "🌙 Modo Oscuro";
+      localStorage.setItem("theme", isDark ? "dark" : "light");
     });
+  }
 });
 
-// Cart animation
-document.querySelector('.fa-shopping-cart').addEventListener('click', function() {
-    this.style.transform = 'scale(1.2)';
-    this.style.color = '#a0896b';
-    
-    setTimeout(() => {
-        this.style.transform = 'scale(1)';
-        this.style.color = '#8b7355';
-    }, 200);
-});
-
-// Wishlist animation
-document.querySelector('.fa-heart').addEventListener('click', function() {
-    this.style.transform = 'scale(1.2)';
-    this.style.color = '#d4c4a8';
-    
-    setTimeout(() => {
-        this.style.transform = 'scale(1)';
-        this.style.color = '#8b7355';
-    }, 200);
-});
-
-// Mobile menu simulation
-function toggleMobileMenu() {
-    const navMenu = document.querySelector('.nav-menu');
-    navMenu.style.display = navMenu.style.display === 'none' ? 'flex' : 'none';
-}
-
-// Add mobile menu button if screen is small
-if (window.innerWidth <= 768) {
-    const mobileMenuBtn = document.createElement('button');
-    mobileMenuBtn.innerHTML = '<i class="fas fa-bars"></i>';
-    mobileMenuBtn.style.cssText = `
-        background: none;
-        border: none;
-        font-size: 20px;
-        color: #8b7355;
-        cursor: pointer;
-    `;
-    mobileMenuBtn.addEventListener('click', toggleMobileMenu);
-    document.querySelector('.header .container').insertBefore(mobileMenuBtn, document.querySelector('.header-icons'));
-}
-
-// Parallax effect for hero section
-window.addEventListener('scroll', function() {
+/* ================== HERO PARALLAX ================== */
+window.addEventListener('scroll', () => {
+  const parallax = document.querySelector('.hero');
+  if (parallax) {
     const scrolled = window.pageYOffset;
-    const parallax = document.querySelector('.hero');
-    const speed = scrolled * 0.5;
-    
-    if (parallax) {
-        parallax.style.transform = `translateY(${speed}px)`;
-    }
+    parallax.style.transform = `translateY(${scrolled * 0.3}px)`;
+  }
 });
 
-// Loading animation for page
-window.addEventListener('load', function() {
-    document.body.style.opacity = '0';
-    document.body.style.transition = 'opacity 0.5s ease-in';
-    
-    setTimeout(() => {
-        document.body.style.opacity = '1';
-    }, 100);
+/* ================== PAGE LOAD FADE ================== */
+window.addEventListener('load', () => {
+  document.body.style.opacity = '0';
+  document.body.style.transition = 'opacity 0.5s ease-in';
+  setTimeout(() => { document.body.style.opacity = '1'; }, 100);
 });
 
-// Intersection Observer for animations
-const observerOptions = {
-    threshold: 0.1,
-    rootMargin: '0px 0px -50px 0px'
-};
+/* ================== POS (solo si existe en el DOM) ================== */
+const $productos = document.getElementById('productos');
+if ($productos) {
+  const d=document,
+    $carritoLista=d.getElementById('carrito-lista'),
+    $cSub=d.getElementById('c-subtotal'),
+    $cDesc=d.getElementById('c-descuento'),
+    $cIva=d.getElementById('c-iva'),
+    $cTot=d.getElementById('c-total'),
+    $statItems=d.getElementById('stat-items'),
+    $statTotal=d.getElementById('stat-total'),
+    $cCambio=d.getElementById('c-cambio'),
+    $quick=d.querySelectorAll('.quick-add'),
+    $chips=d.querySelectorAll('.chip');
+  
+  const state={ products: [], cart: [] };   
 
-const observer = new IntersectionObserver(function(entries) {
-    entries.forEach(entry => {
-        if (entry.isIntersecting) {
-            entry.target.style.opacity = '1';
-            entry.target.style.transform = 'translateY(0)';
-        }
+  fetch('data/products.json')
+    .then(res=>res.json())
+    .then(data=>{ state.products=data; renderProductos(); })
+    .catch(err=>console.error('Error cargando productos:', err));
+
+  function fmt(num){ return num.toLocaleString('es-ES',{style:'currency',currency:'EUR'}); }
+
+  function renderProductos(){
+    $productos.innerHTML='';
+    state.products.forEach(p=>{
+      const card=d.createElement('div');
+      card.className='card';
+      card.dataset.id=p.id;
+      card.innerHTML=`
+        <img src="${p.img}" alt="${p.nombre}">
+        <h3>${p.nombre}</h3>
+        <p class="price">${fmt(p.precio)}</p>
+        <div class="qty-container">
+          <input type="number" class="qty-input" value="1" min="1">
+        </div>
+        <button class="btn add">Añadir al carrito</button>`;
+      $productos.appendChild(card);
     });
-}, observerOptions);
+  }
 
-// Observe elements for scroll animations
-document.querySelectorAll('.product-card, .feature, .product-category').forEach(el => {
-    el.style.opacity = '0';
-    el.style.transform = 'translateY(30px)';
-    el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
-    observer.observe(el);
-});
+  function findProd(id){ return state.products.find(p=>String(p.id)===String(id)); }
+
+  function calcular(){
+    let subtotal=0, descGlobal=0, iva=0, total=0, items=0, cambio=0;
+    state.cart.forEach(it=>{
+      const prod=findProd(it.id);
+      if(!prod) return;
+      let precioUnit=it.precio;
+      let descPct=it.descPct||0;
+      let descItem=precioUnit*it.qty*(descPct/100);
+      let precioFinal=(precioUnit*it.qty)-descItem;
+      subtotal+=precioUnit*it.qty;
+      descGlobal+=descItem;
+      items+=it.qty;
+    });
+    iva=(subtotal-descGlobal)*0.21; // IVA
+    total=subtotal-descGlobal+iva;
+    return {subtotal, descGlobal, iva, total, items, cambio};
+  }
+
+  function renderCarrito(){
+    $carritoLista.innerHTML='';
+    state.cart.forEach(it=>{
+      const li = d.createElement('li');
+      li.className='cart-item';
+      li.innerHTML=`
+        <div><strong>${it.nombre}</strong> (${fmt(it.precio)})</div>
+        <div>
+          Cant: ${it.qty}
+          <button class="btn ghost small" data-act="menos" data-id="${it.id}">-</button>
+          <button class="btn ghost small" data-act="mas" data-id="${it.id}">+</button>
+          <button class="btn ghost small" data-act="del" data-id="${it.id}">×</button>
+        </div>`;
+      $carritoLista.appendChild(li);
+    });
+    const {subtotal, descGlobal, iva, total, items, cambio} = calcular();
+    $cSub.textContent = fmt(subtotal);
+    $cDesc.textContent = '-'+fmt(descGlobal);
+    $cIva.textContent = fmt(iva);
+    $cTot.textContent = fmt(total);
+    $statItems.textContent = items+' ítems';
+    $statTotal.textContent = fmt(total);
+    $cCambio.textContent = fmt(cambio);
+  }
+
+  function addToCart(id, qty=1){
+    const p=findProd(id); if(!p) return;
+    const ex=state.cart.find(i=>i.id===p.id);
+    if(ex) ex.qty+=qty;
+    else state.cart.push({id:p.id,nombre:p.nombre,precio:+p.precio,qty,descPct:0,img:p.img});
+    renderCarrito();
+  }
+
+  // Eventos UI
+  $productos.addEventListener('click', e=>{
+    const card=e.target.closest('.card'); if(!card) return;
+    if(e.target.classList.contains('add')){
+      const qty=Math.max(1,Number(card.querySelector('.qty-input')?.value||1));
+      addToCart(card.dataset.id, qty);
+    }
+  });
+
+  $carritoLista.addEventListener("click", e=>{
+    if(!e.target.dataset.act) return;
+    const id=e.target.dataset.id;
+    const item=state.cart.find(i=>String(i.id)===String(id));
+    if(!item) return;
+    if(e.target.dataset.act==="mas") item.qty++;
+    if(e.target.dataset.act==="menos") item.qty=Math.max(1,item.qty-1);
+    if(e.target.dataset.act==="del") state.cart=state.cart.filter(i=>String(i.id)!==String(id));
+    renderCarrito();
+  });
+
+  $quick.forEach(btn=>btn.addEventListener('click',()=> addToCart(btn.dataset.id)));
+
+  $chips.forEach(chip=>{
+    chip.addEventListener('click',()=>{
+      const cat=chip.dataset.cat;
+      document.querySelectorAll('.card').forEach(card=>{
+        if(cat==='all' || card.dataset.id===cat || findProd(card.dataset.id)?.categoria===cat){
+          card.style.display='block';
+        } else {
+          card.style.display='none';
+        }
+      });
+      $chips.forEach(c=>c.classList.remove('active'));
+      chip.classList.add('active');
+    });
+  });
+}

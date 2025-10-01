@@ -1,0 +1,139 @@
+/* ==== STATISTICS SECTION ==== */
+.statistics {
+  padding: 80px 0;
+  background: linear-gradient(135deg, #a0896b 0%, #8b7355 100%);
+  color: white;
+  position: relative;
+  overflow: hidden;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+/* Patrón de puntos */
+.statistics::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="2" fill="white" opacity="0.1"/></svg>') repeat;
+  background-size: 50px 50px;
+  z-index: 0;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 40px;
+  position: relative;
+  z-index: 1;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* Tarjeta individual */
+.stat-item {
+  text-align: center;
+  padding: 30px 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.4s ease;
+  position: relative;
+  opacity: 0;
+  transform: translateY(40px);
+}
+
+/* Estado visible al hacer scroll */
+.stat-item.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Hover dinámico */
+.stat-item:hover {
+  transform: translateY(-10px);
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+}
+
+.stat-icon {
+  width: 80px;
+  height: 80px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+  font-size: 32px;
+  color: white;
+  transition: all 0.4s ease;
+}
+
+.stat-item:hover .stat-icon {
+  transform: scale(1.1) rotate(360deg);
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Número */
+.stat-number {
+  font-size: 48px;
+  font-weight: bold;
+  color: white;
+  margin-bottom: 5px;
+  position: relative;
+  display: inline-block;
+}
+
+/* Plus */
+.stat-plus {
+  font-size: 36px;
+  font-weight: bold;
+  color: #d4c4a8;
+  position: absolute;
+  top: 0;
+  right: -20px;
+}
+
+/* Texto */
+.stat-label {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.9);
+  margin-top: 10px;
+  font-weight: 500;
+}
+
+/* 🌙 DARK MODE */
+body.dark .statistics {
+  background: linear-gradient(135deg, #1e1e1e 0%, #2b2b2b 100%);
+  color: #f0f0f0;
+}
+
+body.dark .stat-item {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+body.dark .stat-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+body.dark .stat-icon {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+body.dark .stat-item:hover .stat-icon {
+  background: rgba(255, 215, 140, 0.25);
+}
+
+body.dark .stat-number {
+  color: #fff;
+}
+
+body.dark .stat-plus {
+  color: #f2d38a;
+}
+
+body.dark .stat-label {
+  color: rgba(255, 255, 255, 0.8);
+}
