@@ -132,73 +132,324 @@ function registrarUsuarioSocial(string $nombre, string $email, ?string $provider
 }
 
 /* ============================================================
-   Ventas
+   REGISTRO DE VENTAS
    ============================================================ */
-function registrarVenta(int $usuario_id, int $cajero_id, array $cart, float $desc_global_pct = 0, array $pagos = [], string $nota = ''): ?int {
-    $pdo = new PDO("mysql:host=127.0.0.1;dbname=LumiSpace;charset=utf8mb4", "root", "");
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+/**
+ * Registrar una nueva venta (POS o en línea).
+ */
+function registrarVenta( 
+    ?int $cliente_id,
+    ?int $usuario_id,
+    array $items,
+    string $metodo_pago,
+    float $total
+): ?int {
+    $conn = getDBConnection();
+    $conn->begin_transaction();
 
     try {
-        $pdo->beginTransaction();
-
-        $subtotal = 0;
-        foreach ($cart as $it) {
-            $precio   = (float)$it['precio'];
-            $qty      = (int)$it['qty'];
-            $descPct  = (float)($it['descPct'] ?? 0);
-            $precioDesc = $precio * (1 - $descPct/100);
-            $subtotal += $precioDesc * $qty;
-        }
-        $desc_monto = $subtotal * ($desc_global_pct/100);
-        $base       = $subtotal - $desc_monto;
-        $iva        = round($base * 0.16, 2);
-        $total      = round($base + $iva, 2);
-
-        $pEfectivo = (float)($pagos['efectivo'] ?? 0);
-        $pTarjeta  = (float)($pagos['tarjeta'] ?? 0);
-        $pTransf   = (float)($pagos['transferencia'] ?? 0);
-        $metodo_principal = array_search(max([$pEfectivo,$pTarjeta,$pTransf]), [$pEfectivo,$pTarjeta,$pTransf]);
-        $metodo_principal = ['efectivo','tarjeta','transferencia'][$metodo_principal];
-
-        // Insert venta
-        $stmt = $pdo->prepare("INSERT INTO ventas (usuario_id, cajero_id, subtotal, descuento_total, iva, total, pago_efectivo, pago_tarjeta, pago_transferencia, metodo_principal, nota, fecha)
-                               VALUES (?,?,?,?,?,?,?,?,?,?,?,NOW())");
-        $stmt->execute([$usuario_id, $cajero_id, $subtotal, $desc_monto, $iva, $total, $pEfectivo, $pTarjeta, $pTransf, $metodo_principal, $nota]);
-        $venta_id = (int)$pdo->lastInsertId();
-
-        // Insert detalle + actualizar stock
-        $stmtDet = $pdo->prepare("INSERT INTO detalle_ventas (venta_id, producto_id, nombre, precio, cantidad, descuento_pct, total_linea)
-                                  VALUES (?,?,?,?,?,?,?)");
-        $stmtStock = $pdo->prepare("UPDATE productos SET stock = stock - ? WHERE id = ?");
-        foreach ($cart as $it) {
-            $precio   = (float)$it['precio'];
-            $qty      = (int)$it['qty'];
-            $descPct  = (float)($it['descPct'] ?? 0);
-            $precioDesc = $precio * (1 - $descPct/100);
-            $totalLinea = round($precioDesc * $qty, 2);
-
-            $stmtDet->execute([$venta_id, (int)$it['id'], $it['nombre'], $precio, $qty, $descPct, $totalLinea]);
-            $stmtStock->execute([$qty, (int)$it['id']]);
+        // Calcular cantidad total
+        $cantidad_total = 0;
+        foreach ($items as $item) {
+            $cantidad_total += (int)$item['cantidad'];
         }
 
-        $pdo->commit();
+        // 1. Insertar venta
+        $stmt = $conn->prepare("
+            INSERT INTO ventas (cliente_id, usuario_id, metodo_pago, total, cantidad_total, fecha)
+            VALUES (?, ?, ?, ?, ?, NOW())
+        ");
+        if (!$stmt) {
+            throw new Exception("Error prepare ventas: " . $conn->error);
+        }
+
+        // s = string, i = integer, d = double
+        $stmt->bind_param(
+            "iisdi",
+            $cliente_id,
+            $usuario_id,
+            $metodo_pago,
+            $total,
+            $cantidad_total
+        );
+        $stmt->execute();
+        $venta_id = $stmt->insert_id;
+        $stmt->close();
+
+        // 2. Insertar detalle de la venta
+        $stmtDetalle = $conn->prepare("
+            INSERT INTO detalle_ventas (venta_id, producto_id, cantidad, precio_unitario, subtotal)
+            VALUES (?, ?, ?, ?, ?)
+        ");
+        if (!$stmtDetalle) {
+            throw new Exception("Error prepare detalle: " . $conn->error);
+        }
+
+        foreach ($items as $item) {
+            $cantidad = (int)$item['cantidad'];
+            $precio   = (float)$item['precio'];
+            $subtotal = $cantidad * $precio;
+
+            $stmtDetalle->bind_param(
+                "iiidd",
+                $venta_id,
+                $item['producto_id'],
+                $cantidad,
+                $precio,
+                $subtotal
+            );
+            $stmtDetalle->execute();
+
+            // 3. Actualizar inventario (salida)
+            registrarMovimiento(
+                $item['producto_id'],
+                $usuario_id ?? 0,
+                'salida',
+                $cantidad,
+                "Venta #$venta_id"
+            );
+        }
+        $stmtDetalle->close();
+
+        // 4. Registrar pago
+        registrarPago($venta_id, $metodo_pago, $total);
+
+        $conn->commit();
         return $venta_id;
 
-    } catch (Throwable $e) {
-        if ($pdo->inTransaction()) $pdo->rollBack();
-        error_log("❌ Error en registrarVenta: ".$e->getMessage());
+    } catch (Exception $e) {
+        $conn->rollback();
+        error_log("❌ registrarVenta fallo: " . $e->getMessage());
         return null;
     }
 }
-function getVentasHoy(): array {
+
+
+/* ============================================================
+   CONSULTAS DE VENTAS (REPORTES Y DASHBOARD)
+   ============================================================ */
+
+// Total de ventas de hoy
+function getVentasHoy(): float {
     $conn = getDBConnection();
-    $sql = "SELECT COUNT(*) as transacciones, SUM(total) as total 
-            FROM ventas 
-            WHERE DATE(fecha) = CURDATE()";
-    $res = $conn->query($sql);
-    return $res->fetch_assoc() ?: ["transacciones" => 0, "total" => 0];
+    $sql  = "SELECT IFNULL(SUM(total),0) as total FROM ventas WHERE DATE(fecha)=CURDATE()";
+    $res  = $conn->query($sql);
+    return (float)($res->fetch_assoc()['total'] ?? 0);
 }
 
+// Resumen de hoy
+function getResumenHoy(): array {
+    $conn = getDBConnection();
+    $sql  = "SELECT 
+                IFNULL(SUM(total),0) as total,
+                COUNT(id) as transacciones,
+                IFNULL(SUM(cantidad_total),0) as productos
+             FROM ventas
+             WHERE DATE(fecha)=CURDATE()";
+    $res = $conn->query($sql);
+    return $res ? $res->fetch_assoc() : ['total'=>0,'transacciones'=>0,'productos'=>0];
+}
+
+// Últimas N ventas
+function getVentasRecientes(int $limit=6): array {
+    $conn = getDBConnection();
+    $limit = max(1, (int)$limit); // siempre mínimo 1
+
+    $sql = "
+        SELECT v.id, 
+               c.nombre AS cliente, 
+               v.total, 
+               v.fecha,
+               GROUP_CONCAT(p.nombre SEPARATOR ', ') AS productos
+        FROM ventas v
+        LEFT JOIN clientes c ON v.cliente_id = c.id
+        LEFT JOIN detalle_ventas dv ON v.id = dv.venta_id
+        LEFT JOIN productos p ON dv.producto_id = p.id
+        GROUP BY v.id
+        ORDER BY v.fecha DESC
+        LIMIT $limit
+    ";
+
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        error_log("Error en prepare: " . $conn->error);
+        return [];
+    }
+    $stmt->execute();
+    $res = $stmt->get_result();
+    return $res->fetch_all(MYSQLI_ASSOC);
+}
+
+// Clientes únicos atendidos hoy
+function getClientesUnicosHoy(): int {
+    $conn = getDBConnection();
+    $sql  = "SELECT COUNT(DISTINCT cliente_id) as clientes FROM ventas WHERE DATE(fecha)=CURDATE()";
+    $res  = $conn->query($sql);
+    return (int)($res->fetch_assoc()['clientes'] ?? 0);
+}
+
+// Corte de caja por método de pago (hoy)
+function getCorteCajaHoy(): array {
+    $conn = getDBConnection();
+    $sql  = "SELECT metodo_pago, SUM(total) as total 
+             FROM ventas 
+             WHERE DATE(fecha)=CURDATE()
+             GROUP BY metodo_pago";
+    $res  = $conn->query($sql);
+    return $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
+}
+
+// Ventas agrupadas por categoría (hoy)
+function getVentasPorCategoria(): array {
+    $conn = getDBConnection();
+    $sql  = "SELECT cat.nombre as categoria, SUM(dv.subtotal) as total
+             FROM detalle_ventas dv
+             INNER JOIN productos p ON dv.producto_id = p.id
+             INNER JOIN categorias cat ON p.categoria_id = cat.id
+             INNER JOIN ventas v ON dv.venta_id = v.id
+             WHERE DATE(v.fecha) = CURDATE()
+             GROUP BY cat.id";
+    $res = $conn->query($sql);
+    return $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
+}
+
+// Detalle completo de una venta
+function getVentaById(int $venta_id): ?array {
+    $conn = getDBConnection();
+    $stmt = $conn->prepare("
+        SELECT v.*, c.nombre as cliente, u.nombre as cajero
+        FROM ventas v
+        LEFT JOIN clientes c ON v.cliente_id=c.id
+        LEFT JOIN usuarios u ON v.usuario_id=u.id
+        WHERE v.id=?
+        LIMIT 1
+    ");
+    $stmt->bind_param("i",$venta_id);
+    $stmt->execute();
+    $venta = $stmt->get_result()->fetch_assoc();
+
+    if (!$venta) return null;
+
+    $stmt2 = $conn->prepare("
+        SELECT dv.*, p.nombre as producto
+        FROM detalle_ventas dv
+        JOIN productos p ON dv.producto_id=p.id
+        WHERE dv.venta_id=?
+    ");
+    $stmt2->bind_param("i",$venta_id);
+    $stmt2->execute();
+    $venta['items'] = $stmt2->get_result()->fetch_all(MYSQLI_ASSOC);
+
+    return $venta;
+}
+/**
+ * Categorías más vendidas del mes
+ */
+function getCategoriasMasVendidasMes(int $limit = 10): array {
+    $conn = getDBConnection();
+
+    // Sanitizar límite
+    $limit = (int)$limit;
+
+    $sql = "
+        SELECT c.id, c.nombre AS categoria,
+               SUM(dv.cantidad) AS total_vendido,
+               SUM(dv.cantidad * dv.precio_unitario) AS ingresos
+        FROM detalle_ventas dv
+        JOIN productos p ON dv.producto_id = p.id
+        JOIN categorias c ON p.categoria_id = c.id
+        JOIN ventas v ON dv.venta_id = v.id
+        WHERE MONTH(v.fecha) = MONTH(NOW())
+          AND YEAR(v.fecha) = YEAR(NOW())
+        GROUP BY c.id
+        ORDER BY total_vendido DESC
+        LIMIT $limit
+    ";
+
+    $res = $conn->query($sql);
+    return $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
+}
+
+
+
+/* ============================================================
+   REPORTES MENSUALES
+   ============================================================ */
+
+// Ventas por mes (para gráficas del dashboard)
+function getVentasMensuales(): array {
+    $conn = getDBConnection();
+    $sql  = "SELECT MONTHNAME(fecha) as mes, SUM(total) as total 
+             FROM ventas 
+             WHERE YEAR(fecha)=YEAR(NOW())
+             GROUP BY MONTH(fecha)
+             ORDER BY MONTH(fecha)";
+    $res = $conn->query($sql);
+    return $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
+}
+
+// Ventas por día en el mes actual
+function getVentasPorDiaMesActual(): array {
+    $conn = getDBConnection();
+    $sql = "SELECT DAY(fecha) as dia, SUM(total) as total
+            FROM ventas
+            WHERE MONTH(fecha)=MONTH(NOW()) AND YEAR(fecha)=YEAR(NOW())
+            GROUP BY DAY(fecha)
+            ORDER BY dia ASC";
+    $res = $conn->query($sql);
+    return $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
+}
+
+
+/* ============================================================
+   PRODUCTOS MÁS VENDIDOS
+   ============================================================ */
+
+// Top N productos más vendidos (general)
+function getProductosMasVendidos(int $limit=10): array {
+    $conn = getDBConnection();
+    $stmt = $conn->prepare("
+        SELECT p.id, p.nombre, p.precio, p.imagen,
+               SUM(dv.cantidad) as total_vendido,
+               SUM(dv.subtotal) as ingresos
+        FROM detalle_ventas dv
+        JOIN productos p ON dv.producto_id = p.id
+        JOIN ventas v ON dv.venta_id = v.id
+        GROUP BY p.id
+        ORDER BY total_vendido DESC
+        LIMIT ?
+    ");
+    $stmt->bind_param("i", $limit);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    return $res->fetch_all(MYSQLI_ASSOC);
+}
+
+// Top N productos más vendidos del mes actual
+function getProductosMasVendidosMes(int $limit = 10): array {
+    $conn = getDBConnection();
+
+    // Sanitizar el límite para evitar SQL injection
+    $limit = (int)$limit;
+
+    $sql = "
+        SELECT p.id, p.nombre, p.precio, p.imagen,
+               SUM(dv.cantidad) AS total_vendido,
+               SUM(dv.cantidad * dv.precio_unitario) AS ingresos
+        FROM detalle_ventas dv
+        JOIN productos p ON dv.producto_id = p.id
+        JOIN ventas v ON dv.venta_id = v.id
+        WHERE MONTH(v.fecha) = MONTH(NOW()) 
+          AND YEAR(v.fecha) = YEAR(NOW())
+        GROUP BY p.id
+        ORDER BY total_vendido DESC
+        LIMIT $limit
+    ";
+
+    $res = $conn->query($sql);
+    return $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
+}
 
 /* ============================================================
    Funciones para el Dashboard Admin
@@ -276,16 +527,6 @@ function getUsuariosMensuales(): array {
             FROM usuarios 
             WHERE YEAR(fecha_registro)=YEAR(NOW())
             GROUP BY MONTH(fecha_registro)";
-    $res = $conn->query($sql);
-    return $res->fetch_all(MYSQLI_ASSOC);
-}
-
-function getVentasMensuales(): array {
-    $conn = getDBConnection();
-    $sql = "SELECT MONTHNAME(fecha) as mes, SUM(total) as total 
-            FROM ventas 
-            WHERE YEAR(fecha)=YEAR(NOW())
-            GROUP BY MONTH(fecha)";
     $res = $conn->query($sql);
     return $res->fetch_all(MYSQLI_ASSOC);
 }
@@ -478,23 +719,7 @@ function getMovimientos(): array {
 
 /* ============================================================
    Productos
-   ============================================================ */
-   function getProductosMasVendidos(int $limit = 10): array {
-    $conn = getDBConnection();
-    $sql = "SELECT p.id, p.nombre, p.precio, p.stock, p.imagen, 
-                   SUM(dv.cantidad) as total_vendido
-            FROM productos p
-            JOIN detalle_ventas dv ON p.id = dv.producto_id
-            GROUP BY p.id
-            ORDER BY total_vendido DESC
-            LIMIT ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("i", $limit);
-    $stmt->execute();
-    $res = $stmt->get_result();
-    return $res->fetch_all(MYSQLI_ASSOC);
-}
-
+    ============================================================ */
    function getProductosPublicos($limit = 12): array {
     $conn = getDBConnection();
     $sql = "SELECT p.id, p.nombre, p.descripcion, p.precio, p.precio_original, 

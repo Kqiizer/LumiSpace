@@ -1,145 +1,106 @@
 <?php
+// Cargar funciones globales
 require_once __DIR__ . "/../config/functions.php";
+require_once __DIR__ . '/../config/db.php';
 
-/**
- * Total de ventas del día (monto).
- */
-function getVentasHoy(): float {
-    $conn = getDBConnection();
-    $sql  = "SELECT IFNULL(SUM(total),0) AS total FROM ventas WHERE DATE(fecha)=CURDATE()";
-    $res  = $conn->query($sql);
-    if (!$res) return 0.0;
-    $row  = $res->fetch_assoc();
-    return (float)$row['total'];
-}
+// ================= DATOS =================
+$ventasHoy       = getVentasHoy();             // Total de ventas del día
+$ventasRecientes = getVentasRecientes(6);      // Últimas 6 ventas
+$resumenHoy      = getResumenHoy();            // Resumen del día
+$clientesHoy     = getClientesUnicosHoy();     // Clientes únicos hoy
+$corteCaja       = getCorteCajaHoy();          // Corte por método de pago
+$ventasCategoria = getVentasPorCategoria();    // Ventas por categoría
+?>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestor de Ventas - LumiSpace</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-/**
- * Ventas recientes (una fila por venta).
- */
-function getVentasRecientes(int $limit = 6): array {
-    $conn = getDBConnection();
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    $sql = "
-        SELECT 
-            v.id,
-            u.nombre AS nombre,
-            v.total,
-            v.fecha,
-            (
-                SELECT CONCAT(p.nombre, 
-                    CASE 
-                        WHEN COUNT(*) > 1 THEN CONCAT(' +', COUNT(*)-1, ' más') 
-                        ELSE '' 
-                    END
-                )
-                FROM detalle_ventas dv
-                INNER JOIN productos p ON p.id = dv.producto_id
-                WHERE dv.venta_id = v.id
-                GROUP BY dv.venta_id
-                LIMIT 1
-            ) AS productos
-        FROM ventas v
-        LEFT JOIN usuarios u ON u.id = v.usuario_id
-        ORDER BY v.fecha DESC
-        LIMIT ?
-    ";
+    <!-- Estilos -->
+    <link rel="stylesheet" href="../css/styles/dashboard.css">
+</head>
+<body>
 
-    $stmt = $conn->prepare($sql);
-    if (!$stmt) return [];
-    $stmt->bind_param("i", $limit);
-    $stmt->execute();
-    $res = $stmt->get_result();
-    if (!$res) return [];
-    return $res->fetch_all(MYSQLI_ASSOC);
-}
+    <h1>📊 Panel de Ventas</h1>
 
-/**
- * Ventas por categoría (monto).
- */
-function getVentasPorCategoria(): array {
-    $conn = getDBConnection();
+    <!-- Resumen del día -->
+    <section class="resumen">
+        <h2>Resumen del Día</h2>
+        <?php if (!empty($resumenHoy)): ?>
+        <ul>
+            <li><strong>Total Vendido:</strong> $<?= number_format($resumenHoy['total'], 2) ?></li>
+            <li><strong>Transacciones:</strong> <?= $resumenHoy['transacciones'] ?></li>
+            <li><strong>Productos Vendidos:</strong> <?= $resumenHoy['productos'] ?></li>
+            <li><strong>Clientes Únicos:</strong> <?= $clientesHoy ?></li>
+        </ul>
+        <?php else: ?>
+            <p>No hay datos de ventas hoy.</p>
+        <?php endif; ?>
+    </section>
 
-    $sql = "
-        SELECT 
-            COALESCE(cat.nombre, 'Sin categoría') AS categoria,
-            IFNULL(SUM(dv.cantidad * dv.precio), 0) AS total
-        FROM productos p
-        LEFT JOIN categorias cat ON cat.id = p.categoria_id
-        LEFT JOIN detalle_ventas dv ON dv.producto_id = p.id
-        GROUP BY COALESCE(cat.nombre, 'Sin categoría')
-        ORDER BY total DESC
-    ";
-    $res = $conn->query($sql);
-    if ($res) {
-        return $res->fetch_all(MYSQLI_ASSOC);
-    }
+    <!-- Corte de caja -->
+    <section class="corte-caja">
+        <h2>Corte de Caja (Hoy)</h2>
+        <?php if (!empty($corteCaja)): ?>
+            <ul>
+                <?php foreach ($corteCaja as $metodo => $total): ?>
+                    <li><strong><?= htmlspecialchars($metodo) ?>:</strong> $<?= number_format($total, 2) ?></li>
+                <?php endforeach; ?>
+            </ul>
+        <?php else: ?>
+            <p>No hay registros de ventas hoy.</p>
+        <?php endif; ?>
+    </section>
 
-    // Fallback
-    $sql2 = "
-        SELECT 
-            COALESCE(p.categoria, 'Sin categoría') AS categoria,
-            IFNULL(SUM(dv.cantidad * dv.precio), 0) AS total
-        FROM productos p
-        LEFT JOIN detalle_ventas dv ON dv.producto_id = p.id
-        GROUP BY COALESCE(p.categoria, 'Sin categoría')
-        ORDER BY total DESC
-    ";
-    $res2 = $conn->query($sql2);
-    return $res2 ? $res2->fetch_all(MYSQLI_ASSOC) : [];
-}
+    <!-- Ventas recientes -->
+    <section class="ventas-recientes">
+        <h2>Ventas Recientes</h2>
+        <?php if (!empty($ventasRecientes)): ?>
+            <table border="1" cellpadding="8" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th>ID Venta</th>
+                        <th>Cliente</th>
+                        <th>Productos</th>
+                        <th>Total</th>
+                        <th>Fecha</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($ventasRecientes as $venta): ?>
+                        <tr>
+                            <td>#<?= $venta['id'] ?></td>
+                            <td><?= htmlspecialchars($venta['cliente'] ?? 'Desconocido') ?></td>
+                            <td><?= htmlspecialchars($venta['productos']) ?></td>
+                            <td>$<?= number_format($venta['total'], 2) ?></td>
+                            <td><?= date("d/m/Y H:i", strtotime($venta['fecha'])) ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        <?php else: ?>
+            <p>No hay ventas recientes.</p>
+        <?php endif; ?>
+    </section>
 
-/**
- * Corte de caja del día de hoy agrupado por método de pago.
- */
-function getCorteCajaHoy(): array {
-    $conn = getDBConnection();
-    $sql = "
-        SELECT metodo_pago, IFNULL(SUM(total),0) AS total
-        FROM ventas
-        WHERE DATE(fecha)=CURDATE()
-        GROUP BY metodo_pago
-    ";
-    $res = $conn->query($sql);
-    if (!$res) return [];
-    $out = [];
-    while ($row = $res->fetch_assoc()) {
-        $out[$row['metodo_pago']] = (float)$row['total'];
-    }
-    return $out;
-}
+    <!-- Ventas por categoría -->
+    <section class="ventas-categoria">
+        <h2>Ventas por Categoría</h2>
+        <?php if (!empty($ventasCategoria)): ?>
+            <ul>
+                <?php foreach ($ventasCategoria as $cat): ?>
+                    <li><strong><?= htmlspecialchars($cat['categoria']) ?>:</strong> $<?= number_format($cat['total'], 2) ?></li>
+                <?php endforeach; ?>
+            </ul>
+        <?php else: ?>
+            <p>No hay registros de ventas por categoría.</p>
+        <?php endif; ?>
+    </section>
 
-/**
- * Número de clientes únicos que compraron hoy.
- */
-function getClientesUnicosHoy(): int {
-    $conn = getDBConnection();
-    $sql  = "SELECT COUNT(DISTINCT usuario_id) AS c FROM ventas WHERE DATE(fecha)=CURDATE()";
-    $res  = $conn->query($sql);
-    if (!$res) return 0;
-    $row  = $res->fetch_assoc();
-    return (int)$row['c'];
-}
-
-/**
- * Resumen del día: total vendido, número de ventas, productos vendidos.
- */
-function getResumenHoy(): array {
-    $conn = getDBConnection();
-    $sql = "
-        SELECT 
-            IFNULL(SUM(v.total),0) AS total,
-            COUNT(DISTINCT v.id) AS transacciones,
-            IFNULL(SUM(dv.cantidad),0) AS productos
-        FROM ventas v
-        LEFT JOIN detalle_ventas dv ON dv.venta_id = v.id
-        WHERE DATE(v.fecha) = CURDATE()
-    ";
-    $res = $conn->query($sql);
-    if (!$res) return ['total'=>0.0,'transacciones'=>0,'productos'=>0];
-    $row = $res->fetch_assoc();
-    return [
-        'total'         => (float)$row['total'],
-        'transacciones' => (int)$row['transacciones'],
-        'productos'     => (int)$row['productos']
-    ];
-}
+</body>
+</html>
