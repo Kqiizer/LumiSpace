@@ -2,15 +2,13 @@
 if (session_status() === PHP_SESSION_NONE) session_start();
 
 require_once __DIR__ . "/../config/functions.php";
-require_once __DIR__ . "/../gestor/ventas.php"; // ✅ Funciones de ventas
 
 // ============================
 // 📦 Cargar productos reales
 // ============================
 $conn = getDBConnection();
-$sql = "SELECT p.id, p.nombre, p.precio, p.stock, 
-               c.nombre AS categoria, 
-               p.imagen
+$sql = "SELECT p.id, p.nombre, p.precio, p.stock, p.imagen,
+               c.nombre AS categoria
         FROM productos p
         LEFT JOIN categorias c ON p.categoria_id = c.id
         ORDER BY p.nombre ASC";
@@ -24,25 +22,32 @@ while ($row = $res->fetch_assoc()) {
         'stock'    => (int)$row['stock'],
         'categoria'=> $row['categoria'] ?? 'General',
         'estado'   => $row['stock'] > 20 ? 'disponible' : ($row['stock'] > 5 ? 'poco' : 'bajo'),
-        'img'      => !empty($row['imagen']) ? "../" . $row['imagen'] : "../images/default.png"
+        // ✅ Ruta absoluta con BASE_URL para que siempre carguen
+        'img'      => !empty($row['imagen'])
+                        ? (defined('BASE_URL') ? BASE_URL : '/LumiSpace/') . "uploads/productos/" . $row['imagen']
+                        : (defined('BASE_URL') ? BASE_URL : '/LumiSpace/') . "images/default.png"
     ];
 }
 
 // ============================
-// 📊 Métricas reales
+// 📊 Métricas globales (para POS + dashboards)
 // ============================
-$metaDiaria     = 60000; // fija o configurable en BD
+$metaDiaria     = 60000;
 $ventasHoy      = getVentasHoy();
 $resumenHoy     = getResumenHoy();
 $ventasCantidad = $resumenHoy['transacciones'] ?? 0;
-$promedioVenta  = $ventasCantidad > 0 
-                    ? round($ventasHoy / $ventasCantidad, 2) 
-                    : 0;
+$promedioVenta  = $ventasCantidad > 0 ? round($ventasHoy / $ventasCantidad, 2) : 0;
 
 // ============================
 // 🕒 Últimas ventas
 // ============================
 $ventasRecientes = getVentasRecientes(5);
+
+// ============================
+// 🏆 Top más vendidos (mes)
+// ============================
+$topProductosMes  = function_exists('getProductosMasVendidosMes') ? getProductosMasVendidosMes(5) : [];
+$topCategoriasMes = function_exists('getCategoriasMasVendidasMes') ? getCategoriasMasVendidasMes(5) : [];
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -66,7 +71,7 @@ $ventasRecientes = getVentasRecientes(5);
         <div class="stat-top"><span>Meta Diaria</span>
           <strong class="money">$<?= number_format($metaDiaria,0); ?></strong>
         </div>
-        <?php $pct = min(100, round(($ventasHoy/$metaDiaria)*100)); ?>
+        <?php $pct = min(100, $metaDiaria > 0 ? round(($ventasHoy/$metaDiaria)*100) : 0); ?>
         <div class="bar"><span id="barMeta" style="width:<?= $pct; ?>%"></span></div>
         <small id="metaPct"><?= $pct; ?>% cumplido</small>
       </div>
@@ -92,37 +97,18 @@ $ventasRecientes = getVentasRecientes(5);
     </div>
   </header>
 
-  <!-- ACCESOS RÁPIDOS -->
-  <section class="quick">
-    <div class="quick-grid">
-      <?php foreach(array_slice($productos,0,4) as $p): ?>
-        <button class="quick-item" 
-                data-id="<?= $p['id']; ?>" 
-                data-precio="<?= $p['precio']; ?>"
-                data-nombre="<?= htmlspecialchars($p['nombre']); ?>">
-          <span><?= htmlspecialchars($p['nombre']); ?></span>
-          <strong>$<?= number_format($p['precio'],0); ?></strong>
-        </button>
-      <?php endforeach; ?>
-    </div>
-  </section>
-
-  <!-- FILTROS Y BUSCADOR -->
+  <!-- (Opcional) Buscador / Filtros si luego los quieres -->
+  <!--
   <section class="filters">
     <div class="chips">
       <button class="chip is-active" data-filter="todos">Todos</button>
-      <?php 
-      // 🔹 Generar chips de categorías automáticamente
-      $cats = array_unique(array_column($productos, 'categoria'));
-      foreach ($cats as $cat): ?>
-        <button class="chip" data-filter="<?= htmlspecialchars($cat); ?>"><?= htmlspecialchars($cat); ?></button>
-      <?php endforeach; ?>
     </div>
     <input type="text" id="buscador" placeholder="Buscar productos (F2)">
   </section>
+  -->
 
+  <!-- LISTADO DE PRODUCTOS -->
   <main class="content">
-    <!-- LISTADO DE PRODUCTOS -->
     <section class="productos" id="productos">
       <?php foreach ($productos as $p): ?>
         <article class="card"
@@ -135,7 +121,7 @@ $ventasRecientes = getVentasRecientes(5);
             <div class="labels">
               <span class="label"><?= htmlspecialchars($p['categoria']); ?></span>
             </div>
-            <button class="preview">Vista previa</button>
+            <button class="preview" type="button">Vista previa</button>
           </div>
           
           <div class="info">
@@ -148,7 +134,7 @@ $ventasRecientes = getVentasRecientes(5);
               </span>
             </div>
             <div class="actions">
-              <button class="btn add">Agregar</button>
+              <button class="btn add" type="button">Agregar</button>
             </div>
           </div>
         </article>
@@ -160,24 +146,9 @@ $ventasRecientes = getVentasRecientes(5);
       <header><h2>Carrito</h2></header>
       <ul id="carritoLista" class="cart-list"></ul>
 
-      <!-- Descuentos y notas -->
-      <div class="descuentos">
-        <div class="line">
-          <label>Descuento global (%):</label>
-          <input type="number" id="descGlobalPct" value="0" min="0" max="100">
-        </div>
-        <div class="line">
-          <label>Nota:</label>
-          <input type="text" id="ticketNota" placeholder="Ej. entrega a domicilio">
-        </div>
-      </div>
-
-      <!-- Totales -->
+      <!-- Totales (si usas subtotal/iva/desc, añade spans con ids cSub/cIva/cDesc) -->
       <div class="totales">
-        <div class="line"><span>Subtotal:</span><strong id="cSub">$0</strong></div>
-        <div class="line"><span>Descuento:</span><strong id="cDesc">$0</strong></div>
-        <div class="line"><span>IVA (16%):</span><strong id="cIva">$0</strong></div>
-        <div class="line total"><span>Total:</span><strong id="cTot">$0</strong></div>
+        <div class="line"><span>Total:</span><strong id="cTot">$0</strong></div>
       </div>
 
       <!-- Pagos -->
@@ -191,10 +162,8 @@ $ventasRecientes = getVentasRecientes(5);
 
       <!-- Acciones -->
       <div class="cart-actions">
-        <button id="btnLimpiar" class="btn ghost">Limpiar (F4)</button>
-        <button id="btnGuardarBorrador" class="btn ghost">Guardar borrador</button>
-        <button id="btnCargarBorrador" class="btn ghost">Cargar borrador</button>
-        <button id="btnPagar" class="btn primary">Procesar pago (F9)</button>
+        <button id="btnLimpiar" class="btn ghost" type="button">Limpiar (F4)</button>
+        <button id="btnPagar" class="btn primary" type="button">Procesar pago (F9)</button>
       </div>
 
       <!-- Historial -->
@@ -202,19 +171,51 @@ $ventasRecientes = getVentasRecientes(5);
         <h3>Últimas ventas</h3>
         <ul id="ventasRecientes">
           <?php foreach ($ventasRecientes as $v): ?>
-            <li>#<?= $v['id']; ?> - <?= htmlspecialchars($v['nombre']); ?> 
+            <li>#<?= $v['id']; ?> - <?= htmlspecialchars($v['cliente'] ?? 'Desconocido'); ?> 
+              <em>(<?= htmlspecialchars($v['productos'] ?? '---'); ?>)</em>
               <strong>$<?= number_format($v['total'],0); ?></strong>
             </li>
           <?php endforeach; ?>
         </ul>
       </div>
+
+      <!-- Top productos -->
+      <div class="top-block">
+        <h3>🔥 Top Productos (Mes)</h3>
+        <ul>
+          <?php foreach ($topProductosMes as $p): ?>
+            <li><?= htmlspecialchars($p['nombre']); ?> 
+              <strong><?= (int)$p['total_vendido']; ?> u.</strong>
+            </li>
+          <?php endforeach; ?>
+        </ul>
+      </div>
+
+      <!-- Top categorías -->
+      <div class="top-block">
+        <h3>🏷️ Top Categorías (Mes)</h3>
+        <ul>
+          <?php foreach ($topCategoriasMes as $c): ?>
+            <li><?= htmlspecialchars($c['categoria']); ?> 
+              <strong><?= (int)$c['total_vendido']; ?> u.</strong>
+            </li>
+          <?php endforeach; ?>
+        </ul>
+      </div>
+
     </aside>
   </main>
 </div>
 
+<!-- ✅ Inyectar datos para pos.js -->
 <script>
-  window.CATALOGO_POS = <?= json_encode($productos, JSON_UNESCAPED_UNICODE); ?>;
+  window.CATALOGO_POS = <?= json_encode($productos, JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK); ?>;
+  window.USUARIO_ID   = <?= isset($_SESSION['usuario_id']) ? (int)$_SESSION['usuario_id'] : 0 ?>;
 </script>
+
+<!-- ✅ JS del POS (usa el que te pasé, no pongas más JS inline aquí) -->
 <script src="../js/pos.js?v=<?= time(); ?>"></script>
 </body>
 </html>
+<?php exit();
+?>
