@@ -1,4 +1,4 @@
-/* === Sidebar lateral fijo con animación fluida === */
+/* === SIDEBAR lateral fijo con animación fluida === */
 .sidebar {
   position: fixed;
   top: 0;
@@ -12,7 +12,7 @@
   flex-direction: column;
   gap: 15px;
   transform: translateX(100%);
-  transition: transform 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+  transition: transform 0.5s cubic-bezier(0.68,-0.55,0.27,1.55);
   z-index: 2000;
 }
 
@@ -20,13 +20,13 @@
   transform: translateX(0);
 }
 
-/* === Links del sidebar (estilo limpio, no botones) === */
-.sidebar-menu a,
-.sidebar-session a {
+/* === Links dentro del sidebar === */
+.sidebar a.btn,
+.sidebar button.btn {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 0;
+  padding: 12px 0;
   font-size: 15px;
   font-weight: 600;
   color: #5a4a3b;
@@ -34,26 +34,40 @@
   opacity: 0;
   transform: translateX(20px);
   transition: color 0.3s ease;
+  position: relative;
 }
 
-.sidebar-menu a:hover,
-.sidebar-session a:hover {
+/* Hover */
+.sidebar a.btn:hover {
   color: #a0896b;
 }
 
-/* Animación de aparición escalonada */
-.sidebar.active .sidebar-menu a,
-.sidebar.active .sidebar-session a {
+/* Activo */
+.sidebar a.btn.active {
+  color: #a0896b;
+}
+
+.sidebar a.btn.active::before {
+  content: "›";
+  position: absolute;
+  left: -12px;
+  font-size: 18px;
+  color: #a0896b;
+}
+
+/* Animación escalonada */
+.sidebar.active a.btn,
+.sidebar.active button.btn {
   animation: slideIn 0.4s forwards;
 }
 
-.sidebar.active .sidebar-menu a:nth-child(1) { animation-delay: 0.1s; }
-.sidebar.active .sidebar-menu a:nth-child(2) { animation-delay: 0.2s; }
-.sidebar.active .sidebar-menu a:nth-child(3) { animation-delay: 0.3s; }
-.sidebar.active .sidebar-menu a:nth-child(4) { animation-delay: 0.4s; }
-.sidebar.active .sidebar-menu a:nth-child(5) { animation-delay: 0.5s; }
-.sidebar.active .sidebar-menu a:nth-child(6) { animation-delay: 0.6s; }
-.sidebar.active .sidebar-menu a:nth-child(7) { animation-delay: 0.7s; }
+.sidebar.active a.btn:nth-child(1) { animation-delay: 0.1s; }
+.sidebar.active a.btn:nth-child(2) { animation-delay: 0.2s; }
+.sidebar.active a.btn:nth-child(3) { animation-delay: 0.3s; }
+.sidebar.active a.btn:nth-child(4) { animation-delay: 0.4s; }
+.sidebar.active a.btn:nth-child(5) { animation-delay: 0.5s; }
+.sidebar.active a.btn:nth-child(6) { animation-delay: 0.6s; }
+.sidebar.active a.btn:nth-child(7) { animation-delay: 0.7s; }
 
 @keyframes slideIn {
   to {
@@ -70,7 +84,7 @@
   color: #333;
 }
 
-/* === Botón de Modo Oscuro (único con estilo especial) === */
+/* === Botón de Modo Oscuro === */
 #theme-toggle {
   outline: 0;
   display: inline-flex;
@@ -167,14 +181,20 @@ body.dark .sidebar {
   background: #1e1e1e;
 }
 
-body.dark .sidebar-menu a,
-body.dark .sidebar-session a,
+body.dark .sidebar a.btn,
 body.dark .sidebar-user {
   color: #ddd;
 }
 
-body.dark .sidebar-menu a:hover,
-body.dark .sidebar-session a:hover {
+body.dark .sidebar a.btn:hover {
+  color: #c7a97a;
+}
+
+body.dark .sidebar a.btn.active {
+  color: #fff;
+}
+
+body.dark .sidebar a.btn.active::before {
   color: #c7a97a;
 }
 

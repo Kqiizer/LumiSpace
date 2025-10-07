@@ -19,7 +19,7 @@ if (isset($_SESSION['usuario_id'], $_SESSION['usuario_rol'])) {
         'admin'   => 'dashboard-admin.php',
         'gestor'  => 'dashboard-gestor.php',
         'cajero'  => 'pos.php',
-        'usuario' => 'dashboard-usuario.php'
+        'usuario' => 'index.php'
     ];
     header("Location: " . ($rutas[$rol] ?? '../index.php'));
     exit();
