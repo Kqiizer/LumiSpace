@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,14 +8,15 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="../css/shop-styles.css">
 </head>
+
 <body>
-<?php include "../includes/header.php"; ?>
+    <?php include "../includes/header.php"; ?>
 
     <!-- Shop Container -->
     <div class="shop-container">
         <!-- Filter Overlay for mobile -->
         <div class="filter-overlay"></div>
-        
+
         <!-- Mobile Filter Toggle -->
         <button class="mobile-filter-toggle">
             <i class="fas fa-filter"></i> Filtros
@@ -24,7 +26,7 @@
         <aside class="filters-sidebar">
             <!-- Close button for mobile -->
             <button class="filter-close">&times;</button>
-            
+
             <!-- Active Filters -->
             <div class="active-filters">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
@@ -399,7 +401,7 @@
                         <button class="quick-shop">Quick Shop</button>
                     </div>
                     <div class="product-info">
-                        <div class="product-category">Chair</div>
+                        <div class="product-category">LAMPARA</div>
                         <h3 class="product-name">Ergonomic Office Chair</h3>
                         <div class="product-rating">
                             <div class="rating-stars">★★★★☆</div>
@@ -608,4 +610,5 @@
 
     <script src="shop-script.js"></script>
 </body>
+
 </html>
