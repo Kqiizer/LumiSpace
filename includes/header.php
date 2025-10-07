@@ -68,8 +68,7 @@ if (!empty($_SESSION['usuario_id'])) {
       <li><a href="<?= $BASE ?>index.php" class="<?= $currentPage === 'index.php' ? 'active' : '' ?>">Inicio</a></li>
       <li><a href="<?= $BASE ?>views/categorias.php" class="<?= $currentPage === 'categorias.php' ? 'active' : '' ?>">Categorías</a></li>
       <li><a href="<?= $BASE ?>views/marcas.php" class="<?= $currentPage === 'marcas.php' ? 'active' : '' ?>">Marcas</a></li>
-      <li><a href="<?= $BASE ?>views/shop.php" class="<?= $currentPage === 'shop.php' ? 'active' : '' ?>">Catálogo</a></li>
-      <li><a href="<?= $BASE ?>views/servicios.php" class="<?= $currentPage === 'servicios.php' ? 'active' : '' ?>">Servicios</a></li>
+      <li><a href="<?= $BASE ?>views/catalogo.php" class="<?= $currentPage === 'catalogo.php' ? 'active' : '' ?>">Catálogo</a></li>
       <li><a href="<?= $BASE ?>views/contacto.php" class="<?= $currentPage === 'contacto.php' ? 'active' : '' ?>">Contacto</a></li>
     </ul>
 
@@ -114,8 +113,7 @@ if (!empty($_SESSION['usuario_id'])) {
   <a href="<?= $BASE ?>index.php" class="btn <?= $currentPage === 'index.php' ? 'active' : '' ?>">🏠 Inicio</a>
   <a href="<?= $BASE ?>views/categorias.php" class="btn <?= $currentPage === 'categorias.php' ? 'active' : '' ?>">📂 Categorías</a>
   <a href="<?= $BASE ?>views/marcas.php" class="btn <?= $currentPage === 'marcas.php' ? 'active' : '' ?>">🏷 Marcas</a>
-  <a href="<?= $BASE ?>views/shop.php" class="btn <?= $currentPage === 'shop.php' ? 'active' : '' ?>">🛍 Catálogo</a>
-  <a href="<?= $BASE ?>views/servicios.php" class="btn <?= $currentPage === 'servicios.php' ? 'active' : '' ?>">⚙ Servicios</a>
+  <a href="<?= $BASE ?>views/catalogo.php" class="btn <?= $currentPage === 'catalogo.php' ? 'active' : '' ?>">🛍 Catálogo</a>
   <a href="<?= $BASE ?>views/blog.php" class="btn <?= $currentPage === 'blog.php' ? 'active' : '' ?>">📰 Blog</a>
   <a href="<?= $BASE ?>views/contacto.php" class="btn <?= $currentPage === 'contacto.php' ? 'active' : '' ?>">📞 Contacto</a>
 
