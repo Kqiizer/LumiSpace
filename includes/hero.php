@@ -2,34 +2,52 @@
 require_once __DIR__ . "/../config/functions.php";
 
 // BASE_URL (usa la que tengas en tu config; aquí doy fallback)
-$BASE = defined('BASE_URL') ? BASE_URL : '/LumiSpace/';
+$BASE = defined('BASE_URL') ? rtrim(BASE_URL, '/') . '/' : '/LumiSpace/';
 
 /**
- * Normaliza la URL de la imagen del producto para que siempre cargue.
+ * Normaliza la URL de la imagen del producto para que siempre cargue
+ * con base en: images/productos/...
  */
 function buildImageUrl(?string $raw, string $BASE): string {
     $raw = trim((string)$raw);
-    $raw = str_replace('\\', '/', $raw);       // separadores
-    $raw = preg_replace('#\.\./#', '', $raw);  // limpia ../
+    $raw = str_replace('\\', '/', $raw);        // separadores windows -> unix
+    $raw = preg_replace('#\.\./#', '', $raw);   // limpia ../
 
-    // URL absoluta ya válida
-    if (preg_match('#^https?://#i', $raw)) return $raw;
+    // 1) URL absoluta http(s)
+    if ($raw !== '' && preg_match('#^https?://#i', $raw)) {
+        return $raw;
+    }
 
-    // Comienza con slash => absoluta del dominio
-    if (strpos($raw, '/') === 0) return $raw;
+    // 2) Si empieza con "/" (absoluta al docroot), la re-ancoramos a BASE
+    if ($raw !== '' && strpos($raw, '/') === 0) {
+        return rtrim($BASE, '/') . '/' . ltrim($raw, '/');  // /LumiSpace/ + images/...
+    }
 
-    // Si trae 'uploads/...'
-    if (stripos($raw, 'uploads/') === 0) {
+    // 3) Ya viene con prefijo "images/..." -> la anclamos a BASE
+    if (stripos($raw, 'images/') === 0) {
+        return rtrim($BASE, '/') . '/' . $raw;              // /LumiSpace/images/...
+    }
+
+    // 4) Viene como "productos/archivo.jpg" -> la reubicamos bajo images/productos/
+    if (stripos($raw, 'productos/') === 0) {
+        return rtrim($BASE, '/') . '/images/' . $raw;       // /LumiSpace/images/productos/archivo.jpg
+    }
+
+    // 5) Soporte legado para "imagenes/..." (si existiera en tu BD)
+    if (stripos($raw, 'imagenes/') === 0) {
+        // si ya tienes esa carpeta física, usa BASE + imagenes/...
+        // o si deseas forzar a images/productos/, cambia la siguiente línea por:
+        // return rtrim($BASE, '/') . '/images/productos/' . basename($raw);
         return rtrim($BASE, '/') . '/' . $raw;
     }
 
-    // Vacío => fallback
+    // 6) Vacío -> placeholder
     if ($raw === '' || $raw === null) {
         return rtrim($BASE, '/') . '/images/default.png';
     }
 
-    // Nombre de archivo => a uploads/productos/
-    return rtrim($BASE, '/') . '/uploads/productos/' . $raw;
+    // 7) Sólo nombre de archivo -> asumir images/productos/{archivo}
+    return rtrim($BASE, '/') . '/images/productos/' . $raw;
 }
 
 // 🚀 Top productos por ventas (incluye productos sin ventas)
@@ -64,8 +82,8 @@ if ($result) {
       </p>
 
       <div class="hero-buttons">
-        <a href="<?= htmlspecialchars(rtrim($BASE,'/').'/index.php') ?>" class="btn-primary">Shop Now <i class="fas fa-arrow-right"></i></a>
-        <a href="<?= htmlspecialchars(rtrim($BASE,'/').'/index.php') ?>" class="btn-secondary">View All Products</a>
+        <a href="<?= htmlspecialchars($BASE . 'index.php') ?>" class="btn-primary">Shop Now <i class="fas fa-arrow-right"></i></a>
+        <a href="<?= htmlspecialchars($BASE . 'index.php') ?>" class="btn-secondary">View All Products</a>
       </div>
 
       <div class="hero-rating">
@@ -87,14 +105,15 @@ if ($result) {
       <div class="carousel-wrapper" id="heroCarousel" style="display:flex; gap:20px; will-change: transform;">
         <?php if (!empty($topProductos)): ?>
           <?php foreach ($topProductos as $p): 
-            $detalle = rtrim($BASE,'/').'/producto.php?id='.((int)$p['id']);
+            // 🔗 Ajusta si tu detalle es otro archivo:
+            $detalle = $BASE . 'views/productos-detal.php?id=' . ((int)$p['id']);
           ?>
             <div class="room-card"
                  data-id="<?= (int)$p['id'] ?>"
                  data-url="<?= htmlspecialchars($detalle, ENT_QUOTES, 'UTF-8') ?>"
                  style="flex:0 0 calc(33.33% - 14px);">
               <div class="room-image" 
-                   style="background-image: url('<?= htmlspecialchars($p['img_url'], ENT_QUOTES, 'UTF-8') ?>'); background-size: cover; background-position: center;">
+                   style="background-image:url('<?= htmlspecialchars($p['img_url'], ENT_QUOTES, 'UTF-8') ?>'); background-size:cover; background-position:center;">
                 <div class="room-price">$<?= number_format((float)$p['precio'], 2) ?></div>
               </div>
               <div class="room-info">
@@ -106,14 +125,14 @@ if ($result) {
 
           <!-- 🔁 Clones para loop infinito suave -->
           <?php foreach (array_slice($topProductos, 0, min(3,count($topProductos))) as $p): 
-            $detalle = rtrim($BASE,'/').'/producto.php?id='.((int)$p['id']);
+            $detalle = $BASE . 'views/productos-detal.php?id=' . ((int)$p['id']);
           ?>
             <div class="room-card"
                  data-id="<?= (int)$p['id'] ?>"
                  data-url="<?= htmlspecialchars($detalle, ENT_QUOTES, 'UTF-8') ?>"
                  style="flex:0 0 calc(33.33% - 14px); opacity:.7;">
               <div class="room-image" 
-                   style="background-image: url('<?= htmlspecialchars($p['img_url'], ENT_QUOTES, 'UTF-8') ?>'); background-size: cover; background-position: center;">
+                   style="background-image:url('<?= htmlspecialchars($p['img_url'], ENT_QUOTES, 'UTF-8') ?>'); background-size:cover; background-position:center;">
                 <div class="room-price">$<?= number_format((float)$p['precio'], 2) ?></div>
               </div>
               <div class="room-info">
