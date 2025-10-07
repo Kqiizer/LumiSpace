@@ -549,6 +549,45 @@ function timeAgo($date) {
     $days = floor($hours / 24);
     return "hace $days días";
 }
+/* ===== Helpers de introspección ===== */
+// config/functions.php
+
+if (!function_exists('tableExists')) {
+    function tableExists(mysqli $conn, string $table): bool {
+        // Sanear nombre de tabla por seguridad básica
+        if (!preg_match('/^[a-zA-Z0-9_]+$/', $table)) {
+            return false;
+        }
+        $stmt = $conn->prepare("SHOW TABLES LIKE ?");
+        $stmt->bind_param("s", $table);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        return $res && $res->num_rows > 0;
+    }
+}
+
+if (!function_exists('columnExists')) {
+    function columnExists(mysqli $conn, string $table, string $column): bool {
+        if (!preg_match('/^[a-zA-Z0-9_]+$/', $table)) {
+            return false;
+        }
+        $stmt = $conn->prepare("SHOW COLUMNS FROM `{$table}` LIKE ?");
+        $stmt->bind_param("s", $column);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        return $res && $res->num_rows > 0;
+    }
+}
+
+/* ===== URL pública de imagen (admin sube a /images/productos) ===== */
+function publicImageUrl(?string $raw): string {
+    $r = trim((string)$raw);
+    $base = rtrim(BASE_URL, '/').'/';
+    if ($r === '') return $base.'images/default.png';
+    if (preg_match('#^https?://#i', $r)) return $r;
+    if (stripos($r, 'images/') === 0) return $base.$r;
+    return $base.'images/productos/'.$r;
+}
 
 /* ============================================================
    Logs y Pagos
@@ -720,20 +759,79 @@ function getMovimientos(): array {
 /* ============================================================
    Productos
     ============================================================ */
-   function getProductosPublicos($limit = 12): array {
+    /* ===== Detalle seguro por ID (se adapta a tu BD) ===== */
+function getProductoPorId(int $id): ?array {
     $conn = getDBConnection();
-    $sql = "SELECT p.id, p.nombre, p.descripcion, p.precio, p.precio_original, 
-                   p.descuento, p.imagen, c.nombre AS categoria
+    if ($id <= 0) return null;
+
+    $joinCat = $joinProv = "";
+    $selCat  = "NULL AS categoria_id, NULL AS categoria";
+    $selProv = "NULL AS marca";
+
+    if (tableExists($conn, "categorias") && columnExists($conn, "productos", "categoria_id")) {
+        $joinCat = " LEFT JOIN categorias c ON p.categoria_id = c.id";
+        $selCat  = "c.id AS categoria_id, c.nombre AS categoria";
+    }
+    if (tableExists($conn, "proveedores") && columnExists($conn, "productos", "proveedor_id")) {
+        $joinProv = " LEFT JOIN proveedores pr ON p.proveedor_id = pr.id";
+        $selProv  = "pr.nombre AS marca";
+    } elseif (tableExists($conn, "marcas") && columnExists($conn, "productos", "marca_id")) {
+        $joinProv = " LEFT JOIN marcas m ON p.marca_id = m.id";
+        $selProv  = "m.nombre AS marca";
+    }
+
+    $sql = "SELECT p.id, p.nombre, p.descripcion, p.precio, p.precio_original, p.descuento,
+                   p.stock, p.imagen, $selCat, $selProv
+            FROM productos p{$joinCat}{$joinProv}
+            WHERE p.id = ? LIMIT 1";
+
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        error_log("getProductoPorId prepare: {$conn->error} | SQL: {$sql}");
+        return null;
+    }
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    $prod = $stmt->get_result()->fetch_assoc();
+    return $prod ?: null;
+}
+
+/* Thumbs adicionales si tienes la tabla producto_imagenes */
+function getProductoImagenes(int $producto_id): array {
+    $conn = getDBConnection();
+    if (!tableExists($conn, "producto_imagenes")) return [];
+    $stmt = $conn->prepare("SELECT ruta FROM producto_imagenes WHERE producto_id=? ORDER BY orden ASC, id ASC");
+    $stmt->bind_param("i", $producto_id);
+    $stmt->execute();
+    $rs = $stmt->get_result();
+    $imgs = [];
+    while ($row = $rs->fetch_assoc()) $imgs[] = publicImageUrl((string)$row['ruta']);
+    return $imgs;
+}
+
+function getProductosPublicos(int $limit = 12): array {
+    $conn = getDBConnection();
+
+    $sql = "SELECT p.id, p.nombre, p.descripcion, p.precio, p.stock, p.imagen, 
+                   c.nombre AS categoria
             FROM productos p
             LEFT JOIN categorias c ON p.categoria_id = c.id
             WHERE p.estado = 'activo'
-            ORDER BY p.creado_en DESC
+            ORDER BY p.id DESC
             LIMIT ?";
+
     $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        error_log("❌ Error en prepare getProductosPublicos: " . $conn->error);
+        return [];
+    }
+
     $stmt->bind_param("i", $limit);
     $stmt->execute();
-    return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $res = $stmt->get_result();
+    return $res->fetch_all(MYSQLI_ASSOC);
 }
+
 
 function getProductos(): array {
     $conn = getDBConnection();
@@ -831,31 +929,132 @@ function inactivarProducto(int $id): bool {
     $stmt->bind_param("i", $id);
     return $stmt->execute();
 }
-function getProductosPorCategoria($categoria = null, $limit = 12) {
-    $conn = getDBConnection();
-    $limit = (int)$limit; // ✅ Sanitizamos el límite
+function getProductosPorCategoria(?int $categoria_id = null, int $limit = 12): array {
+    $conn  = getDBConnection();
+    $limit = max(1, (int)$limit);
 
-    if ($categoria) {
-        $sql = "SELECT * FROM productos WHERE categoria = ? ORDER BY creado_en DESC LIMIT $limit";
-        $stmt = $conn->prepare($sql);
-        if (!$stmt) {
-            die("Error en prepare: " . $conn->error);
-        }
-        $stmt->bind_param("s", $categoria);
-    } else {
-        $sql = "SELECT * FROM productos ORDER BY creado_en DESC LIMIT $limit";
-        $stmt = $conn->prepare($sql);
-        if (!$stmt) {
-            die("Error en prepare: " . $conn->error);
+    // ===== Detectar columna de orden "reciente" =====
+    static $orderCol = null;
+    if ($orderCol === null) {
+        $candidatas = ['creado_en','created_at','fecha_creacion','fecha'];
+        $orderCol = 'id';
+        foreach ($candidatas as $col) {
+            $chk = $conn->query("SHOW COLUMNS FROM productos LIKE '{$col}'");
+            if ($chk && $chk->num_rows > 0) { $orderCol = $col; break; }
         }
     }
 
-    $stmt->execute();
-    $res = $stmt->get_result();
-    return $res->fetch_all(MYSQLI_ASSOC);
+    // ===== Detectar si existe la columna productos.categoria_id =====
+    static $hasCategoriaId = null;
+    if ($hasCategoriaId === null) {
+        $chk = $conn->query("SHOW COLUMNS FROM productos LIKE 'categoria_id'");
+        $hasCategoriaId = ($chk && $chk->num_rows > 0);
+    }
+
+    // ===== Construcción del SQL =====
+    if ($hasCategoriaId) {
+        // Esquema con FK categoria_id
+        $sqlBase = "
+            SELECT p.id, p.nombre, p.descripcion, p.precio, p.precio_original, p.descuento,
+                   p.stock, p.imagen, c.nombre AS categoria
+            FROM productos p
+            LEFT JOIN categorias c ON p.categoria_id = c.id
+        ";
+
+        if ($categoria_id) {
+            // Usamos prepare; si falla, fallback a query() directa
+            $sql = $sqlBase . " WHERE p.categoria_id = ? ORDER BY p.`{$orderCol}` DESC, p.id DESC LIMIT " . (int)$limit;
+            $stmt = $conn->prepare($sql);
+            if ($stmt) {
+                $stmt->bind_param("i", $categoria_id);
+                $stmt->execute();
+                $res = $stmt->get_result();
+                return $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
+            } else {
+                error_log('getProductosPorCategoria prepare(FK) fallo: ' . $conn->error);
+                $categoria_id = (int)$categoria_id;
+                $sqlFall = $sqlBase . " WHERE p.categoria_id = {$categoria_id} ORDER BY p.`{$orderCol}` DESC, p.id DESC LIMIT " . (int)$limit;
+                $res = $conn->query($sqlFall);
+                return $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
+            }
+        } else {
+            $sql = $sqlBase . " ORDER BY p.`{$orderCol}` DESC, p.id DESC LIMIT " . (int)$limit;
+            $res = $conn->query($sql);
+            return $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
+        }
+
+    } else {
+        // Esquema SIN categoria_id -> p.categoria (texto)
+        $sqlBase = "
+            SELECT p.id, p.nombre, p.descripcion, p.precio, p.precio_original, p.descuento,
+                   p.stock, p.imagen, p.categoria AS categoria
+            FROM productos p
+        ";
+
+        if ($categoria_id) {
+            // Mapear id -> nombre con subquery
+            $sql = $sqlBase . "
+                WHERE p.categoria = (SELECT nombre FROM categorias WHERE id = ? LIMIT 1)
+                ORDER BY p.`{$orderCol}` DESC, p.id DESC
+                LIMIT " . (int)$limit;
+            $stmt = $conn->prepare($sql);
+            if ($stmt) {
+                $stmt->bind_param("i", $categoria_id);
+                $stmt->execute();
+                $res = $stmt->get_result();
+                return $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
+            } else {
+                error_log('getProductosPorCategoria prepare(texto) fallo: ' . $conn->error);
+                // Fallback (menos seguro, pero casteamos todo)
+                $categoria_id = (int)$categoria_id;
+                $sqlFall = $sqlBase . "
+                    WHERE p.categoria = (SELECT nombre FROM categorias WHERE id = {$categoria_id} LIMIT 1)
+                    ORDER BY p.`{$orderCol}` DESC, p.id DESC
+                    LIMIT " . (int)$limit;
+                $res = $conn->query($sqlFall);
+                return $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
+            }
+        } else {
+            $sql = $sqlBase . " ORDER BY p.`{$orderCol}` DESC, p.id DESC LIMIT " . (int)$limit;
+            $res = $conn->query($sql);
+            return $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
+        }
+    }
 }
 
 
+function getProductosCatalogo(?string $categoria = null, int $limit = null): array {
+    $conn = getDBConnection();
+    $sql = "SELECT p.id, p.nombre, p.precio, p.stock, p.imagen, c.nombre AS categoria
+            FROM productos p
+            LEFT JOIN categorias c ON p.categoria_id = c.id";
+    $params = [];
+    $types  = "";
+
+    if ($categoria) {
+        $sql .= " WHERE c.nombre = ?";
+        $params[] = $categoria;
+        $types   .= "s";
+    }
+
+    $sql .= " ORDER BY p.nombre ASC";
+    if ($limit) {
+        $sql .= " LIMIT ?";
+        $params[] = $limit;
+        $types   .= "i";
+    }
+
+    $stmt = $conn->prepare($sql);
+    if ($params) $stmt->bind_param($types, ...$params);
+    $stmt->execute();
+    $res = $stmt->get_result();
+
+    $productos = [];
+    while ($row = $res->fetch_assoc()) {
+        $productos[] = $row;
+    }
+    return $productos;
+}
 
 /* ============================================================
    Proveedores
@@ -938,4 +1137,51 @@ function eliminarCategoria(int $id): bool {
     }
     $stmt->bind_param("i", $id);
     return $stmt->execute();
+}
+function favoritosAvailable(): bool {
+    $conn = getDBConnection();
+    return tableExists($conn, "favoritos")
+        && columnExists($conn, "favoritos", "usuario_id")
+        && columnExists($conn, "favoritos", "producto_id");
+}
+
+function toggleFavorito(int $usuario_id, int $producto_id): bool {
+    if ($usuario_id <= 0 || !favoritosAvailable()) {
+        // fallback sesión
+        if (!isset($_SESSION)) session_start();
+        $_SESSION['favoritos'] = $_SESSION['favoritos'] ?? [];
+        if (in_array($producto_id, $_SESSION['favoritos'])) {
+            $_SESSION['favoritos'] = array_values(array_diff($_SESSION['favoritos'], [$producto_id]));
+        } else {
+            $_SESSION['favoritos'][] = $producto_id;
+            $_SESSION['favoritos'] = array_values(array_unique($_SESSION['favoritos']));
+        }
+        return true;
+    }
+    $conn = getDBConnection();
+    $chk = $conn->prepare("SELECT 1 FROM favoritos WHERE usuario_id=? AND producto_id=?");
+    $chk->bind_param("ii", $usuario_id, $producto_id);
+    $chk->execute();
+    $exists = $chk->get_result()->num_rows > 0;
+    if ($exists) {
+        $del = $conn->prepare("DELETE FROM favoritos WHERE usuario_id=? AND producto_id=?");
+        $del->bind_param("ii", $usuario_id, $producto_id);
+        return $del->execute();
+    } else {
+        $ins = $conn->prepare("INSERT INTO favoritos (usuario_id, producto_id, creado_en) VALUES (?,?,NOW())");
+        $ins->bind_param("ii", $usuario_id, $producto_id);
+        return $ins->execute();
+    }
+}
+
+function getFavoritosCount(?int $usuario_id): int {
+    if ($usuario_id && $usuario_id > 0 && favoritosAvailable()) {
+        $conn = getDBConnection();
+        $stmt = $conn->prepare("SELECT COUNT(*) c FROM favoritos WHERE usuario_id=?");
+        $stmt->bind_param("i", $usuario_id);
+        $stmt->execute();
+        return (int)($stmt->get_result()->fetch_assoc()['c'] ?? 0);
+    }
+    if (!isset($_SESSION)) session_start();
+    return isset($_SESSION['favoritos']) ? count($_SESSION['favoritos']) : 0;
 }

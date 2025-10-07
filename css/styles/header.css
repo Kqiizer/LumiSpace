@@ -4,6 +4,8 @@
   color: white;
   padding: 10px 0;
   font-size: 14px;
+  position: relative;
+  overflow: hidden;
 }
 
 .top-bar .container {
@@ -30,20 +32,23 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.3s ease;
+  transition: all 0.3s ease;
 }
 
 .top-bar .social-icons a:hover {
   background-color: #7a6249;
+  transform: scale(1.1);
 }
 
 /* ==== HEADER PRINCIPAL ==== */
 .header {
   background-color: white;
   padding: 15px 0;
-  box-shadow: 0 2px 5px rgba(139, 115, 85, 0.1);
-  position: relative;
+  box-shadow: 0 2px 8px rgba(139, 115, 85, 0.15);
+  position: sticky;
+  top: 0;
   z-index: 1000;
+  transition: background 0.3s ease, box-shadow 0.3s ease;
 }
 
 .header .container {
@@ -60,21 +65,28 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 20px;
+  font-size: 22px;
   font-weight: bold;
   color: #8b7355;
+  text-decoration: none;
+  transition: transform 0.3s ease;
+}
+
+.logo:hover {
+  transform: scale(1.05);
 }
 
 .logo .logo-icon {
-  width: 40px;
-  height: 40px;
-  background-color: #a0896b;
+  width: 42px;
+  height: 42px;
+  background: linear-gradient(135deg, #8b7355, #a0896b);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   font-size: 18px;
+  box-shadow: 0 4px 10px rgba(139, 115, 85, 0.3);
 }
 
 /* ==== NAV MENU (DESKTOP) ==== */
@@ -82,42 +94,89 @@
   display: flex;
   list-style: none;
   gap: 30px;
-  transition: right 0.3s ease;
 }
 
 .nav-menu li a {
   text-decoration: none;
   color: #8b7355;
   font-weight: 500;
-  transition: color 0.3s;
+  position: relative;
+  padding: 5px 0;
+  transition: color 0.3s ease;
+}
+
+/* Subrayado animado */
+.nav-menu li a::after {
+  content: "";
+  position: absolute;
+  bottom: -3px;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background-color: #a0896b;
+  transition: width 0.3s ease, left 0.3s ease;
+  transform: translateX(-50%);
+}
+
+.nav-menu li a:hover::after,
+.nav-menu li a.active::after {
+  width: 100%;
 }
 
 .nav-menu li a:hover {
   color: #a0896b;
 }
 
+.nav-menu li a.active {
+  color: #a0896b;
+  font-weight: 600;
+}
+
 /* ==== ICONOS HEADER ==== */
 .header-icons {
   display: flex;
-  gap: 15px;
+  gap: 18px;
   align-items: center;
+}
+
+.header-icons a {
+  position: relative;
 }
 
 .header-icons i {
   font-size: 18px;
   color: #8b7355;
   cursor: pointer;
-  transition: transform 0.2s;
+  transition: transform 0.3s, color 0.3s;
 }
 
 .header-icons i:hover {
-  transform: scale(1.2);
+  transform: scale(1.2) rotate(5deg);
+  color: #a0896b;
+}
+
+/* Badges */
+.header-icons .badge {
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  background: #a0896b;
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
 }
 
 /* ==== MENU HAMBURGUESA ==== */
-/* ==== MENU HAMBURGUESA ==== */
 .menu-toggle {
-  display: flex; /* ✅ SIEMPRE visible */
+  display: none;
   flex-direction: column;
   justify-content: space-between;
   width: 25px;
@@ -135,21 +194,7 @@
   border-radius: 3px;
   transition: all 0.3s ease;
 }
-body.dark {
-  background: #121212;
-  color: #f5f5f5;
-}
 
-body.dark .header,
-body.dark .sidebar {
-  background: #1e1e1e;
-}
-
-body.dark a {
-  color: #ddd;
-}
-
-/* Animación a X */
 .menu-toggle.open .top {
   transform: rotate(45deg) translateY(7px);
 }
@@ -160,8 +205,6 @@ body.dark a {
   transform: rotate(-45deg) translateY(-7px);
 }
 
-
-
 /* ==== OVERLAY ==== */
 .overlay {
   position: fixed;
@@ -169,7 +212,7 @@ body.dark a {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0,0,0,0.55);
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.3s ease;
@@ -180,31 +223,68 @@ body.dark a {
   visibility: visible;
 }
 
+/* ==== MODO OSCURO ==== */
+body.dark {
+  background: #121212;
+  color: #f5f5f5;
+}
+
+body.dark .header {
+  background: #1e1e1e;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+}
+
+body.dark .nav-menu li a {
+  color: #ddd;
+}
+
+body.dark .nav-menu li a.active {
+  color: #fff;
+}
+
+body.dark .nav-menu li a.active::after {
+  background-color: #fff;
+}
+
+body.dark .header-icons i {
+  color: #ddd;
+}
+
+body.dark .header-icons i:hover {
+  color: #c7a97a;
+}
+
+body.dark .top-bar {
+  background: #333;
+}
+
+body.dark .top-bar .social-icons a {
+  background: #555;
+}
+
 /* ==== RESPONSIVE NAV ==== */
 @media (max-width: 900px) {
   .nav-menu {
     position: fixed;
     top: 0;
-    right: -250px; /* escondido */
+    right: -260px;
     height: 100%;
-    width: 250px;
+    width: 260px;
     flex-direction: column;
     background: #fff;
     padding: 80px 20px;
-    box-shadow: -2px 0 10px rgba(0,0,0,.1);
-    transition: right 0.3s ease;
+    box-shadow: -2px 0 12px rgba(0,0,0,.15);
+    transition: right 0.4s ease;
   }
 
   .nav-menu.active { right: 0; }
 
-  /* Animación entrada en items */
   .nav-menu li {
     opacity: 0;
     transform: translateX(20px);
     animation: menuFade 0.4s forwards;
   }
 
-  /* Delay escalonado */
   .nav-menu.active li:nth-child(1) { animation-delay: 0.1s; }
   .nav-menu.active li:nth-child(2) { animation-delay: 0.2s; }
   .nav-menu.active li:nth-child(3) { animation-delay: 0.3s; }
