@@ -143,7 +143,8 @@ if (isset($google_client) && $google_client instanceof Google_Client) {
 </head>
 <body>
   <div class="auth-wrapper">
-    <div class="auth-image"></div>
+        <div class="auth-image" style="background: url('../images/pos-logi.jpg') no-repeat center center/cover;"></div>
+
     <div class="auth-form">
 
       <a href="../index.php" class="back-arrow">

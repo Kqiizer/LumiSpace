@@ -58,10 +58,12 @@ if (!empty($_SESSION['usuario_id'])) {
 <header class="header">
   <div class="container">
     <!-- Logo -->
-    <a href="<?= $BASE ?>index.php" class="logo">
-      <div class="logo-icon"><i class="fas fa-couch"></i></div>
-      <span>LumiSpace</span>
-    </a>
+   <a href="<?= $BASE ?>index.php" class="logo">
+  <div class="logo-icon">
+    <i class="fas fa-lightbulb"></i>
+  </div>
+  <span>LumiSpace</span>
+</a>
 
     <!-- Menú Desktop -->
     <ul class="nav-menu">

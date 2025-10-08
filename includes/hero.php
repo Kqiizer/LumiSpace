@@ -55,10 +55,10 @@ if ($result) {
 
       <div class="hero-buttons">
         <a href="<?= htmlspecialchars($BASE . 'index.php') ?>" class="btn-primary">
-          Shop Now <i class="fas fa-arrow-right"></i>
+          Compra Ahora <i class="fas fa-arrow-right"></i>
         </a>
         <a href="<?= htmlspecialchars($BASE . 'index.php') ?>" class="btn-secondary">
-          View All Products
+         Ver Mas
         </a>
       </div>
     </div>
