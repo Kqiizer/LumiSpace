@@ -156,7 +156,7 @@ if (isset($google_client) && $google_client instanceof Google_Client) {
 </head>
 <body>
   <div class="auth-wrapper">
-    <div class="auth-image" style="background: url('../images/pos-register.jpg') no-repeat center center/cover;"></div>
+    <div class="auth-image" style="background: url('../images/pos-logi.jpg') no-repeat center center/cover;"></div>
     <div class="auth-form">
       <h2>Crear cuenta</h2>
       <p class="subtitle">¿Ya tienes cuenta? <a href="login.php">Inicia sesión</a></p>

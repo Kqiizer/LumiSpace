@@ -85,12 +85,12 @@ function prod_img_url($raw, $BASE) {
          data-user="<?= (int)$usuario_id ?>">
   <div class="container">
     <div class="section-header">
-      <div class="section-subtitle">Our Products</div>
-      <h2 class="section-title">Our Products Collections</h2>
+<div class="section-subtitle">Nuestros Productos</div>
+<h2 class="section-title">Nuestras Colecciones de Productos</h2>
 
       <!-- Filtros -->
       <div class="filter-tabs">
-        <a href="<?= $BASE ?>index.php" class="filter-tab <?= !$categoriaSeleccionada ? 'active' : '' ?>">All Products</a>
+        <a href="<?= $BASE ?>index.php" class="filter-tab <?= !$categoriaSeleccionada ? 'active' : '' ?>">Ver Productos</a>
         <?php foreach ($categorias as $c): ?>
           <a href="<?= $BASE ?>index.php?cat=<?= (int)$c['id'] ?>" 
              class="filter-tab <?= ($categoriaSeleccionada === (int)$c['id']) ? 'active' : '' ?>">

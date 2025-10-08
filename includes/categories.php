@@ -1,56 +1,58 @@
-<!-- Products Categories -->
+<!-- Categorías de Productos -->
 <section class="products">
   <div class="container">
     <div class="products-grid">
-      <!-- Chairs -->
+      
+      <!-- Sillas -->
       <div class="product-category">
         <div class="category-header">
-          <div class="item-count">1500+ Items</div>
-          <h2 class="category-title">Chairs</h2>
-          <p class="category-description">Lorem ipsum dolor sit amet, consectetur adipiscing elit</p>
+          <div class="item-count">1500+ Artículos</div>
+          <h2 class="category-title">Exteriores</h2>
+          <p class="category-description">Encuentra la silla perfecta para cada ocasión</p>
           <ul class="category-list">
-            <li>Gaming Chair</li>
-            <li>Lounge Chair</li>
-            <li>Folding Chair</li>
-            <li>Dining Chair</li>
-            <li>Office Chair</li>
-            <li>Armchair</li>
-            <li>Bar Stool</li>
-            <li>Club Chair</li>
+            <li>Silla Gamer</li>
+            <li>Silla de Lounge</li>
+            <li>Silla Plegable</li>
+            <li>Silla de Comedor</li>
+            <li>Silla de Oficina</li>
+            <li>Sillón</li>
+            <li>Banco Alto</li>
+            <li>Silla Club</li>
           </ul>
         </div>
         <div class="category-image"></div>
       </div>
 
-      <!-- Sofa -->
+      <!-- Sofás -->
       <div class="product-category">
         <div class="category-header">
-          <div class="item-count">750+ Items</div>
-          <h2 class="category-title">Sofa</h2>
+          <div class="item-count">750+ Artículos</div>
+          <h2 class="category-title">Lamparas de Techo</h2>
           <ul class="category-list" style="margin-top: 20px;">
-            <li>Reception Sofa</li>
-            <li>Sectional Sofa</li>
-            <li>Armless Sofa</li>
-            <li>Curved Sofa</li>
+            <li>Sofá de Recepción</li>
+            <li>Sofá Seccional</li>
+            <li>Sofá sin Brazos</li>
+            <li>Sofá Curvo</li>
           </ul>
         </div>
         <div class="category-image"></div>
       </div>
 
-      <!-- Lighting -->
+      <!-- Iluminación -->
       <div class="product-category">
         <div class="category-header">
-          <div class="item-count">450+ Items</div>
-          <h2 class="category-title">Lighting</h2>
+          <div class="item-count">450+ Artículos</div>
+          <h2 class="category-title">Iluminación</h2>
           <ul class="category-list" style="margin-top: 20px;">
-            <li>Table Lights</li>
-            <li>Floor Lights</li>
-            <li>Ceiling Lights</li>
-            <li>Wall Lights</li>
+            <li>Lámparas de Mesa</li>
+            <li>Lámparas de Piso</li>
+            <li>Lámparas de Techo</li>
+            <li>Lámparas de Pared</li>
           </ul>
         </div>
         <div class="category-image"></div>
       </div>
+
     </div>
   </div>
 </section>
