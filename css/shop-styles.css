@@ -205,6 +205,8 @@ body {
     padding: 30px;
     height: fit-content;
     box-shadow: 0 5px 20px rgba(139, 115, 85, 0.1);
+    overflow: hidden; /* 🔒 Evita que el slider o inputs se salgan */
+    max-width: 320px; /* 💡 Evita que se expanda más de lo deseado */
 }
 
 .filter-close {
@@ -276,32 +278,45 @@ body {
 
 /* Price Range */
 .price-range {
-    margin-top: 20px;
+    margin-top: 10px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    box-sizing: border-box;
 }
 
 .price-inputs {
     display: flex;
+    justify-content: space-between;
     gap: 10px;
-    margin-bottom: 15px;
+    margin-bottom: 10px;
+    width: 100%;
 }
 
 .price-input {
     flex: 1;
+    min-width: 0; 
     padding: 8px 12px;
     border: 2px solid #d4c4a8;
     border-radius: 8px;
     font-size: 14px;
     text-align: center;
+    box-sizing: border-box;
 }
 
 .price-slider {
+    display: block;
     width: 100%;
     height: 6px;
     border-radius: 3px;
     background: #d4c4a8;
     outline: none;
+    margin: 0; 
+    position: relative;
 }
 
+/* Para que el thumb no se salga del borde */
 .price-slider::-webkit-slider-thumb {
     appearance: none;
     width: 18px;
@@ -309,7 +324,35 @@ body {
     border-radius: 50%;
     background: #a0896b;
     cursor: pointer;
+    position: relative;
+    top: 0; /* ✅ centra el thumb en el track */
+    margin-top: -6px; /* 🪄 ajusta visualmente el centrado */
 }
+
+/* Firefox */
+.price-slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #a0896b;
+    cursor: pointer;
+}
+
+.price-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+    transition: transform 0.2s;
+}
+/* Responsive fix para móviles */
+@media (max-width: 600px) {
+    .price-inputs {
+        flex-direction: column;
+    }
+
+    .price-input {
+        width: 100%;
+    }
+}
+
 
 /* Rating Filter */
 .rating-item {

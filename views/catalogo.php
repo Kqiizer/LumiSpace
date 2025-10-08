@@ -113,7 +113,7 @@
 
             <!-- Rating Filter -->
             <div class="filter-section">
-                <h3 class="filter-title">Calificación del cleinte</h3>
+                <h3 class="filter-title">Calificación del cliente</h3>
                 <div class="filter-group">
                     <div class="rating-item">
                         <div class="filter-checkbox"></div>
@@ -200,10 +200,10 @@
                         </button>
                     </div>
                     <select class="sort-dropdown">
-                        <option>Default Sorting</option>
-                        <option>Price: Low to High</option>
-                        <option>Price: High to Low</option>
-                        <option>Newest First</option>
+                        <option>Predeterminado</option>
+                        <option>Precio: Mas bajo al mas alto</option>
+                        <option>Precio: Mas alto al mas bajo</option>
+                        <option>Recien llegado</option>
                         <option>Más ranqueada</option>
                         <option>Más popular</option>
                     </select>
@@ -233,8 +233,8 @@
                         <button class="quick-shop">Quick Shop</button>
                     </div>
                     <div class="product-info">
-                        <div class="product-category">Lampara de mesa</div>
-                        <h3 class="product-name">Modern Wooden Dining Chair</h3>
+                        <div class="product-category">Interiores</div>
+                        <h3 class="product-name">Lampara de mesa</h3>
                         <div class="product-rating">
                             <div class="rating-stars">★★★★★</div>
                             <span class="rating-count">(4.8) 124 reviews</span>
@@ -243,7 +243,7 @@
                             <span class="current-price">$54.00</span>
                             <span class="original-price">$108.00</span>
                         </div>
-                        <button class="add-to-cart">Add to Cart</button>
+                        <button class="add-to-cart">Añadir Al Carrito</button>
                     </div>
                 </div>
 
@@ -267,8 +267,8 @@
                         <button class="quick-shop">Quick Shop</button>
                     </div>
                     <div class="product-info">
-                        <div class="product-category">Sofa</div>
-                        <h3 class="product-name">Luxury Sectional Sofa</h3>
+                        <div class="product-category">Exteriores</div>
+                        <h3 class="product-name">Lampara de mesa</h3>
                         <div class="product-rating">
                             <div class="rating-stars">★★★★☆</div>
                             <span class="rating-count">(4.6) 89 reviews</span>
@@ -276,7 +276,7 @@
                         <div class="product-price">
                             <span class="current-price">$1,250.00</span>
                         </div>
-                        <button class="add-to-cart">Add to Cart</button>
+                        <button class="add-to-cart">Añadir Al Carrito</button>
                     </div>
                 </div>
 
@@ -300,8 +300,8 @@
                         <button class="quick-shop">Quick Shop</button>
                     </div>
                     <div class="product-info">
-                        <div class="product-category">Table</div>
-                        <h3 class="product-name">Oak Coffee Table</h3>
+                        <div class="product-category">Decorativos</div>
+                        <h3 class="product-name">Lampara de techo para jardines</h3>
                         <div class="product-rating">
                             <div class="rating-stars">★★★★★</div>
                             <span class="rating-count">(5.0) 67 reviews</span>
@@ -310,7 +310,7 @@
                             <span class="current-price">$320.00</span>
                             <span class="original-price">$425.00</span>
                         </div>
-                        <button class="add-to-cart">Add to Cart</button>
+                        <button class="add-to-cart">Añadir Al Carrito</button>
                     </div>
                 </div>
 
@@ -335,7 +335,7 @@
                     </div>
                     <div class="product-info">
                         <div class="product-category">Lighting</div>
-                        <h3 class="product-name">Modern Floor Lamp</h3>
+                        <h3 class="product-name">Foco inteligente dos colores</h3>
                         <div class="product-rating">
                             <div class="rating-stars">★★★★☆</div>
                             <span class="rating-count">(4.3) 156 reviews</span>
@@ -343,7 +343,7 @@
                         <div class="product-price">
                             <span class="current-price">$180.00</span>
                         </div>
-                        <button class="add-to-cart">Add to Cart</button>
+                        <button class="add-to-cart">Añadir Al Carrito</button>
                     </div>
                 </div>
 
@@ -367,8 +367,8 @@
                         <button class="quick-shop">Quick Shop</button>
                     </div>
                     <div class="product-info">
-                        <div class="product-category">Storage</div>
-                        <h3 class="product-name">Wooden Bookshelf</h3>
+                        <div class="product-category">Interiores</div>
+                        <h3 class="product-name">Lampara de mesa</h3>
                         <div class="product-rating">
                             <div class="rating-stars">★★★★★</div>
                             <span class="rating-count">(4.9) 203 reviews</span>
@@ -377,7 +377,7 @@
                             <span class="current-price">$420.00</span>
                             <span class="original-price">$600.00</span>
                         </div>
-                        <button class="add-to-cart">Add to Cart</button>
+                        <button class="add-to-cart">Añadir Al Carrito</button>
                     </div>
                 </div>
 
@@ -401,8 +401,8 @@
                         <button class="quick-shop">Quick Shop</button>
                     </div>
                     <div class="product-info">
-                        <div class="product-category">LAMPARA</div>
-                        <h3 class="product-name">Ergonomic Office Chair</h3>
+                        <div class="product-category">Interiores</div>
+                        <h3 class="product-name">Lampara de mesa</h3>
                         <div class="product-rating">
                             <div class="rating-stars">★★★★☆</div>
                             <span class="rating-count">(4.2) 98 reviews</span>
@@ -410,7 +410,7 @@
                         <div class="product-price">
                             <span class="current-price">$350.00</span>
                         </div>
-                        <button class="add-to-cart">Add to Cart</button>
+                        <button class="add-to-cart">Añadir Al Carrito</button>
                     </div>
                 </div>
 
@@ -434,8 +434,8 @@
                         <button class="quick-shop">Quick Shop</button>
                     </div>
                     <div class="product-info">
-                        <div class="product-category">Bed</div>
-                        <h3 class="product-name">King Size Bed Frame</h3>
+                        <div class="product-category">Exteriores</div>
+                        <h3 class="product-name">Lampara de mesa</h3>
                         <div class="product-rating">
                             <div class="rating-stars">★★★★★</div>
                             <span class="rating-count">(4.7) 145 reviews</span>
@@ -444,7 +444,7 @@
                             <span class="current-price">$680.00</span>
                             <span class="original-price">$800.00</span>
                         </div>
-                        <button class="add-to-cart">Add to Cart</button>
+                        <button class="add-to-cart">Añadir Al Carrito</button>
                     </div>
                 </div>
 
@@ -469,7 +469,7 @@
                     </div>
                     <div class="product-info">
                         <div class="product-category">Lighting</div>
-                        <h3 class="product-name">Pendant Light Set</h3>
+                        <h3 class="product-name">Foco inteligente dos colores</h3>
                         <div class="product-rating">
                             <div class="rating-stars">★★★★☆</div>
                             <span class="rating-count">(4.4) 76 reviews</span>
@@ -477,7 +477,7 @@
                         <div class="product-price">
                             <span class="current-price">$220.00</span>
                         </div>
-                        <button class="add-to-cart">Add to Cart</button>
+                        <button class="add-to-cart">Añadir Al Carrito</button>
                     </div>
                 </div>
 
@@ -501,8 +501,8 @@
                         <button class="quick-shop">Quick Shop</button>
                     </div>
                     <div class="product-info">
-                        <div class="product-category">Table</div>
-                        <h3 class="product-name">Dining Table Set</h3>
+                        <div class="product-category">Lampara de mesa</div>
+                        <h3 class="product-name">Lampara de mesa</h3>
                         <div class="product-rating">
                             <div class="rating-stars">★★★★★</div>
                             <span class="rating-count">(4.8) 112 reviews</span>
@@ -511,7 +511,7 @@
                             <span class="current-price">$750.00</span>
                             <span class="original-price">$1,250.00</span>
                         </div>
-                        <button class="add-to-cart">Add to Cart</button>
+                        <button class="add-to-cart">Añadir Al Carrito</button>
                     </div>
                 </div>
             </div>
@@ -521,8 +521,8 @@
                 <div class="product-list-item">
                     <div class="list-image"></div>
                     <div class="list-info">
-                        <div class="product-category">Chair</div>
-                        <h3 class="product-name">Modern Wooden Dining Chair</h3>
+                        <div class="product-category">Lampara de mesa</div>
+                        <h3 class="product-name">Lampara de mesa</h3>
                         <div class="product-rating">
                             <div class="rating-stars">★★★★★</div>
                             <span class="rating-count">(4.8) 124 reviews</span>
@@ -540,7 +540,7 @@
                             <span class="current-price">$54.00</span>
                             <span class="original-price">$108.00</span>
                         </div>
-                        <button class="add-to-cart" style="width: 150px;">Add to Cart</button>
+                        <button class="add-to-cart" style="width: 150px;">Añadir Al Carrito</button>
                         <div style="display: flex; gap: 10px; margin-top: 10px;">
                             <button class="action-btn" title="Add to Wishlist">
                                 <i class="fas fa-heart"></i>
@@ -575,7 +575,7 @@
                         <div class="product-price">
                             <span class="current-price">$1,250.00</span>
                         </div>
-                        <button class="add-to-cart" style="width: 150px;">Add to Cart</button>
+                        <button class="add-to-cart" style="width: 150px;">Añadir Al Carrito</button>
                         <div style="display: flex; gap: 10px; margin-top: 10px;">
                             <button class="action-btn" title="Add to Wishlist">
                                 <i class="fas fa-heart"></i>

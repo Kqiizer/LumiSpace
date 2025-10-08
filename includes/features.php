@@ -17,7 +17,7 @@
         </div>
         <div class="feature-text">
           <h3>Envío Gratis</h3>
-          <p>Disfruta de envío gratuito en todas las compras superiores a $180.</p>
+          <p>Disfruta de envío gratuito en todas las compras superiores a $500.</p>
         </div>
       </article>
 
