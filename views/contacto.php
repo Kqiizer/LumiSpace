@@ -43,17 +43,14 @@
                         <div class="feature-box">
                             <i class="fas fa-leaf"></i>
                             <h4>DISEÑO Y FUNCIONALIDAD</h4>
-                            <p>Eco-friendly and responsibly sourced</p>
                         </div>
                         <div class="feature-box">
                             <i class="fas fa-hammer"></i>
                             <h4>COMPROMISO CON LA CALIDAD</h4>
-                            <p>Handcrafted by skilled artisans</p>
                         </div>
                         <div class="feature-box">
                             <i class="fas fa-heart"></i>
                             <h4>ATENCIÓN PERSONALIZADA</h4>
-                            <p>Your satisfaction is our priority</p>
                         </div>
                     </div>
                 </div>
@@ -197,8 +194,7 @@
                     </div>
                     <div class="team-info">
                         <h3>Ximena Cuevas</h3>
-                        <p class="team-role">Founder & CEO</p>
-                        <p class="team-description">Visionary leader with 20+ years in furniture design and sustainable manufacturing.</p>
+                        <p class="team-role">programadora front-end</p>
                     </div>
                 </div>
 
@@ -215,8 +211,7 @@
                     </div>
                     <div class="team-info">
                         <h3>Josefina Hernandez</h3>
-                        <p class="team-role">Head of Design</p>
-                        <p class="team-description">Award-winning designer specializing in modern minimalist aesthetics.</p>
+                        <p class="team-role">diseñadora ux/ui</p>
                     </div>
                 </div>
 
@@ -233,8 +228,7 @@
                     </div>
                     <div class="team-info">
                         <h3>Fernando Arroyo</h3>
-                        <p class="team-role">Operations Director</p>
-                        <p class="team-description">Expert in supply chain management and sustainable sourcing.</p>
+                        <p class="team-role">programador back-end</p>
                     </div>
                 </div>
 
@@ -251,8 +245,7 @@
                     </div>
                     <div class="team-info">
                         <h3>Santiago Ballesteros</h3>
-                        <p class="team-role">Master Craftsman</p>
-                        <p class="team-description">Third-generation woodworker with unmatched attention to detail.</p>
+                        <p class="team-role">programador back-end</p>
                     </div>
                 </div>
             </div>
@@ -400,15 +393,15 @@
                             <i class="fas fa-map-marker-alt"></i>
                             <div>
                                 <h4>Dirección</h4>
-                                <p>123 Furniture Street<br>Design District, DC 12345</p>
+                                <p>Avenida Universidad 333<br>Las Víboras, 28040 Colima</p>
                             </div>
                         </div>
 
                         <div class="location-item">
                             <i class="fas fa-phone"></i>
                             <div>
-                                <h4>Phone</h4>
-                                <p>+123-456-789<br>+123-456-790</p>
+                                <h4>Telefono</h4>
+                                <p>3141495596<br>+123-456-790</p>
                             </div>
                         </div>
 
@@ -416,34 +409,43 @@
                             <i class="fas fa-envelope"></i>
                             <div>
                                 <h4>Email</h4>
-                                <p>info@furniture.com<br>support@furniture.com</p>
+                                <p>info@Lumispace.com<br>support@LumiSpace.com</p>
                             </div>
                         </div>
 
                         <div class="location-item">
                             <i class="fas fa-clock"></i>
                             <div>
-                                <h4>Hours</h4>
-                                <p>Mon - Fri: 9:00 - 18:00<br>Sat: 10:00 - 16:00</p>
+                                <h4>Horas</h4>
+                                <p>Lun - Vie: 9:00 - 18:00<br>Sab: 10:00 - 16:00</p>
                             </div>
                         </div>
                     </div>
 
                     <button class="get-directions-btn">
                         <i class="fas fa-directions"></i>
-                        Get Directions
+                        Ver Direcciones
                     </button>
                 </div>
-
                 <div class="location-map">
-                    <div class="map-placeholder">
-                        <i class="fas fa-map-marked-alt"></i>
-                        <p>Interactive Map</p>
+                    <div class="map-header" style="text-align:center; margin-bottom: 10px;">
+                        <i class="fas fa-map-marked-alt" style="font-size: 24px; color: #8b7355;"></i>
                     </div>
+
+                    <iframe
+                        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3766.766155750694!2d-103.70488851363028!3d19.249020535558085!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x84255a99f594dcb1%3A0x9102c91772abaa17!2sFacultad%20de%20Contabilidad%20y%20Administraci%C3%B3n%20de%20Colima%20(FCAC)!5e0!3m2!1ses!2smx!4v1759903577414!5m2!1ses!2smx"
+                        width="100%"
+                        height="400"
+                        style="border:0; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);"
+                        allowfullscreen=""
+                        loading="lazy"
+                        referrerpolicy="no-referrer-when-downgrade">
+                    </iframe>
                 </div>
-            </div>
-        </div>
-    </section>
+            </div> <!-- 🔹 cierre de location-layout -->
+        </div> <!-- 🔹 cierre de container -->
+    </section> <!-- 🔹 cierre de location-section -->
+
 
     <!-- Testimonials Section -->
     <section class="testimonials-section">
@@ -464,7 +466,7 @@
                     </div>
                     <p class="testimonial-text">"Muy buena calidad en lamparas!!, deberian incluir un asesor para saber que tipo de ilumación ocupa mi espacio."</p>
                     <div class="testimonial-author">
-                        <div class="author-avatar">JD</div>
+                        <div class="author-avatar">GG</div>
                         <div class="author-info">
                             <h4>Gonzalo</h4>
                             <p>Colima, México</p>
