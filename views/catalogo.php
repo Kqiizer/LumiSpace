@@ -204,8 +204,8 @@
                         <option>Price: Low to High</option>
                         <option>Price: High to Low</option>
                         <option>Newest First</option>
-                        <option>Best Rating</option>
-                        <option>Most Popular</option>
+                        <option>Más ranqueada</option>
+                        <option>Más popular</option>
                     </select>
                 </div>
             </div>
@@ -233,7 +233,7 @@
                         <button class="quick-shop">Quick Shop</button>
                     </div>
                     <div class="product-info">
-                        <div class="product-category">Chair</div>
+                        <div class="product-category">Lampara de mesa</div>
                         <h3 class="product-name">Modern Wooden Dining Chair</h3>
                         <div class="product-rating">
                             <div class="rating-stars">★★★★★</div>

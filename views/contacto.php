@@ -315,9 +315,9 @@
     <section class="process-section">
         <div class="container">
             <div class="section-header">
-                <span class="section-label">Our Process</span>
-                <h2 class="section-title">How We Create Quality</h2>
-                <p class="section-description">From concept to delivery, every step is carefully managed</p>
+                <span class="section-label">NUESTRO </span>
+                <h2 class="section-title">Cómo Creamos Calidad</h2>
+                <p class="section-description">Desde el diseño hasta la entrega, cada paso está cuidadosamente supervisado.</p>
             </div>
 
             <div class="process-grid">
@@ -326,8 +326,8 @@
                     <div class="step-icon">
                         <i class="fas fa-pencil-ruler"></i>
                     </div>
-                    <h3>Design</h3>
-                    <p>Our designers create innovative concepts that blend form and function.</p>
+                    <h3>Diseño</h3>
+                    <p>Nuestros diseñadores crean conceptos innovadores que combinan estética, funcionalidad y tecnología de iluminación moderna.</p>
                 </div>
 
                 <div class="process-arrow">
@@ -339,8 +339,8 @@
                     <div class="step-icon">
                         <i class="fas fa-tree"></i>
                     </div>
-                    <h3>Sourcing</h3>
-                    <p>We carefully select sustainable, high-quality materials from trusted suppliers.</p>
+                    <h3>Selección de Materiales</h3>
+                    <p>Elegimos materiales duraderos y sostenibles, garantizando calidad y respeto por el medio ambiente en cada luminaria.</p>
                 </div>
 
                 <div class="process-arrow">
@@ -352,8 +352,8 @@
                     <div class="step-icon">
                         <i class="fas fa-tools"></i>
                     </div>
-                    <h3>Crafting</h3>
-                    <p>Skilled artisans handcraft each piece with precision and care.</p>
+                    <h3>Fabricación</h3>
+                    <p>Cada pieza es elaborada con precisión, cuidando cada detalle para ofrecer productos que iluminan con estilo y confianza.</p>
                 </div>
 
                 <div class="process-arrow">
@@ -365,8 +365,9 @@
                     <div class="step-icon">
                         <i class="fas fa-check-circle"></i>
                     </div>
-                    <h3>Quality Check</h3>
-                    <p>Rigorous inspection ensures every piece meets our standards.</p>
+                    <h3>Control de Calidad</h3>
+                    <p>Revisamos cada luminaria con pruebas técnicas y visuales para asegurar que cumpla con nuestros estándares de excelencia.
+                    </p>
                 </div>
 
                 <div class="process-arrow">
@@ -378,8 +379,8 @@
                     <div class="step-icon">
                         <i class="fas fa-shipping-fast"></i>
                     </div>
-                    <h3>Delivery</h3>
-                    <p>Safe packaging and timely delivery right to your doorstep.</p>
+                    <h3>Entrega</h3>
+                    <p>Empaquetamos y enviamos con seguridad para que cada producto llegue en perfectas condiciones, listo para transformar tus espacios.</p>
                 </div>
             </div>
         </div>
@@ -390,15 +391,15 @@
         <div class="container">
             <div class="location-layout">
                 <div class="location-content">
-                    <span class="section-label">Visit Us</span>
-                    <h2 class="section-title">Find Us Here</h2>
-                    <p class="location-description">Visit our showroom to experience our furniture collection in person. Our expert team is ready to help you find the perfect pieces for your space.</p>
+                    <span class="section-label">VISITANOS</span>
+                    <h2 class="section-title">Encuentranos aqui </h2>
+                    <p class="location-description">Visita nuestra sala de exposición para descubrir nuestra colección de ilumariarias en persona. Nuestro equipo de expertos está listo para ayudarte a encontrar las piezas perfectas para tu espacio.</p>
 
                     <div class="location-details">
                         <div class="location-item">
                             <i class="fas fa-map-marker-alt"></i>
                             <div>
-                                <h4>Address</h4>
+                                <h4>Dirección</h4>
                                 <p>123 Furniture Street<br>Design District, DC 12345</p>
                             </div>
                         </div>
@@ -461,12 +462,12 @@
                         <i class="fas fa-star"></i>
                         <i class="fas fa-star"></i>
                     </div>
-                    <p class="testimonial-text">"Absolutely love the quality and design! The team was incredibly helpful throughout the entire process. Our living room looks stunning with the new furniture."</p>
+                    <p class="testimonial-text">"Muy buena calidad en lamparas!!, deberian incluir un asesor para saber que tipo de ilumación ocupa mi espacio."</p>
                     <div class="testimonial-author">
                         <div class="author-avatar">JD</div>
                         <div class="author-info">
-                            <h4>Jennifer Davis</h4>
-                            <p>Homeowner, California</p>
+                            <h4>Gonzalo</h4>
+                            <p>Colima, México</p>
                         </div>
                     </div>
                 </div>
@@ -484,7 +485,7 @@
                         <div class="author-avatar">RT</div>
                         <div class="author-info">
                             <h4>Robert Thompson</h4>
-                            <p>Business Owner, New York</p>
+                            <p>Comala, México</p>
                         </div>
                     </div>
                 </div>
@@ -502,7 +503,7 @@
                         <div class="author-avatar">MG</div>
                         <div class="author-info">
                             <h4>Maria Garcia</h4>
-                            <p>Interior Designer, Texas</p>
+                            <p>Comala, México</p>
                         </div>
                     </div>
                 </div>
