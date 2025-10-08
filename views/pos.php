@@ -1,36 +1,65 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) session_start();
-
 require_once __DIR__ . "/../config/functions.php";
 
 // ============================
-// 📦 Cargar productos reales
+// 📦 Productos con stock actual
 // ============================
 $conn = getDBConnection();
-$sql = "SELECT p.id, p.nombre, p.precio, p.stock, p.imagen,
-               c.nombre AS categoria
+
+$sql = "SELECT 
+          p.id,
+          p.nombre,
+          p.precio,
+          p.imagen,
+          c.nombre AS categoria,
+          COALESCE((
+            SELECT SUM(
+              CASE m.tipo
+                WHEN 'entrada' THEN m.cantidad
+                WHEN 'ajuste'  THEN m.cantidad
+                WHEN 'salida'  THEN -m.cantidad
+                ELSE 0
+              END
+            )
+            FROM movimientos_inventario m
+            WHERE m.producto_id = p.id
+          ), 0) AS stock_actual
         FROM productos p
         LEFT JOIN categorias c ON p.categoria_id = c.id
         ORDER BY p.nombre ASC";
+
 $res = $conn->query($sql);
+if (!$res) {
+    die("❌ Error en la consulta: " . $conn->error);
+}
+
 $productos = [];
+$base = defined('BASE_URL') ? rtrim(BASE_URL, '/') . '/' : '/LumiSpace/';
+
 while ($row = $res->fetch_assoc()) {
+    // Imagen correcta: primero uploads, si no existe, fallback a images/productos
+    $imgPath = $base . "uploads/productos/" . $row['imagen'];
+    if (empty($row['imagen']) || !file_exists(__DIR__ . "/../uploads/productos/" . $row['imagen'])) {
+        $imgPath = $base . "images/productos/default.png";
+    }
+
+    $stock = (int)$row['stock_actual'];
+    $estado = $stock > 20 ? "disponible" : ($stock > 5 ? "poco" : "bajo");
+
     $productos[] = [
-        'id'       => (int)$row['id'],
-        'nombre'   => $row['nombre'],
-        'precio'   => (float)$row['precio'],
-        'stock'    => (int)$row['stock'],
-        'categoria'=> $row['categoria'] ?? 'General',
-        'estado'   => $row['stock'] > 20 ? 'disponible' : ($row['stock'] > 5 ? 'poco' : 'bajo'),
-        // ✅ Ruta absoluta con BASE_URL para que siempre carguen
-        'img'      => !empty($row['imagen'])
-                        ? (defined('BASE_URL') ? BASE_URL : '/LumiSpace/') . "uploads/productos/" . $row['imagen']
-                        : (defined('BASE_URL') ? BASE_URL : '/LumiSpace/') . "images/default.png"
+        'id'        => (int)$row['id'],
+        'nombre'    => (string)$row['nombre'],
+        'precio'    => (float)$row['precio'],
+        'stock'     => $stock,
+        'categoria' => $row['categoria'] ?? "General",
+        'estado'    => $estado,
+        'img'       => $imgPath
     ];
 }
 
 // ============================
-// 📊 Métricas globales (para POS + dashboards)
+// 📊 Métricas
 // ============================
 $metaDiaria     = 60000;
 $ventasHoy      = getVentasHoy();
@@ -39,14 +68,10 @@ $ventasCantidad = $resumenHoy['transacciones'] ?? 0;
 $promedioVenta  = $ventasCantidad > 0 ? round($ventasHoy / $ventasCantidad, 2) : 0;
 
 // ============================
-// 🕒 Últimas ventas
+// 🕒 Últimas ventas y top
 // ============================
 $ventasRecientes = getVentasRecientes(5);
-
-// ============================
-// 🏆 Top más vendidos (mes)
-// ============================
-$topProductosMes  = function_exists('getProductosMasVendidosMes') ? getProductosMasVendidosMes(5) : [];
+$topProductosMes = function_exists('getProductosMasVendidosMes') ? getProductosMasVendidosMes(5) : [];
 $topCategoriasMes = function_exists('getCategoriasMasVendidasMes') ? getCategoriasMasVendidasMes(5) : [];
 ?>
 <!DOCTYPE html>
@@ -97,31 +122,19 @@ $topCategoriasMes = function_exists('getCategoriasMasVendidasMes') ? getCategori
     </div>
   </header>
 
-  <!-- (Opcional) Buscador / Filtros si luego los quieres -->
-  <!--
-  <section class="filters">
-    <div class="chips">
-      <button class="chip is-active" data-filter="todos">Todos</button>
-    </div>
-    <input type="text" id="buscador" placeholder="Buscar productos (F2)">
-  </section>
-  -->
-
   <!-- LISTADO DE PRODUCTOS -->
   <main class="content">
     <section class="productos" id="productos">
       <?php foreach ($productos as $p): ?>
-        <article class="card"
+        <article class="card producto-item"
           data-id="<?= $p['id']; ?>"
           data-nombre="<?= htmlspecialchars($p['nombre']); ?>"
-          data-precio="<?= $p['precio']; ?>"
-          data-categoria="<?= htmlspecialchars($p['categoria']); ?>">
+          data-precio="<?= $p['precio']; ?>">
           
           <div class="thumb" style="background-image:url('<?= htmlspecialchars($p['img']); ?>')">
             <div class="labels">
               <span class="label"><?= htmlspecialchars($p['categoria']); ?></span>
             </div>
-            <button class="preview" type="button">Vista previa</button>
           </div>
           
           <div class="info">
@@ -129,12 +142,8 @@ $topCategoriasMes = function_exists('getCategoriasMasVendidasMes') ? getCategori
             <div class="row">
               <span class="price">$<?= number_format($p['precio'],0); ?></span>
               <span class="stock <?= $p['estado']; ?>">
-                <?= $p['estado']==='disponible' ? "Disponible" : ($p['estado']==='poco'?"Poco stock":"Stock bajo"); ?>
-                (<?= $p['stock']; ?>)
+                <?= ucfirst($p['estado']); ?> (<?= $p['stock']; ?>)
               </span>
-            </div>
-            <div class="actions">
-              <button class="btn add" type="button">Agregar</button>
             </div>
           </div>
         </article>
@@ -146,12 +155,10 @@ $topCategoriasMes = function_exists('getCategoriasMasVendidasMes') ? getCategori
       <header><h2>Carrito</h2></header>
       <ul id="carritoLista" class="cart-list"></ul>
 
-      <!-- Totales (si usas subtotal/iva/desc, añade spans con ids cSub/cIva/cDesc) -->
       <div class="totales">
         <div class="line"><span>Total:</span><strong id="cTot">$0</strong></div>
       </div>
 
-      <!-- Pagos -->
       <div class="pagos">
         <h3>Pago</h3>
         <div class="line"><label>Efectivo:</label><input type="number" id="pEfectivo" value="0"></div>
@@ -160,13 +167,11 @@ $topCategoriasMes = function_exists('getCategoriasMasVendidasMes') ? getCategori
         <div class="line"><span>Cambio:</span><strong id="cCambio">$0</strong></div>
       </div>
 
-      <!-- Acciones -->
       <div class="cart-actions">
         <button id="btnLimpiar" class="btn ghost" type="button">Limpiar (F4)</button>
         <button id="btnPagar" class="btn primary" type="button">Procesar pago (F9)</button>
       </div>
 
-      <!-- Historial -->
       <div class="historial">
         <h3>Últimas ventas</h3>
         <ul id="ventasRecientes">
@@ -179,7 +184,6 @@ $topCategoriasMes = function_exists('getCategoriasMasVendidasMes') ? getCategori
         </ul>
       </div>
 
-      <!-- Top productos -->
       <div class="top-block">
         <h3>🔥 Top Productos (Mes)</h3>
         <ul>
@@ -191,7 +195,6 @@ $topCategoriasMes = function_exists('getCategoriasMasVendidasMes') ? getCategori
         </ul>
       </div>
 
-      <!-- Top categorías -->
       <div class="top-block">
         <h3>🏷️ Top Categorías (Mes)</h3>
         <ul>
@@ -202,20 +205,32 @@ $topCategoriasMes = function_exists('getCategoriasMasVendidasMes') ? getCategori
           <?php endforeach; ?>
         </ul>
       </div>
-
     </aside>
   </main>
 </div>
 
-<!-- ✅ Inyectar datos para pos.js -->
+<!-- ✅ Inyectar datos -->
 <script>
   window.CATALOGO_POS = <?= json_encode($productos, JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK); ?>;
   window.USUARIO_ID   = <?= isset($_SESSION['usuario_id']) ? (int)$_SESSION['usuario_id'] : 0 ?>;
+
+  // 📌 Agregar producto al carrito automáticamente al hacer clic
+  document.addEventListener("DOMContentLoaded", () => {
+    document.querySelectorAll(".producto-item").forEach(card => {
+      card.addEventListener("click", () => {
+        const id = card.dataset.id;
+        const nombre = card.dataset.nombre;
+        const precio = parseFloat(card.dataset.precio);
+
+        document.dispatchEvent(new CustomEvent("pos:add", {
+          detail: {id, nombre, precio, cantidad: 1}
+        }));
+      });
+    });
+  });
 </script>
 
-<!-- ✅ JS del POS (usa el que te pasé, no pongas más JS inline aquí) -->
 <script src="../js/pos.js?v=<?= time(); ?>"></script>
 </body>
 </html>
-<?php exit();
-?>
+<?php exit(); ?>

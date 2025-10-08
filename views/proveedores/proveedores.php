@@ -17,7 +17,7 @@ $proveedores = getProveedores();
   <title>Proveedores - LumiSpace</title>
   <link rel="stylesheet" href="../../css/dashboard.css">
   <style>
-    /* Header de la página */
+    /* Header */
     .page-header {
       display: flex;
       justify-content: space-between;
@@ -41,19 +41,25 @@ $proveedores = getProveedores();
     }
     .btn-add:hover { background: var(--act1); color: #fff; }
 
+    /* Alertas */
+    .alert {
+      margin-bottom: 16px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-weight: 600;
+    }
+    .alert.success { background:#d4edda; color:#155724; border:1px solid #c3e6cb; }
+    .alert.error   { background:#f8d7da; color:#721c24; border:1px solid #f5c6cb; }
+
     /* Tabla */
     .table-wrapper { overflow-x: auto; }
-    .table { width:100%; border-collapse: collapse; }
+    .table { width:100%; border-collapse: collapse; border-radius: 10px; overflow:hidden; }
     .table th, .table td {
       padding: 12px 14px;
       border-bottom: 1px solid #eee;
       text-align: left;
     }
-    .table th {
-      background: var(--card-bg-1); 
-      color: var(--text); 
-      font-weight: 600;
-    }
+    .table th { background: var(--card-bg-1); font-weight: 600; }
     .table tbody tr:hover { background: rgba(0,0,0,0.03); }
 
     /* Botones */
@@ -83,6 +89,14 @@ $proveedores = getProveedores();
         <a href="proveedor-nuevo.php" class="btn-add">➕ Nuevo Proveedor</a>
       </div>
 
+      <!-- Alertas de mensajes -->
+      <?php if (isset($_GET['msg'])): ?>
+        <div class="alert success"><?= htmlspecialchars($_GET['msg']) ?></div>
+      <?php elseif (isset($_GET['error'])): ?>
+        <div class="alert error"><?= htmlspecialchars($_GET['error']) ?></div>
+      <?php endif; ?>
+
+      <!-- Tabla -->
       <div class="card p-16 table-wrapper">
         <table class="table">
           <thead>

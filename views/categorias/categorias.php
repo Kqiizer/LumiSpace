@@ -2,13 +2,14 @@
 if (session_status() === PHP_SESSION_NONE) session_start();
 require_once __DIR__ . "/../../config/functions.php";
 
-// Solo Admin
+// 🚨 Solo Admin
 if (!isset($_SESSION['usuario_id']) || ($_SESSION['usuario_rol'] ?? '') !== 'admin') {
   header("Location: ../login.php?error=unauthorized");
   exit();
 }
 
-$categorias = getCategorias();
+// 🔹 Obtener categorías
+$categorias = getCategorias() ?? [];
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -31,19 +32,13 @@ $categorias = getCategorias();
     }
     .btn-add:hover { background: var(--act1); color:#fff; }
 
-    /* Alertas */
     .alert {
-      margin-bottom: 18px;
-      padding: 12px 16px;
-      border-radius: 8px;
-      font-weight: 600;
-      animation: fadeIn .3s ease;
+      margin-bottom: 18px; padding: 12px 16px;
+      border-radius: 8px; font-weight: 600;
     }
     .alert.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
     .alert.error   { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-    @keyframes fadeIn { from {opacity:0;transform:translateY(-6px);} to{opacity:1;transform:translateY(0);} }
 
-    /* Buscador */
     .search-box { margin-bottom: 16px; }
     .search-box input {
       width: 100%; padding: 10px 14px;
@@ -51,14 +46,12 @@ $categorias = getCategorias();
       font-size: .95rem;
     }
 
-    /* Tabla */
     .table-wrapper { overflow-x: auto; }
     .table { width:100%; border-collapse: collapse; }
     .table th, .table td {
       padding: 12px 14px;
       border-bottom: 1px solid #eee;
-      text-align: left;
-      vertical-align: middle;
+      text-align: left; vertical-align: middle;
     }
     .table th {
       background: var(--card-bg-1); 
@@ -66,7 +59,6 @@ $categorias = getCategorias();
     }
     .table tbody tr:hover { background: rgba(0,0,0,0.03); }
 
-    /* Botones */
     .btn-sm {
       padding: 6px 10px; border-radius: 6px;
       font-size: .85rem; text-decoration: none;
@@ -90,11 +82,11 @@ $categorias = getCategorias();
         <a href="categoria-nueva.php" class="btn-add">➕ Nueva Categoría</a>
       </div>
 
-      <!-- Alertas dinámicas -->
+      <!-- Alertas -->
       <?php if (isset($_GET['msg'])): ?>
-        <div class="alert success">✅ Categoría <?= htmlspecialchars($_GET['msg']) ?> correctamente.</div>
+        <div class="alert success">✅ <?= htmlspecialchars($_GET['msg']) ?></div>
       <?php elseif (isset($_GET['error'])): ?>
-        <div class="alert error">❌ Error: <?= htmlspecialchars($_GET['error']) ?></div>
+        <div class="alert error">❌ <?= htmlspecialchars($_GET['error']) ?></div>
       <?php endif; ?>
 
       <!-- Buscador -->
@@ -113,12 +105,12 @@ $categorias = getCategorias();
             </tr>
           </thead>
           <tbody>
-            <?php if (count($categorias) > 0): ?>
+            <?php if (!empty($categorias)): ?>
               <?php foreach($categorias as $c): ?>
                 <tr>
                   <td><?= $c['id'] ?></td>
                   <td><strong><?= htmlspecialchars($c['nombre']) ?></strong></td>
-                  <td><?= htmlspecialchars($c['descripcion']) ?></td>
+                  <td><?= htmlspecialchars($c['descripcion'] ?? '-') ?></td>
                   <td>
                     <a href="categoria-editar.php?id=<?= $c['id'] ?>" class="btn-sm btn-edit">✏️ Editar</a>
                     <a href="categoria-eliminar.php?id=<?= $c['id'] ?>" class="btn-sm btn-delete" onclick="return confirm('¿Eliminar esta categoría?')">🗑️ Eliminar</a>
@@ -126,7 +118,7 @@ $categorias = getCategorias();
                 </tr>
               <?php endforeach; ?>
             <?php else: ?>
-              <tr><td colspan="4" style="text-align:center;">No hay categorías registradas.</td></tr>
+              <tr><td colspan="4" style="text-align:center;">⚠️ No hay categorías registradas.</td></tr>
             <?php endif; ?>
           </tbody>
         </table>
@@ -135,13 +127,16 @@ $categorias = getCategorias();
   </main>
 
   <script>
-    // 🔍 Búsqueda dinámica
+    // 🔍 Filtro dinámico
     document.getElementById("searchInput").addEventListener("keyup", function() {
       const filter = this.value.toLowerCase();
       const rows = document.querySelectorAll("#categoriasTable tbody tr");
+
       rows.forEach(row => {
         const text = row.innerText.toLowerCase();
-        row.style.display = text.includes(filter) ? "" : "none";
+        if (!row.innerText.includes("No hay categorías")) {
+          row.style.display = text.includes(filter) ? "" : "none";
+        }
       });
     });
   </script>

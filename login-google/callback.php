@@ -31,7 +31,7 @@ function redirSegunRol(string $rol): never {
             header("Location: ../views/pos.php"); 
             break;
         case 'usuario':
-            header("Location: ../views/index.php"); 
+            header("Location: ../index.php");  // 👈 Usuario normal al index
             break;
         default:
             header("Location: ../index.php");
@@ -88,10 +88,22 @@ try {
     $user = obtenerUsuarioPorEmail($email);
 
     if (!$user) {
-        // 🚨 No registrado → completar registro
-        $url = "../views/register.php?google=1&email=" . urlencode($email) . "&nombre=" . urlencode($nombre);
-        header("Location: $url");
-        exit();
+        // 🚨 Si no existe → registrar automático como usuario
+        $rol = 'usuario';
+        $res = registrarUsuario($nombre, $email, null, $rol);
+
+        if ($res === false) {
+            header("Location: ../views/login.php?error=google_register_failed");
+            exit();
+        }
+
+        // Actualizar datos
+        $user = [
+            'id'     => $res,
+            'nombre' => $nombre,
+            'email'  => $email,
+            'rol'    => $rol
+        ];
     }
 
     // 4) Crear sesión
@@ -99,11 +111,12 @@ try {
     session_regenerate_id(true);
     $_SESSION['usuario_id']     = (int)$user['id'];
     $_SESSION['usuario_nombre'] = (string)$user['nombre'];
+    $_SESSION['usuario_email']  = (string)($user['email'] ?? $email);
     $_SESSION['usuario_rol']    = $rol;
 
     unset($_SESSION['oauth2_state']); // limpiar state
 
-    // 5) Redirigir al dashboard según rol
+    // 5) Redirigir según rol
     redirSegunRol($rol);
 
 } catch (Throwable $e) {

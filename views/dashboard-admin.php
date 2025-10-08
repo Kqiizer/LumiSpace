@@ -16,7 +16,7 @@ $totalGestores     = getTotalGestores();
 $totalProductos    = getTotalProductos();
 $ingresosMes       = getIngresosMes();
 $usuariosRecientes = getUsuariosRecientes(5);
-$inventarioResumen = getInventarioResumen();
+$inventarioResumen = getInventarioResumen();  // ✅ Corregido
 $usuariosMensuales = getUsuariosMensuales();
 $ventasMensuales   = getVentasMensuales();
 

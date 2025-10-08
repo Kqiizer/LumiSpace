@@ -17,23 +17,29 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $direccion = trim($_POST['direccion'] ?? '');
 
     if ($id > 0 && $nombre !== '') {
-        $conn = getDBConnection();
-
-        $sql = "UPDATE proveedores 
-                SET nombre=?, contacto=?, telefono=?, email=?, direccion=? 
-                WHERE id=?";
-
-        $stmt = $conn->prepare($sql);
-        if ($stmt) {
-            $stmt->bind_param("sssssi", $nombre, $contacto, $telefono, $email, $direccion, $id);
-            if ($stmt->execute()) {
-                header("Location: proveedores.php?msg=" . urlencode("✅ Proveedor actualizado correctamente."));
-                exit();
-            } else {
-                $error = "❌ Error al actualizar proveedor: " . $stmt->error;
-            }
+        // 🔹 Validar que el nombre no contenga números
+        if (!preg_match('/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/u', $nombre)) {
+            $error = "⚠️ El nombre no puede contener números ni caracteres inválidos.";
         } else {
-            $error = "❌ Error en prepare(): " . $conn->error;
+            $conn = getDBConnection();
+
+            $sql = "UPDATE proveedores 
+                    SET nombre=?, contacto=?, telefono=?, email=?, direccion=? 
+                    WHERE id=?";
+
+            $stmt = $conn->prepare($sql);
+            if ($stmt) {
+                $stmt->bind_param("sssssi", $nombre, $contacto, $telefono, $email, $direccion, $id);
+                if ($stmt->execute()) {
+                    header("Location: proveedores.php?msg=" . urlencode("✅ Proveedor actualizado correctamente."));
+                    exit();
+                } else {
+                    $error = "❌ Error al actualizar proveedor: " . $stmt->error;
+                }
+                $stmt->close();
+            } else {
+                $error = "❌ Error en prepare(): " . $conn->error;
+            }
         }
     } else {
         $error = "⚠️ Datos inválidos: el nombre es obligatorio.";

@@ -26,6 +26,30 @@ if (!$producto) {
 
 $categorias  = getCategorias();
 $proveedores = getProveedores();
+
+$conn = getDBConnection();
+
+// 🔹 Obtenemos stock inicial
+$stockInicial = (int)($producto['stock_inicial'] ?? 0);
+
+// 🔹 Calculamos stock real (entradas - salidas)
+$sqlMov = "
+    SELECT 
+      SUM(CASE WHEN tipo='entrada' THEN cantidad ELSE 0 END) AS entradas,
+      SUM(CASE WHEN tipo='salida'  THEN cantidad ELSE 0 END) AS salidas
+    FROM inventario
+    WHERE producto_id = ?
+";
+$stmt = $conn->prepare($sqlMov);
+$stmt->bind_param("i", $producto['id']);
+$stmt->execute();
+$res = $stmt->get_result()->fetch_assoc();
+
+$entradas = (int)($res['entradas'] ?? 0);
+$salidas  = (int)($res['salidas'] ?? 0);
+
+// 🔹 Stock real = inicial + entradas – salidas
+$stockReal = $stockInicial + $entradas - $salidas;
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -34,13 +58,21 @@ $proveedores = getProveedores();
   <title>Editar Producto - LumiSpace</title>
   <link rel="stylesheet" href="../../css/dashboard.css">
   <style>
-    .form-card { max-width: 700px; margin: 0 auto; padding: 24px; border-radius: var(--radius);
-      background: var(--card-bg-1); box-shadow: var(--shadow); border: 1px solid var(--card-bd); }
+    .form-card {
+      max-width: 700px;
+      margin: 0 auto;
+      padding: 24px;
+      border-radius: var(--radius);
+      background: var(--card-bg-1);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--card-bd);
+    }
     .form-card h2 { margin-bottom: 20px; color: var(--act1); }
     form { display: flex; flex-direction: column; gap: 14px; }
     label { font-weight: 600; color: var(--text); }
     input, textarea, select {
-      width: 100%; padding: 10px 12px; border: 1px solid var(--card-bd); border-radius: 8px;
+      width: 100%; padding: 10px 12px;
+      border: 1px solid var(--card-bd); border-radius: 8px;
       background: var(--card-bg-2); font-size: .95rem;
     }
     textarea { resize: vertical; min-height: 90px; }
@@ -50,7 +82,8 @@ $proveedores = getProveedores();
     .btn-primary:hover { filter: brightness(1.1); }
     .btn-secondary { background: var(--card-bg-2); color: var(--text); }
     .btn-secondary:hover { background: var(--card-bg-1); }
-    .prod-img { max-width: 120px; border-radius: 8px; display: block; margin-bottom: 10px; }
+    .prod-img { max-width: 150px; border-radius: 8px; display: block; margin-bottom: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);}
+    #preview { max-width: 150px; max-height: 150px; border-radius: 8px; border: 1px solid #ccc; margin-top: 10px; display: none; object-fit: cover; }
   </style>
 </head>
 <body>
@@ -71,10 +104,7 @@ $proveedores = getProveedores();
           <textarea name="descripcion"><?= htmlspecialchars($producto['descripcion']) ?></textarea>
 
           <label>Precio</label>
-          <input type="number" step="0.01" name="precio" value="<?= $producto['precio'] ?>" required>
-
-          <label>Stock</label>
-          <input type="number" name="stock" value="<?= $producto['stock'] ?>" required>
+          <input type="number" step="0.01" min="0.01" name="precio" value="<?= $producto['precio'] ?>" required>
 
           <label>Categoría</label>
           <select name="categoria_id" required>
@@ -95,6 +125,13 @@ $proveedores = getProveedores();
             <?php endforeach; ?>
           </select>
 
+          <label>Stock Inicial</label>
+          <input type="number" value="<?= $stockInicial ?>" readonly style="background:#f3f3f3; cursor:not-allowed;">
+
+          <label>Stock Actual (solo lectura)</label>
+          <input type="number" value="<?= $stockReal ?>" readonly style="background:#f3f3f3; cursor:not-allowed;">
+          <small style="color:#777;">El stock actual se calcula automáticamente con base en inventario.</small>
+
           <label>Imagen actual</label>
           <?php if (!empty($producto['imagen'])): ?>
             <img src="<?= BASE_URL ?>images/productos/<?= htmlspecialchars($producto['imagen']) ?>" 
@@ -102,7 +139,10 @@ $proveedores = getProveedores();
           <?php else: ?>
             <p style="color:#aaa;">Sin imagen</p>
           <?php endif; ?>
-          <input type="file" name="imagen" accept="image/*">
+
+          <label>Nueva imagen (opcional)</label>
+          <input type="file" name="imagen" accept="image/*" onchange="previewImage(event)">
+          <img id="preview" alt="Vista previa de nueva imagen">
 
           <div class="form-actions">
             <button type="submit" class="btn btn-primary">💾 Actualizar</button>
@@ -112,5 +152,21 @@ $proveedores = getProveedores();
       </div>
     </section>
   </main>
+
+  <script>
+    // 📌 Previsualización de imagen nueva
+    function previewImage(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+          const img = document.getElementById('preview');
+          img.src = ev.target.result;
+          img.style.display = 'block';
+        }
+        reader.readAsDataURL(file);
+      }
+    }
+  </script>
 </body>
 </html>

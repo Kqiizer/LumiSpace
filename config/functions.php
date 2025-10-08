@@ -451,6 +451,7 @@ function getProductosMasVendidosMes(int $limit = 10): array {
     return $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
 }
 
+
 /* ============================================================
    Funciones para el Dashboard Admin
 <?php
@@ -513,13 +514,18 @@ function getUsuariosRecientes(int $limit=5): array {
 
 function getInventarioResumen(): array {
     $conn = getDBConnection();
-    $sql = "SELECT c.nombre as categoria, SUM(p.stock) as cantidad 
-            FROM productos p
-            JOIN categorias c ON p.categoria_id = c.id
-            GROUP BY c.nombre";
+    $sql = "
+        SELECT c.nombre AS categoria, 
+               COALESCE(SUM(p.stock), 0) AS cantidad
+        FROM categorias c
+        LEFT JOIN productos p ON p.categoria_id = c.id
+        GROUP BY c.id, c.nombre
+        ORDER BY c.nombre ASC
+    ";
     $res = $conn->query($sql);
     return $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
 }
+
 
 function getUsuariosMensuales(): array {
     $conn = getDBConnection();
@@ -634,26 +640,110 @@ function insertarCliente($nombre,$email,$telefono,$direccion): bool {
 /* ============================================================
    Inventario
    ============================================================ */
-/* ============================
-   INVENTARIO AVANZADO
-   ============================ */
-function getInventario(): array {
+ function getInventarioByProducto(int $producto_id): array {
     $conn = getDBConnection();
-    $sql = "SELECT i.*, p.nombre AS producto, p.precio 
-            FROM inventario i
-            JOIN productos p ON i.producto_id=p.id
-            ORDER BY p.nombre ASC";
-    $result = $conn->query($sql);
-    return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
+
+    $sql = "
+        SELECT 
+            i.id AS inventario_id,
+            i.producto_id,
+            p.nombre AS producto,
+            i.sucursal,
+            i.cantidad,
+            p.precio,
+            (i.cantidad * p.precio) AS valor_total
+        FROM inventario i
+        INNER JOIN productos p ON i.producto_id = p.id
+        WHERE i.producto_id = ?
+        ORDER BY i.sucursal ASC
+    ";
+
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        error_log("❌ Error en getInventarioByProducto prepare(): " . $conn->error);
+        return [];
+    }
+
+    $stmt->bind_param("i", $producto_id);
+    $stmt->execute();
+    $res = $stmt->get_result();
+
+    return $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
 }
 
+/**
+ * Obtener todo el inventario (por producto y sucursal)
+ */
+function getInventario(): array {
+    $conn = getDBConnection();
+    $sql = "
+        SELECT 
+            i.id,
+            i.producto_id,
+            p.nombre AS producto,
+            IFNULL(i.sucursal, 'Principal') AS sucursal,
+            i.cantidad,
+            p.precio
+        FROM inventario i
+        JOIN productos p ON p.id = i.producto_id
+        ORDER BY p.nombre ASC
+    ";
+    $res = $conn->query($sql);
+    return $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
+}
+
+
+/**
+ * Obtener un registro de inventario por ID
+ */
 function getInventarioById(int $id): ?array {
     $conn = getDBConnection();
-    $stmt = $conn->prepare("SELECT * FROM inventario WHERE id=? LIMIT 1");
+
+    $sql = "
+        SELECT 
+            i.id,
+            i.producto_id,
+            p.nombre AS producto,
+            IFNULL(i.sucursal, 'Principal') AS sucursal,
+            IFNULL(i.cantidad, 0) AS cantidad,
+            p.precio
+        FROM inventario i
+        INNER JOIN productos p ON i.producto_id = p.id
+        WHERE i.id = ?
+        LIMIT 1
+    ";
+
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        error_log("getInventarioById error: " . $conn->error);
+        return null;
+    }
+
     $stmt->bind_param("i", $id);
     $stmt->execute();
-    return $stmt->get_result()->fetch_assoc() ?: null;
+    $res = $stmt->get_result();
+    $row = $res->fetch_assoc();
+
+    return $row ?: null;
 }
+
+/**
+ * Actualizar inventario
+ */
+function actualizarInventario(int $id, int $producto_id, int $cantidad, string $sucursal): bool {
+    $conn = getDBConnection();
+
+    $sql = "UPDATE inventario SET cantidad=?, sucursal=? WHERE id=? AND producto_id=?";
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        error_log("actualizarInventario error: " . $conn->error);
+        return false;
+    }
+
+    $stmt->bind_param("isii", $cantidad, $sucursal, $id, $producto_id);
+    return $stmt->execute();
+}
+
 
 function insertarInventario(int $producto_id, int $cantidad, string $sucursal='Principal'): bool {
     $conn = getDBConnection();
@@ -662,12 +752,6 @@ function insertarInventario(int $producto_id, int $cantidad, string $sucursal='P
     return $stmt->execute();
 }
 
-function actualizarInventario(int $id, int $cantidad, string $sucursal): bool {
-    $conn = getDBConnection();
-    $stmt = $conn->prepare("UPDATE inventario SET cantidad=?, sucursal=? WHERE id=?");
-    $stmt->bind_param("isi", $cantidad, $sucursal, $id);
-    return $stmt->execute();
-}
 
 function eliminarInventario(int $id): bool {
     $conn = getDBConnection();
@@ -675,6 +759,7 @@ function eliminarInventario(int $id): bool {
     $stmt->bind_param("i", $id);
     return $stmt->execute();
 }
+
 
 /* ============================
    MOVIMIENTOS DE INVENTARIO
@@ -691,12 +776,16 @@ function registrarMovimiento(
     $conn->begin_transaction();
 
     try {
-        // 1. Insertar el movimiento en la bitácora
-        $stmt = $conn->prepare("INSERT INTO movimientos_inventario (producto_id, usuario_id, tipo, cantidad, motivo) VALUES (?, ?, ?, ?, ?)");
+        // 1. Insertar el movimiento en la bitácora con sucursal
+        $stmt = $conn->prepare("
+            INSERT INTO movimientos_inventario 
+            (producto_id, usuario_id, tipo, cantidad, motivo, sucursal, creado_en) 
+            VALUES (?, ?, ?, ?, ?, ?, NOW())
+        ");
         if (!$stmt) {
             throw new Exception("Error al preparar INSERT: " . $conn->error);
         }
-        $stmt->bind_param("iisis", $producto_id, $usuario_id, $tipo, $cantidad, $motivo);
+        $stmt->bind_param("iissss", $producto_id, $usuario_id, $tipo, $cantidad, $motivo, $sucursal);
         $stmt->execute();
 
         // 2. Consultar stock actual
@@ -709,7 +798,7 @@ function registrarMovimiento(
         $res = $stmt2->get_result()->fetch_assoc();
         $stockActual = $res ? (int)$res['cantidad'] : 0;
 
-        // 3. Calcular nuevo stock en PHP
+        // 3. Calcular nuevo stock
         if ($tipo === 'entrada') {
             $nuevoStock = $stockActual + $cantidad;
         } elseif ($tipo === 'salida') {
@@ -737,11 +826,149 @@ function registrarMovimiento(
 
     } catch (Exception $e) {
         $conn->rollback();
-        error_log("registrarMovimiento() fallo: ".$e->getMessage());
+        error_log("registrarMovimiento() fallo: " . $e->getMessage());
+        return false;
+    }
+}
+function getMovimientoById(int $id): ?array {
+    $conn = getDBConnection();
+
+    $sql = "
+        SELECT 
+            m.id,
+            m.producto_id,
+            p.nombre AS producto,
+            m.tipo,
+            m.cantidad,
+            m.motivo,
+            m.usuario_id,
+            u.nombre AS usuario,
+            m.sucursal,
+            m.creado_en
+        FROM movimientos_inventario m
+        JOIN productos p ON m.producto_id = p.id
+        JOIN usuarios  u ON m.usuario_id  = u.id
+        WHERE m.id = ?
+        LIMIT 1
+    ";
+
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        error_log("getMovimientoById() error: " . $conn->error);
+        return null;
+    }
+
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    $res = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    return $res ?: null;
+}
+
+
+
+function actualizarMovimiento(
+    int $id,
+    int $producto_id,
+    string $tipo,
+    int $cantidad,
+    string $motivo,
+    int $usuario_id
+): bool {
+    $conn = getDBConnection();
+    $conn->begin_transaction();
+
+    try {
+        // 🔹 Obtener movimiento anterior
+        $stmt = $conn->prepare("SELECT cantidad, tipo, sucursal FROM movimientos_inventario WHERE id=? LIMIT 1");
+        if (!$stmt) throw new Exception("Error SELECT movimiento: " . $conn->error);
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $old = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$old) throw new Exception("Movimiento no encontrado");
+
+        $oldCantidad = (int)$old['cantidad'];
+        $oldTipo     = $old['tipo'];
+        $sucursal    = $old['sucursal'];
+
+        // 🔹 Revertir efecto anterior
+        if ($oldTipo === 'entrada') {
+            $ajusteAnterior = -$oldCantidad;
+        } elseif ($oldTipo === 'salida') {
+            $ajusteAnterior = $oldCantidad;
+        } else { // ajuste
+            $ajusteAnterior = 0;
+        }
+
+        // 🔹 Nuevo ajuste
+        if ($tipo === 'entrada') {
+            $ajusteNuevo = $cantidad;
+        } elseif ($tipo === 'salida') {
+            $ajusteNuevo = -$cantidad;
+        } else { // ajuste manual
+            $ajusteNuevo = $cantidad - $oldCantidad;
+        }
+
+        $ajusteFinal = $ajusteAnterior + $ajusteNuevo;
+
+        // 🔹 Actualizar movimiento
+        $stmt = $conn->prepare("
+            UPDATE movimientos_inventario
+            SET tipo=?, cantidad=?, motivo=?, usuario_id=?, creado_en=NOW()
+            WHERE id=?
+        ");
+        if (!$stmt) throw new Exception("Error UPDATE movimiento: " . $conn->error);
+        $stmt->bind_param("sisii", $tipo, $cantidad, $motivo, $usuario_id, $id);
+        $stmt->execute();
+        $stmt->close();
+
+        // 🔹 Actualizar inventario
+        $stmt = $conn->prepare("SELECT id, cantidad FROM inventario WHERE producto_id=? AND sucursal=? LIMIT 1");
+        if (!$stmt) throw new Exception("Error SELECT inventario: " . $conn->error);
+        $stmt->bind_param("is", $producto_id, $sucursal);
+        $stmt->execute();
+        $inv = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if ($inv) {
+            $nuevoStock = max(0, $inv['cantidad'] + $ajusteFinal);
+            $stmt = $conn->prepare("UPDATE inventario SET cantidad=? WHERE id=?");
+            if (!$stmt) throw new Exception("Error UPDATE inventario: " . $conn->error);
+            $stmt->bind_param("ii", $nuevoStock, $inv['id']);
+            $stmt->execute();
+            $stmt->close();
+        }
+
+        // 🔹 (opcional) Actualizar columna stock en productos
+        if ($ajusteFinal !== 0) {
+            $stmt = $conn->prepare("UPDATE productos SET stock = GREATEST(0, stock + ?) WHERE id=?");
+            if ($stmt) {
+                $stmt->bind_param("ii", $ajusteFinal, $producto_id);
+                $stmt->execute();
+                $stmt->close();
+            }
+        }
+
+        $conn->commit();
+        return true;
+
+    } catch (Exception $e) {
+        $conn->rollback();
+        error_log("actualizarMovimiento() error: " . $e->getMessage());
         return false;
     }
 }
 
+
+function eliminarMovimiento(int $id): bool {
+    $conn = getDBConnection();
+    $stmt = $conn->prepare("DELETE FROM movimientos_inventario WHERE id=?");
+    $stmt->bind_param("i",$id);
+    return $stmt->execute();
+}
 
 function getMovimientos(): array {
     $conn = getDBConnection();
@@ -780,10 +1007,23 @@ function getProductoPorId(int $id): ?array {
         $selProv  = "m.nombre AS marca";
     }
 
-    $sql = "SELECT p.id, p.nombre, p.descripcion, p.precio, p.precio_original, p.descuento,
-                   p.stock, p.imagen, $selCat, $selProv
-            FROM productos p{$joinCat}{$joinProv}
-            WHERE p.id = ? LIMIT 1";
+    $sql = "
+        SELECT 
+            p.id, p.nombre, p.descripcion, p.precio, p.precio_original, p.descuento,
+            p.stock_inicial,
+            -- 👇 cálculo de stock real
+            (p.stock_inicial 
+              + IFNULL((SELECT SUM(cantidad) FROM inventario i WHERE i.producto_id = p.id AND i.tipo = 'entrada'), 0)
+              - IFNULL((SELECT SUM(cantidad) FROM inventario i WHERE i.producto_id = p.id AND i.tipo = 'salida'), 0)
+            ) AS stock_real,
+            p.imagen, 
+            $selCat, 
+            $selProv
+        FROM productos p
+        {$joinCat}
+        {$joinProv}
+        WHERE p.id = ? 
+        LIMIT 1";
 
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
@@ -833,19 +1073,82 @@ function getProductosPublicos(int $limit = 12): array {
 }
 
 
+/**
+ * Obtener todos los productos con su stock REAL (suma de inventario por sucursales).
+ */
 function getProductos(): array {
     $conn = getDBConnection();
-    $sql = "SELECT p.*, c.nombre as categoria, pr.nombre as proveedor
-            FROM productos p
-            LEFT JOIN categorias c ON p.categoria_id = c.id
-            LEFT JOIN proveedores pr ON p.proveedor_id = pr.id
-            ORDER BY p.id DESC";
+
+    $sql = "
+        SELECT 
+            p.id,
+            p.nombre,
+            p.descripcion,
+            p.precio,
+            p.imagen,
+            p.creado_en,
+            c.nombre AS categoria,
+            pr.nombre AS proveedor,
+            COALESCE(SUM(i.cantidad),0) AS stock_real
+        FROM productos p
+        LEFT JOIN categorias c ON p.categoria_id = c.id
+        LEFT JOIN proveedores pr ON p.proveedor_id = pr.id
+        LEFT JOIN inventario i ON p.id = i.producto_id
+        GROUP BY 
+            p.id, p.nombre, p.descripcion, p.precio, p.imagen, p.creado_en, 
+            c.nombre, pr.nombre
+        ORDER BY p.id DESC
+    ";
+
     $res = $conn->query($sql);
     return $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
 }
+
+
+/**
+ * Obtener un producto por su ID con su stock REAL (suma de inventario).
+ */
+function getProductoById(int $id): ?array {
+    $conn = getDBConnection();
+
+    $sql = "
+        SELECT 
+            p.id,
+            p.nombre,
+            p.descripcion,
+            p.precio,
+            -- 👇 stock REAL desde inventario
+            COALESCE(SUM(i.cantidad), 0) AS stock_real,
+            c.nombre AS categoria,
+            pr.nombre AS proveedor,
+            p.imagen,
+            p.creado_en
+        FROM productos p
+        LEFT JOIN categorias c ON p.categoria_id = c.id
+        LEFT JOIN proveedores pr ON p.proveedor_id = pr.id
+        LEFT JOIN inventario i ON p.id = i.producto_id
+        WHERE p.id = ?
+        GROUP BY 
+            p.id, p.nombre, p.descripcion, p.precio, 
+            c.nombre, pr.nombre, p.imagen, p.creado_en
+        LIMIT 1
+    ";
+
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    return $res ? $res->fetch_assoc() : null;
+}
+
+
 // 🔴 Eliminar producto definitivamente
 function eliminarProducto(int $id): bool {
     $conn = getDBConnection();
+
+    // eliminar inventario asociado
+    $conn->query("DELETE FROM inventario WHERE producto_id=$id");
+
     $stmt = $conn->prepare("DELETE FROM productos WHERE id=?");
     if (!$stmt) {
         error_log("❌ Error en eliminarProducto prepare(): " . $conn->error);
@@ -856,7 +1159,50 @@ function eliminarProducto(int $id): bool {
 }
 
 
+
 function insertarProducto(
+    string $nombre,
+    string $descripcion,
+    float $precio,
+    int $stockInicial,
+    int $categoria_id,
+    ?int $proveedor_id = null,
+    ?string $imagenPath = null
+): bool {
+    $conn = getDBConnection();
+
+    $sql = "INSERT INTO productos (nombre, descripcion, precio, categoria_id, proveedor_id, imagen) 
+            VALUES (?, ?, ?, ?, ?, ?)";
+    $stmt = $conn->prepare($sql);
+
+    if (!$stmt) {
+        error_log("❌ Error en insertarProducto prepare(): " . $conn->error);
+        return false;
+    }
+
+    $stmt->bind_param("ssdiss", $nombre, $descripcion, $precio, $categoria_id, $proveedor_id, $imagenPath);
+
+    if ($stmt->execute()) {
+        $producto_id = $conn->insert_id;
+        $stmt->close();
+
+        // ✅ Registrar stock inicial directamente en inventario
+        if ($stockInicial > 0) {
+            $stmt2 = $conn->prepare("INSERT INTO inventario (producto_id, sucursal, cantidad) VALUES (?, 'Principal', ?)");
+            $stmt2->bind_param("ii", $producto_id, $stockInicial);
+            $stmt2->execute();
+            $stmt2->close();
+        }
+
+        return true;
+    }
+
+    return false;
+}
+
+
+function actualizarProducto(
+    int $id,
     string $nombre,
     string $descripcion,
     float $precio,
@@ -867,58 +1213,50 @@ function insertarProducto(
 ): bool {
     $conn = getDBConnection();
 
-    $sql = "INSERT INTO productos (nombre, descripcion, precio, stock, categoria_id, proveedor_id, imagen) 
-            VALUES (?, ?, ?, ?, ?, ?, ?)";
-    $stmt = $conn->prepare($sql);
-
-    if (!$stmt) {
-        error_log("❌ Error en prepare(): " . $conn->error);
-        return false;
-    }
-
-    $stmt->bind_param("ssdiiss", $nombre, $descripcion, $precio, $stock, $categoria_id, $proveedor_id, $imagenPath);
-
-    return $stmt->execute();
-}
-
-
-function actualizarProducto($id, $nombre, $descripcion, $precio, $stock, $categoria_id, $proveedor_id = null, $imagenPath = null): bool {
-    $conn = getDBConnection();
-
     if ($imagenPath) {
-        // Si se actualiza con nueva imagen
-        if ($proveedor_id) {
-            $sql = "UPDATE productos 
-                    SET nombre=?, descripcion=?, precio=?, stock=?, categoria_id=?, proveedor_id=?, imagen=? 
-                    WHERE id=?";
-            $stmt = $conn->prepare($sql);
-            $stmt->bind_param("ssdiissi", $nombre, $descripcion, $precio, $stock, $categoria_id, $proveedor_id, $imagenPath, $id);
-        } else {
-            $sql = "UPDATE productos 
-                    SET nombre=?, descripcion=?, precio=?, stock=?, categoria_id=?, proveedor_id=NULL, imagen=? 
-                    WHERE id=?";
-            $stmt = $conn->prepare($sql);
-            $stmt->bind_param("ssdissi", $nombre, $descripcion, $precio, $stock, $categoria_id, $imagenPath, $id);
-        }
+        $sql = "UPDATE productos 
+                SET nombre=?, descripcion=?, precio=?, categoria_id=?, proveedor_id=?, imagen=? 
+                WHERE id=?";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("ssdissi", $nombre, $descripcion, $precio, $categoria_id, $proveedor_id, $imagenPath, $id);
     } else {
-        // Si NO hay imagen nueva, no tocar la columna imagen
-        if ($proveedor_id) {
-            $sql = "UPDATE productos 
-                    SET nombre=?, descripcion=?, precio=?, stock=?, categoria_id=?, proveedor_id=? 
-                    WHERE id=?";
-            $stmt = $conn->prepare($sql);
-            $stmt->bind_param("ssdiisi", $nombre, $descripcion, $precio, $stock, $categoria_id, $proveedor_id, $id);
-        } else {
-            $sql = "UPDATE productos 
-                    SET nombre=?, descripcion=?, precio=?, stock=?, categoria_id=?, proveedor_id=NULL 
-                    WHERE id=?";
-            $stmt = $conn->prepare($sql);
-            $stmt->bind_param("ssdiii", $nombre, $descripcion, $precio, $stock, $categoria_id, $id);
-        }
+        $sql = "UPDATE productos 
+                SET nombre=?, descripcion=?, precio=?, categoria_id=?, proveedor_id=? 
+                WHERE id=?";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("ssdiii", $nombre, $descripcion, $precio, $categoria_id, $proveedor_id, $id);
     }
 
-    return $stmt && $stmt->execute();
+    if ($stmt && $stmt->execute()) {
+        $stmt->close();
+
+        // ✅ Actualizar inventario para el producto
+        $stmt2 = $conn->prepare("SELECT id FROM inventario WHERE producto_id=? AND sucursal='Principal' LIMIT 1");
+        $stmt2->bind_param("i", $id);
+        $stmt2->execute();
+        $res = $stmt2->get_result()->fetch_assoc();
+        $stmt2->close();
+
+        if ($res) {
+            // actualizar stock existente
+            $stmt3 = $conn->prepare("UPDATE inventario SET cantidad=? WHERE producto_id=? AND sucursal='Principal'");
+            $stmt3->bind_param("ii", $stock, $id);
+            $stmt3->execute();
+            $stmt3->close();
+        } else {
+            // insertar si no existía en inventario
+            $stmt3 = $conn->prepare("INSERT INTO inventario (producto_id, sucursal, cantidad) VALUES (?, 'Principal', ?)");
+            $stmt3->bind_param("ii", $id, $stock);
+            $stmt3->execute();
+            $stmt3->close();
+        }
+
+        return true;
+    }
+
+    return false;
 }
+
 function inactivarProducto(int $id): bool {
     $conn = getDBConnection();
     $stmt = $conn->prepare("UPDATE productos SET estado='inactivo' WHERE id=?");
@@ -1025,9 +1363,13 @@ function getProductosPorCategoria(?int $categoria_id = null, int $limit = 12): a
 
 function getProductosCatalogo(?string $categoria = null, int $limit = null): array {
     $conn = getDBConnection();
-    $sql = "SELECT p.id, p.nombre, p.precio, p.stock, p.imagen, c.nombre AS categoria
+
+    $sql = "SELECT p.id, p.nombre, p.precio, p.imagen, c.nombre AS categoria,
+                   COALESCE(SUM(i.cantidad),0) AS stock_real
             FROM productos p
-            LEFT JOIN categorias c ON p.categoria_id = c.id";
+            LEFT JOIN categorias c ON p.categoria_id = c.id
+            LEFT JOIN inventario i ON p.id = i.producto_id";
+
     $params = [];
     $types  = "";
 
@@ -1037,15 +1379,22 @@ function getProductosCatalogo(?string $categoria = null, int $limit = null): arr
         $types   .= "s";
     }
 
-    $sql .= " ORDER BY p.nombre ASC";
+    $sql .= " GROUP BY p.id, p.nombre, p.precio, p.imagen, c.nombre
+              ORDER BY p.nombre ASC";
+
     if ($limit) {
-        $sql .= " LIMIT ?";
-        $params[] = $limit;
-        $types   .= "i";
+        $limit = (int)$limit; // sanitizar
+        $sql  .= " LIMIT $limit";
     }
 
     $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        error_log("❌ Error en prepare getProductosCatalogo: " . $conn->error);
+        return [];
+    }
+
     if ($params) $stmt->bind_param($types, ...$params);
+
     $stmt->execute();
     $res = $stmt->get_result();
 
@@ -1073,17 +1422,51 @@ function insertarProveedor(string $nombre, ?string $contacto, ?string $telefono,
     $stmt = $conn->prepare($sql);
 
     if (!$stmt) {
-        error_log("Error en prepare(): " . $conn->error);
+        error_log("❌ Error en prepare(): " . $conn->error);
         return false;
     }
 
+    // Si vienen vacíos, los mandamos como NULL
     $contacto  = !empty($contacto) ? $contacto : null;
     $telefono  = !empty($telefono) ? $telefono : null;
     $email     = !empty($email) ? $email : null;
     $direccion = !empty($direccion) ? $direccion : null;
 
     $stmt->bind_param("sssss", $nombre, $contacto, $telefono, $email, $direccion);
-    return $stmt->execute();
+
+    if (!$stmt->execute()) {
+        error_log("❌ Error en execute(): " . $stmt->error);
+        return false;
+    }
+
+    return true;
+}
+function actualizarProveedor(int $id, string $nombre, ?string $contacto, ?string $telefono, ?string $email, ?string $direccion): bool {
+    $conn = getDBConnection();
+    $sql = "UPDATE proveedores 
+            SET nombre=?, contacto=?, telefono=?, email=?, direccion=? 
+            WHERE id=?";
+    $stmt = $conn->prepare($sql);
+
+    if (!$stmt) {
+        error_log("❌ Error en prepare(): " . $conn->error);
+        return false;
+    }
+
+    // Si vienen vacíos, los mandamos como NULL
+    $contacto  = !empty($contacto) ? $contacto : null;
+    $telefono  = !empty($telefono) ? $telefono : null;
+    $email     = !empty($email) ? $email : null;
+    $direccion = !empty($direccion) ? $direccion : null;
+
+    $stmt->bind_param("sssssi", $nombre, $contacto, $telefono, $email, $direccion, $id);
+
+    if (!$stmt->execute()) {
+        error_log("❌ Error en execute(): " . $stmt->error);
+        return false;
+    }
+
+    return true;
 }
 
 /* ============================================================
@@ -1092,7 +1475,7 @@ function insertarProveedor(string $nombre, ?string $contacto, ?string $telefono,
 
 function getCategorias(): array {
     $conn = getDBConnection();
-    $sql = "SELECT id, nombre FROM categorias ORDER BY nombre ASC";
+    $sql = "SELECT id, nombre, descripcion FROM categorias ORDER BY nombre ASC";
     $res = $conn->query($sql);
     return $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
 }
