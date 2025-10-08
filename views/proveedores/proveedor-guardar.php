@@ -15,7 +15,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $email     = trim($_POST['email'] ?? '');
     $direccion = trim($_POST['direccion'] ?? '');
 
-    if ($nombre !== '') {
+    // 🔹 Validar que el nombre no esté vacío y no tenga números
+    if ($nombre === '') {
+        $error = "⚠️ El nombre es obligatorio.";
+    } elseif (!preg_match('/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/u', $nombre)) {
+        $error = "⚠️ El nombre no puede contener números ni caracteres inválidos.";
+    } else {
+        // ✅ Insertar proveedor
         $ok = insertarProveedor($nombre, $contacto, $telefono, $email, $direccion);
 
         if ($ok) {
@@ -24,11 +30,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         } else {
             $error = "❌ Error al guardar proveedor en la base de datos.";
         }
-    } else {
-        $error = "⚠️ El nombre es obligatorio.";
     }
+
+    // 🚨 Si hubo error en validación o inserción
+    header("Location: proveedores.php?error=" . urlencode($error));
+    exit();
 }
 
-// 🚨 Si hubo error o acceso incorrecto
-header("Location: proveedores.php?error=" . urlencode($error ?? "Acceso inválido."));
+// 🚨 Si entran aquí sin POST válido
+header("Location: proveedores.php?error=" . urlencode("Acceso inválido."));
 exit();

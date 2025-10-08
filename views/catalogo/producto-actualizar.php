@@ -2,74 +2,70 @@
 if (session_status() === PHP_SESSION_NONE) session_start();
 require_once __DIR__ . "/../../config/functions.php";
 
-// 🚨 Solo Admin
+// 🚨 Solo admin
 if (!isset($_SESSION['usuario_id']) || ($_SESSION['usuario_rol'] ?? '') !== 'admin') {
     header("Location: ../login.php?error=unauthorized");
     exit();
 }
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    $id          = (int)($_POST['id'] ?? 0);
-    $nombre      = trim($_POST['nombre'] ?? '');
-    $descripcion = trim($_POST['descripcion'] ?? '');
-    $precio      = (float)($_POST['precio'] ?? 0);
-    $stock       = (int)($_POST['stock'] ?? 0);
-    $categoriaId = (int)($_POST['categoria_id'] ?? 0);
-    $proveedorId = !empty($_POST['proveedor_id']) ? (int)$_POST['proveedor_id'] : null;
-
-    // 📌 Buscar imagen actual
     $conn = getDBConnection();
+
+    $id           = (int)($_POST['id'] ?? 0);
+    $nombre       = trim($_POST['nombre'] ?? '');
+    $descripcion  = trim($_POST['descripcion'] ?? '');
+    $precio       = (float)($_POST['precio'] ?? 0);
+    $categoria_id = !empty($_POST['categoria_id']) ? (int)$_POST['categoria_id'] : null;
+    $proveedor_id = !empty($_POST['proveedor_id']) ? (int)$_POST['proveedor_id'] : null;
+
+    if ($id <= 0 || empty($nombre) || $precio <= 0) {
+        header("Location: productos.php?error=Datos inválidos");
+        exit();
+    }
+
+    // 📌 Obtener producto actual (para la imagen existente)
     $stmt = $conn->prepare("SELECT imagen FROM productos WHERE id=? LIMIT 1");
     $stmt->bind_param("i", $id);
     $stmt->execute();
-    $res = $stmt->get_result()->fetch_assoc();
-    $imagenActual = $res['imagen'] ?? null;
+    $prod = $stmt->get_result()->fetch_assoc();
+    $imagenActual = $prod['imagen'] ?? null;
 
-    $nuevaImagen = $imagenActual;
-
-    // 📂 Subida de nueva imagen
+    // 📂 Manejo de imagen nueva
+    $imagenNombre = $imagenActual; // por defecto conservar
     if (!empty($_FILES['imagen']['name'])) {
-        $uploadDir = __DIR__ . "/../../images/productos/";
-        if (!is_dir($uploadDir)) {
-            mkdir($uploadDir, 0777, true);
-        }
+        $dir = __DIR__ . "/../../images/productos/";
+        if (!is_dir($dir)) mkdir($dir, 0777, true);
 
-        $ext = strtolower(pathinfo($_FILES['imagen']['name'], PATHINFO_EXTENSION));
-        $allowed = ['jpg','jpeg','png','gif','webp'];
-        if (!in_array($ext, $allowed)) {
-            header("Location: productos.php?error=" . urlencode("⚠️ Formato de imagen no permitido."));
-            exit();
-        }
+        $ext = pathinfo($_FILES['imagen']['name'], PATHINFO_EXTENSION);
+        $imagenNombre = uniqid("prod_") . "." . strtolower($ext);
 
-        $fileName = uniqid("prod_") . "." . $ext;
-        $filePath = $uploadDir . $fileName;
-
-        if (move_uploaded_file($_FILES['imagen']['tmp_name'], $filePath)) {
-            // 🗑️ Eliminar imagen vieja si existe
-            if ($imagenActual && file_exists($uploadDir . $imagenActual)) {
-                unlink($uploadDir . $imagenActual);
+        $destino = $dir . $imagenNombre;
+        if (move_uploaded_file($_FILES['imagen']['tmp_name'], $destino)) {
+            // Borrar imagen anterior si existía
+            if (!empty($imagenActual) && file_exists($dir . $imagenActual)) {
+                unlink($dir . $imagenActual);
             }
-            $nuevaImagen = $fileName;
         } else {
-            header("Location: productos.php?error=" . urlencode("❌ Error al subir la nueva imagen."));
+            header("Location: productos.php?error=Error al subir la nueva imagen");
             exit();
         }
     }
 
-    // 📌 Actualizar producto
-    $stmt = $conn->prepare("UPDATE productos 
-                            SET nombre=?, descripcion=?, precio=?, stock=?, categoria_id=?, proveedor_id=?, imagen=? 
-                            WHERE id=?");
-    $stmt->bind_param("ssdiissi", $nombre, $descripcion, $precio, $stock, $categoriaId, $proveedorId, $nuevaImagen, $id);
+    // 📌 Actualizar producto (SIN tocar stock_inicial)
+    $sql = "UPDATE productos 
+            SET nombre=?, descripcion=?, precio=?, categoria_id=?, proveedor_id=?, imagen=? 
+            WHERE id=?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("ssdiisi", $nombre, $descripcion, $precio, $categoria_id, $proveedor_id, $imagenNombre, $id);
 
     if ($stmt->execute()) {
-        header("Location: productos.php?msg=" . urlencode("Producto actualizado correctamente."));
+        header("Location: productos.php?msg=Producto actualizado correctamente");
+        exit();
     } else {
-        header("Location: productos.php?error=" . urlencode("❌ Error al actualizar el producto."));
+        header("Location: productos.php?error=No se pudo actualizar el producto");
+        exit();
     }
+} else {
+    header("Location: productos.php?error=invalid_request");
     exit();
 }
-
-// 🚨 Si entran directo
-header("Location: productos.php?error=" . urlencode("Acceso inválido."));
-exit();

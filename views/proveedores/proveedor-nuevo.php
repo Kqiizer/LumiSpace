@@ -85,6 +85,13 @@ if (!isset($_SESSION['usuario_id']) || ($_SESSION['usuario_rol'] ?? '') !== 'adm
     .btn-secondary:hover {
       background: var(--card-bg-1);
     }
+    .error-msg {
+      color: #c00;
+      font-weight: bold;
+      font-size: .9rem;
+      margin-top: 5px;
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -94,11 +101,12 @@ if (!isset($_SESSION['usuario_id']) || ($_SESSION['usuario_rol'] ?? '') !== 'adm
     <section class="content wide">
       <div class="form-card">
         <h2>➕ Nuevo Proveedor</h2>
-        <form method="POST" action="proveedor-guardar.php">
+        <form method="POST" action="proveedor-guardar.php" onsubmit="return validarNombre()">
           
           <div>
             <label for="nombre">Nombre</label>
             <input type="text" id="nombre" name="nombre" placeholder="Ej. Iluminaciones Pérez" required>
+            <div id="errorNombre" class="error-msg">❌ El nombre no puede contener números</div>
           </div>
 
           <div>
@@ -129,5 +137,21 @@ if (!isset($_SESSION['usuario_id']) || ($_SESSION['usuario_rol'] ?? '') !== 'adm
       </div>
     </section>
   </main>
+
+  <script>
+    function validarNombre() {
+      const nombre = document.getElementById("nombre").value.trim();
+      const errorMsg = document.getElementById("errorNombre");
+      const regex = /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/; // Solo letras y espacios
+      
+      if (!regex.test(nombre)) {
+        errorMsg.style.display = "block";
+        return false; // ❌ Cancela envío
+      } else {
+        errorMsg.style.display = "none";
+        return true;
+      }
+    }
+  </script>
 </body>
 </html>

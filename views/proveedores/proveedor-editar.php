@@ -69,7 +69,12 @@ if (!$proveedor) {
 
           <div>
             <label>Nombre</label>
-            <input type="text" name="nombre" value="<?= htmlspecialchars($proveedor['nombre']) ?>" required>
+            <input type="text" 
+                   name="nombre" 
+                   value="<?= htmlspecialchars($proveedor['nombre']) ?>" 
+                   required
+                   pattern="[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+" 
+                   title="Solo se permiten letras y espacios">
           </div>
 
           <div>

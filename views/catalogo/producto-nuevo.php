@@ -2,7 +2,7 @@
 if (session_status() === PHP_SESSION_NONE) session_start();
 require_once __DIR__ . "/../../config/functions.php";
 
-// 🚨 Solo Admin
+// 🚨 Solo admin
 if (!isset($_SESSION['usuario_id']) || ($_SESSION['usuario_rol'] ?? '') !== 'admin') {
     header("Location: ../login.php?error=unauthorized");
     exit();
@@ -47,6 +47,18 @@ $proveedores = getProveedores();
     .btn { padding: 10px 18px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; }
     .btn-primary { background: linear-gradient(90deg, var(--act1), var(--act2)); color: #fff; }
     .btn-secondary { background: var(--card-bg-2); color: var(--text); }
+
+    /* Previsualización de imagen */
+    #preview {
+      max-width: 150px;
+      max-height: 150px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      margin-top: 10px;
+      display: none;
+      object-fit: cover;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
   </style>
 </head>
 <body>
@@ -66,12 +78,13 @@ $proveedores = getProveedores();
 
           <div>
             <label for="precio">Precio ($)</label>
-            <input type="number" step="0.01" min="0" id="precio" name="precio" required>
+            <input type="number" step="0.01" min="0.01" id="precio" name="precio" required>
           </div>
 
           <div>
-            <label for="stock">Stock inicial</label>
-            <input type="number" min="0" id="stock" name="stock" required>
+            <label for="stock_inicial">Stock inicial</label>
+            <input type="number" min="0" id="stock_inicial" name="stock_inicial" value="0" required>
+            <small style="color:#777;">Este valor se registra como stock inicial. El stock real se actualizará con movimientos en inventario.</small>
           </div>
 
           <div>
@@ -96,8 +109,9 @@ $proveedores = getProveedores();
 
           <div style="grid-column: span 2;">
             <label for="imagen">Imagen del producto</label>
-            <input type="file" id="imagen" name="imagen" accept="image/*">
+            <input type="file" id="imagen" name="imagen" accept="image/*" onchange="previewImage(event)">
             <small>Se guardará en <code>/images/productos/</code></small>
+            <img id="preview" alt="Vista previa de la imagen">
           </div>
 
           <div style="grid-column: span 2;">
@@ -113,5 +127,21 @@ $proveedores = getProveedores();
       </div>
     </section>
   </main>
+
+  <script>
+    // 📌 Previsualización de imagen
+    function previewImage(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+          const img = document.getElementById('preview');
+          img.src = ev.target.result;
+          img.style.display = 'block';
+        }
+        reader.readAsDataURL(file);
+      }
+    }
+  </script>
 </body>
 </html>

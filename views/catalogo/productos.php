@@ -9,7 +9,7 @@ if (!isset($_SESSION['usuario_id']) || ($_SESSION['usuario_rol'] ?? '') !== 'adm
 }
 
 // Obtener productos y categorías
-$productos   = getProductos();
+$productos   = getProductos(); // ✅ debe devolver stock_real
 $categorias  = getCategorias();
 ?>
 <!DOCTYPE html>
@@ -19,7 +19,7 @@ $categorias  = getCategorias();
   <title>Productos - LumiSpace</title>
   <link rel="stylesheet" href="../../css/dashboard.css">
   <style>
-    section.content.wide { max-width: 100% !important; width: 100% !important; margin: 0; padding: 0 10px; }
+    section.content.wide { max-width: 100%; width: 100%; margin: 0; padding: 0 10px; }
     .prod-img { width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 1px solid var(--card-bd); box-shadow: var(--shadow); }
 
     /* Header */
@@ -101,8 +101,8 @@ $categorias  = getCategorias();
               <th>Categoría</th>
               <th>Proveedor</th>
               <th>Precio</th>
-              <th>Stock</th>
-              <th>Creado en</th> <!-- 🔹 Nueva columna -->
+              <th>Stock actual</th>
+              <th>Creado en</th>
               <th>Acciones</th>
             </tr>
           </thead>
@@ -124,12 +124,13 @@ $categorias  = getCategorias();
                   <td>$<?= number_format($p['precio'],2) ?></td>
                   <td>
                     <?php
-                      $stock = (int)$p['stock'];
+                      // 👇 aquí ya se asegura que es stock_real
+                      $stock = (int)($p['stock_real'] ?? 0);
                       $class = $stock <= 5 ? "low" : ($stock <= 20 ? "medium" : "high");
                     ?>
                     <span class="badge <?= $class ?>"><?= $stock ?></span>
                   </td>
-                  <td><?= !empty($p['creado_en']) ? date("d/m/Y H:i", strtotime($p['creado_en'])) : '-' ?></td> <!-- 📅 Fecha -->
+                  <td><?= !empty($p['creado_en']) ? date("d/m/Y H:i", strtotime($p['creado_en'])) : '-' ?></td>
                   <td>
                     <a href="producto-editar.php?id=<?= $p['id'] ?>" class="btn btn-sm">✏️</a>
                     <a href="producto-eliminar.php?id=<?= $p['id'] ?>" class="btn btn-sm btn-danger" onclick="return confirm('¿Eliminar producto?')">🗑️</a>

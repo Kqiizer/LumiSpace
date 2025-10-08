@@ -1,64 +1,36 @@
 <?php
 require_once __DIR__ . "/../config/functions.php";
 
-// BASE_URL (usa la que tengas en tu config; aquí doy fallback)
+// BASE_URL
 $BASE = defined('BASE_URL') ? rtrim(BASE_URL, '/') . '/' : '/LumiSpace/';
 
-/**
- * Normaliza la URL de la imagen del producto para que siempre cargue
- * con base en: images/productos/...
- */
+// Normalizador de imágenes
 function buildImageUrl(?string $raw, string $BASE): string {
     $raw = trim((string)$raw);
-    $raw = str_replace('\\', '/', $raw);        // separadores windows -> unix
-    $raw = preg_replace('#\.\./#', '', $raw);   // limpia ../
+    $raw = str_replace('\\', '/', $raw);
+    $raw = preg_replace('#\.\./#', '', $raw);
 
-    // 1) URL absoluta http(s)
-    if ($raw !== '' && preg_match('#^https?://#i', $raw)) {
-        return $raw;
-    }
-
-    // 2) Si empieza con "/" (absoluta al docroot), la re-ancoramos a BASE
-    if ($raw !== '' && strpos($raw, '/') === 0) {
-        return rtrim($BASE, '/') . '/' . ltrim($raw, '/');  // /LumiSpace/ + images/...
-    }
-
-    // 3) Ya viene con prefijo "images/..." -> la anclamos a BASE
-    if (stripos($raw, 'images/') === 0) {
-        return rtrim($BASE, '/') . '/' . $raw;              // /LumiSpace/images/...
-    }
-
-    // 4) Viene como "productos/archivo.jpg" -> la reubicamos bajo images/productos/
-    if (stripos($raw, 'productos/') === 0) {
-        return rtrim($BASE, '/') . '/images/' . $raw;       // /LumiSpace/images/productos/archivo.jpg
-    }
-
-    // 5) Soporte legado para "imagenes/..." (si existiera en tu BD)
-    if (stripos($raw, 'imagenes/') === 0) {
-        // si ya tienes esa carpeta física, usa BASE + imagenes/...
-        // o si deseas forzar a images/productos/, cambia la siguiente línea por:
-        // return rtrim($BASE, '/') . '/images/productos/' . basename($raw);
-        return rtrim($BASE, '/') . '/' . $raw;
-    }
-
-    // 6) Vacío -> placeholder
-    if ($raw === '' || $raw === null) {
-        return rtrim($BASE, '/') . '/images/default.png';
-    }
-
-    // 7) Sólo nombre de archivo -> asumir images/productos/{archivo}
+    if ($raw !== '' && preg_match('#^https?://#i', $raw)) return $raw;
+    if ($raw !== '' && strpos($raw, '/') === 0) return rtrim($BASE, '/') . '/' . ltrim($raw, '/');
+    if (stripos($raw, 'images/') === 0) return rtrim($BASE, '/') . '/' . $raw;
+    if (stripos($raw, 'productos/') === 0) return rtrim($BASE, '/') . '/images/' . $raw;
+    if ($raw === '' || $raw === null) return rtrim($BASE, '/') . '/images/default.png';
     return rtrim($BASE, '/') . '/images/productos/' . $raw;
 }
 
-// 🚀 Top productos por ventas (incluye productos sin ventas)
+// 🚀 Productos top (ventas + stock real)
 $conn = getDBConnection();
-$sql = "SELECT p.id, p.nombre, p.precio, p.stock, p.imagen, 
-               COALESCE(SUM(dv.cantidad),0) as total_vendido
-        FROM productos p
-        LEFT JOIN detalle_ventas dv ON p.id = dv.producto_id
-        GROUP BY p.id
-        ORDER BY total_vendido DESC, p.id DESC
-        LIMIT 15";
+$sql = "
+    SELECT 
+        p.id, p.nombre, p.precio, p.imagen,
+        COALESCE(SUM(i.cantidad),0) AS stock_real,
+        COALESCE(SUM(dv.cantidad),0) AS total_vendido
+    FROM productos p
+    LEFT JOIN inventario i ON p.id = i.producto_id
+    LEFT JOIN detalle_ventas dv ON p.id = dv.producto_id
+    GROUP BY p.id, p.nombre, p.precio, p.imagen
+    ORDER BY total_vendido DESC, p.id DESC
+    LIMIT 12";
 $result = $conn->query($sql);
 
 $topProductos = [];
@@ -78,66 +50,38 @@ if ($result) {
       <h1 class="hero-title">Ilumina tu espacio. Inspira tu estilo</h1>
       <p class="hero-subtitle">
         En Lumispace creemos que la luz no solo transforma ambientes, transforma emociones.
-        Por eso diseñamos lámparas, gadgets y soluciones inteligentes que combinan tecnología, elegancia y funcionalidad.
+        Diseñamos lámparas, gadgets y soluciones inteligentes que combinan tecnología, elegancia y funcionalidad.
       </p>
 
       <div class="hero-buttons">
-        <a href="<?= htmlspecialchars($BASE . 'index.php') ?>" class="btn-primary">Shop Now <i class="fas fa-arrow-right"></i></a>
-        <a href="<?= htmlspecialchars($BASE . 'index.php') ?>" class="btn-secondary">View All Products</a>
-      </div>
-
-      <div class="hero-rating">
-        <div class="rating-avatars">
-          <div class="avatar avatar-1"></div>
-          <div class="avatar avatar-2"></div>
-          <div class="avatar avatar-3"></div>
-          <div class="avatar avatar-4"></div>
-          <div style="background-color: #d4c4a8; color: #8b7355; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-left: -10px;">+</div>
-        </div>
-        <div class="rating-text">
-          <div style="font-weight: bold;">4.9 Ratings+</div>
-          <div style="font-size: 12px;">Trusted by 300+ Customers</div>
-        </div>
+        <a href="<?= htmlspecialchars($BASE . 'index.php') ?>" class="btn-primary">
+          Shop Now <i class="fas fa-arrow-right"></i>
+        </a>
+        <a href="<?= htmlspecialchars($BASE . 'index.php') ?>" class="btn-secondary">
+          View All Products
+        </a>
       </div>
     </div>
 
+    <!-- Carrusel -->
     <div class="hero-images" style="position: relative; overflow: hidden;">
-      <div class="carousel-wrapper" id="heroCarousel" style="display:flex; gap:20px; will-change: transform;">
+      <div class="carousel-wrapper" id="heroCarousel" 
+           style="display:flex; gap:20px; will-change:transform;">
         <?php if (!empty($topProductos)): ?>
           <?php foreach ($topProductos as $p): 
-            // 🔗 Ajusta si tu detalle es otro archivo:
-            $detalle = $BASE . 'views/productos-detal.php?id=' . ((int)$p['id']);
+            $detalle = $BASE . 'views/productos-detal.php?id=' . (int)$p['id'];
           ?>
-            <div class="room-card"
-                 data-id="<?= (int)$p['id'] ?>"
-                 data-url="<?= htmlspecialchars($detalle, ENT_QUOTES, 'UTF-8') ?>"
-                 style="flex:0 0 calc(33.33% - 14px);">
+            <div class="room-card" 
+                 data-url="<?= htmlspecialchars($detalle, ENT_QUOTES) ?>"
+                 style="flex:0 0 calc(33.33% - 14px); cursor:pointer;">
               <div class="room-image" 
-                   style="background-image:url('<?= htmlspecialchars($p['img_url'], ENT_QUOTES, 'UTF-8') ?>'); background-size:cover; background-position:center;">
+                   style="background-image:url('<?= htmlspecialchars($p['img_url'], ENT_QUOTES) ?>');
+                          background-size:cover; background-position:center;">
                 <div class="room-price">$<?= number_format((float)$p['precio'], 2) ?></div>
               </div>
               <div class="room-info">
                 <h3 class="room-title"><?= strtoupper(htmlspecialchars($p['nombre'])) ?></h3>
-                <p class="room-items"><?= (int)$p['stock'] ?> disponibles</p>
-              </div>
-            </div>
-          <?php endforeach; ?>
-
-          <!-- 🔁 Clones para loop infinito suave -->
-          <?php foreach (array_slice($topProductos, 0, min(3,count($topProductos))) as $p): 
-            $detalle = $BASE . 'views/productos-detal.php?id=' . ((int)$p['id']);
-          ?>
-            <div class="room-card"
-                 data-id="<?= (int)$p['id'] ?>"
-                 data-url="<?= htmlspecialchars($detalle, ENT_QUOTES, 'UTF-8') ?>"
-                 style="flex:0 0 calc(33.33% - 14px); opacity:.7;">
-              <div class="room-image" 
-                   style="background-image:url('<?= htmlspecialchars($p['img_url'], ENT_QUOTES, 'UTF-8') ?>'); background-size:cover; background-position:center;">
-                <div class="room-price">$<?= number_format((float)$p['precio'], 2) ?></div>
-              </div>
-              <div class="room-info">
-                <h3 class="room-title"><?= strtoupper(htmlspecialchars($p['nombre'])) ?></h3>
-                <p class="room-items"><?= (int)$p['stock'] ?> disponibles</p>
+                <p class="room-items"><?= (int)$p['stock_real'] ?> disponibles</p>
               </div>
             </div>
           <?php endforeach; ?>
@@ -146,107 +90,107 @@ if ($result) {
         <?php endif; ?>
       </div>
 
+      <!-- Flechas -->
       <div class="nav-arrows">
         <button class="nav-arrow" id="prevBtn"><i class="fas fa-arrow-left"></i></button>
-        <button class="nav-arrow" style="background-color: #d4c4a8;" id="nextBtn"><i class="fas fa-arrow-right"></i></button>
+        <button class="nav-arrow" style="background-color:#d4c4a8;" id="nextBtn"><i class="fas fa-arrow-right"></i></button>
       </div>
     </div>
   </div>
 </section>
 
 <script>
-// 🎠 Carrusel con movimiento constante + arrastre + pausa en hover + click a detalle
+// 🎠 Carrusel dinámico con autoplay + hover + drag + swipe + flechas
 const carousel = document.getElementById("heroCarousel");
 if (carousel && carousel.children.length) {
-  let isDown = false;
-  let isPaused = false;      // pausa por hover o drag
-  let dragged = false;       // evita click tras un drag
-  let startX;
-  let scrollLeft;
-  let position = 0;
-  const speed = 0.5; // velocidad constante
+  let pos = 0;
+  let isPaused = false;
+  let isDragging = false;
+  let moved = false;
+  let startX = 0;
+  let initialPos = 0;
+  const speed = 0.6;
 
   function cardW() {
-    const firstCard = carousel.children[0];
-    return firstCard ? firstCard.offsetWidth + 20 : 0;
+    const c = carousel.children[0];
+    return c ? c.offsetWidth + 20 : 0;
   }
 
   function animate() {
-    const w = cardW();
-    if (!w) return requestAnimationFrame(animate);
-
-    if (!isPaused) {
-      position -= speed;
-      carousel.style.transform = `translateX(${position}px)`;
-      if (Math.abs(position) >= w) {
+    if (!isPaused && !isDragging) {
+      pos -= speed;
+      const w = cardW();
+      carousel.style.transform = `translateX(${pos}px)`;
+      if (Math.abs(pos) >= w) {
         carousel.appendChild(carousel.children[0]);
-        position += w;
+        pos += w;
       }
     }
     requestAnimationFrame(animate);
   }
   animate();
 
-  // Pausa por hover
-  carousel.addEventListener("mouseenter", () => {
-    isPaused = true;
-    carousel.style.cursor = "grab";
-  });
-  carousel.addEventListener("mouseleave", () => {
-    isPaused = false;
-    isDown = false;
-    dragged = false;
-    carousel.style.cursor = "auto";
-  });
+  // Hover (desktop)
+  carousel.addEventListener("mouseenter", () => { isPaused = true; });
+  carousel.addEventListener("mouseleave", () => { isPaused = false; });
 
-  // Drag con el mouse
+  // Drag (desktop)
   carousel.addEventListener("mousedown", (e) => {
-    isDown = true;
-    isPaused = true;
-    dragged = false;
+    isDragging = true; moved = false;
+    startX = e.pageX;
+    initialPos = pos;
     carousel.style.cursor = "grabbing";
-    startX = e.pageX - carousel.offsetLeft;
-    scrollLeft = position;
   });
-  carousel.addEventListener("mouseup", () => {
-    isDown = false;
-    carousel.style.cursor = "grab";
+  document.addEventListener("mouseup", () => {
+    if (isDragging) {
+      isDragging = false;
+      carousel.style.cursor = "auto";
+    }
   });
-  carousel.addEventListener("mousemove", (e) => {
-    if (!isDown) return;
-    e.preventDefault();
-    const x = e.pageX - carousel.offsetLeft;
-    const walk = x - startX;
-    if (Math.abs(walk) > 3) dragged = true; // umbral para considerar drag
-    position = scrollLeft + walk;
-    carousel.style.transform = `translateX(${position}px)`;
+  document.addEventListener("mousemove", (e) => {
+    if (!isDragging) return;
+    const dx = e.pageX - startX;
+    pos = initialPos + dx;
+    if (Math.abs(dx) > 5) moved = true;
+    carousel.style.transform = `translateX(${pos}px)`;
   });
 
-  // Flechas manuales
-  const nextBtn = document.getElementById("nextBtn");
-  const prevBtn = document.getElementById("prevBtn");
+  // Swipe táctil (mobile)
+  carousel.addEventListener("touchstart", (e) => {
+    isDragging = true; moved = false;
+    startX = e.touches[0].pageX;
+    initialPos = pos;
+    isPaused = true;
+  }, {passive:true});
+  carousel.addEventListener("touchend", () => {
+    isDragging = false; isPaused = false;
+  }, {passive:true});
+  carousel.addEventListener("touchmove", (e) => {
+    if (!isDragging) return;
+    const dx = e.touches[0].pageX - startX;
+    pos = initialPos + dx;
+    if (Math.abs(dx) > 5) moved = true;
+    carousel.style.transform = `translateX(${pos}px)`;
+  }, {passive:true});
 
-  nextBtn && nextBtn.addEventListener("click", () => {
+  // Flechas
+  document.getElementById("nextBtn").addEventListener("click", () => {
     const w = cardW();
-    if (!w) return;
-    position -= w;
-    carousel.style.transform = `translateX(${position}px)`;
+    pos -= w;
+    carousel.style.transform = `translateX(${pos}px)`;
   });
-
-  prevBtn && prevBtn.addEventListener("click", () => {
+  document.getElementById("prevBtn").addEventListener("click", () => {
     const w = cardW();
-    if (!w) return;
-    const lastCard = carousel.lastElementChild;
-    carousel.insertBefore(lastCard, carousel.firstElementChild);
-    position -= w;
-    carousel.style.transform = `translateX(${position}px)`;
+    const last = carousel.lastElementChild;
+    carousel.insertBefore(last, carousel.firstElementChild);
+    pos -= w;
+    carousel.style.transform = `translateX(${pos}px)`;
   });
 
-  // 🔗 Click a detalle (si no se arrastró)
+  // Click seguro
   carousel.addEventListener("click", (e) => {
     const card = e.target.closest(".room-card");
-    if (!card) return;
-    if (dragged) { dragged = false; return; } // no navegar si fue drag
+    if (!card || moved) { moved = false; return; }
     const url = card.dataset.url;
     if (url) window.location.href = url;
   });
