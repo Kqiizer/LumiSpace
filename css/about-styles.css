@@ -162,7 +162,7 @@ body {
 .about-hero {
     position: relative;
     height: 60vh;
-    min-height: 400px;
+    min-height: 300px;
     background: linear-gradient(135deg, #a0896b 0%, #8b7355 100%);
     display: flex;
     align-items: center;

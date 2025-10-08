@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,8 +8,9 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="../css/about-styles.css">
 </head>
+
 <body>
-<?php include "../includes/header.php"; ?>
+    <?php include "../includes/header.php"; ?>
 
     <!-- Hero Section -->
     <section class="about-hero">
@@ -27,32 +29,30 @@
         <div class="container">
             <div class="story-layout">
                 <div class="story-image">
-                    <div class="image-placeholder"></div>
-                    <div class="story-badge">
-                        <span class="badge-number">15+</span>
-                        <span class="badge-text">Years of Excellencia</span>
-                    </div>
+                    <img src="../images/sobrenosotros.jpg" alt="imagen de LumiSpace" width="800">
                 </div>
                 <div class="story-content">
-                    <span class="section-label">Our Story</span>
-                    <h2 class="section-title">Where Quality Meets Design</h2>
-                    <p class="story-text">Founded in 2009, Furniture began with a simple mission: to create beautiful, sustainable furniture that transforms houses into homes. What started as a small workshop has grown into a leading furniture destination, serving thousands of satisfied customers worldwide.</p>
-                    <p class="story-text">Our passion for craftsmanship and attention to detail drives everything we do. Every piece in our collection is carefully selected or designed to meet our high standards of quality, comfort, and style.</p>
-                    
+                    <span class="section-label">Nuestra Historia</span>
+                    <h2 class="section-title">Donde la calidad se encuentra con el diseño</h2>
+                    <p class="story-text">En LUMISPACE creemos que la iluminación transforma los espacios. Somos una tienda mexicana dedicada a ofrecer soluciones modernas, funcionales y estéticamente cuidadas para interiores y exteriores.
+                        Desde lámparas colgantes y apliques de pared hasta faroles y proyectores LED, cada pieza está pensada para combinar diseño, calidad y calidez.</p>
+                    <p class="story-text">Nuestra misión es ayudarte a crear ambientes únicos, llenos de luz y estilo.
+                        Nuestra visión es convertirnos en la marca líder de iluminación decorativa en Latinoamérica, ofreciendo productos innovadores, sustentables y accesibles.</p>
+
                     <div class="story-features">
                         <div class="feature-box">
                             <i class="fas fa-leaf"></i>
-                            <h4>Sustainable Materials</h4>
+                            <h4>DISEÑO Y FUNCIONALIDAD</h4>
                             <p>Eco-friendly and responsibly sourced</p>
                         </div>
                         <div class="feature-box">
                             <i class="fas fa-hammer"></i>
-                            <h4>Expert Craftsmanship</h4>
+                            <h4>COMPROMISO CON LA CALIDAD</h4>
                             <p>Handcrafted by skilled artisans</p>
                         </div>
                         <div class="feature-box">
                             <i class="fas fa-heart"></i>
-                            <h4>Customer First</h4>
+                            <h4>ATENCIÓN PERSONALIZADA</h4>
                             <p>Your satisfaction is our priority</p>
                         </div>
                     </div>
@@ -65,58 +65,58 @@
     <section class="values-section">
         <div class="container">
             <div class="section-header">
-                <span class="section-label">Our Values</span>
-                <h2 class="section-title">What We Stand For</h2>
-                <p class="section-description">These core values guide every decision we make and every piece we create</p>
+                <span class="section-label">NUESTROS VALORES</span>
+                <h2 class="section-title">Lo que representamos</h2>
+                <p class="section-description">Estos valores fundamentales guían cada decisión que tomamos y cada pieza que creamos.</p>
             </div>
-            
+
             <div class="values-grid">
                 <div class="value-card">
                     <div class="value-icon">
                         <i class="fas fa-award"></i>
                     </div>
-                    <h3>Quality First</h3>
-                    <p>We never compromise on quality. Each piece undergoes rigorous quality checks to ensure it meets our exacting standards.</p>
+                    <h3>CALIDAD ANTE TODO</h3>
+                    <p>En LUMISPACE, cada pieza pasa por rigurosos controles para asegurar materiales duraderos, acabados impecables y un rendimiento excepcional.</p>
                 </div>
-                
+
                 <div class="value-card">
                     <div class="value-icon">
                         <i class="fas fa-recycle"></i>
                     </div>
-                    <h3>Sustainability</h3>
-                    <p>Environmental responsibility is at our core. We use sustainable materials and eco-friendly production processes.</p>
+                    <h3>SOSTENIBILIDAD</h3>
+                    <p>Creemos en iluminar sin comprometer el planeta. Utilizamos procesos responsables y materiales ecoamigables que reducen nuestro impacto ambiental.</p>
                 </div>
-                
+
                 <div class="value-card">
                     <div class="value-icon">
                         <i class="fas fa-palette"></i>
                     </div>
-                    <h3>Design Excellence</h3>
-                    <p>Beautiful design that stands the test of time. We blend contemporary trends with timeless elegance.</p>
+                    <h3>DISEÑO Y ESTILO</h3>
+                    <p>Fusionamos la funcionalidad con la estética moderna. Cada diseño refleja equilibrio, elegancia y armonía para realzar cualquier espacio.</p>
                 </div>
-                
+
                 <div class="value-card">
                     <div class="value-icon">
                         <i class="fas fa-handshake"></i>
                     </div>
-                    <h3>Trust & Transparency</h3>
-                    <p>Building lasting relationships through honest communication and reliable service. Your trust is our most valued asset.</p>
+                    <h3>CONFIANZA Y TRANSPARENCIA</h3>
+                    <p>Construimos relaciones basadas en honestidad, atención personalizada y servicio confiable. Tu satisfacción es nuestra prioridad.</p>
                 </div>
-                
+
                 <div class="value-card">
                     <div class="value-icon">
                         <i class="fas fa-lightbulb"></i>
                     </div>
-                    <h3>Innovation</h3>
-                    <p>Constantly evolving and improving. We embrace new ideas while respecting traditional craftsmanship.</p>
+                    <h3>INNOVACIÓN CONSTANTE </h3>
+                    <p>Evolucionamos con las nuevas tendencias tecnológicas y de diseño para ofrecerte iluminación eficiente, moderna y con propósito.</p>
                 </div>
-                
+
                 <div class="value-card">
                     <div class="value-icon">
                         <i class="fas fa-users"></i>
                     </div>
-                    <h3>Community</h3>
-                    <p>Supporting local artisans and giving back to the communities we serve. Together, we create something beautiful.</p>
+                    <h3>COMUNIDAD</h3>
+                    <p>Apoyamos a diseñadores y artesanos locales, impulsando el talento y la economía de nuestras comunidades. Juntos creamos luz con significado.</p>
                 </div>
             </div>
         </div>
@@ -133,10 +133,10 @@
                     <div class="stat-content">
                         <span class="stat-number" data-target="2500">0</span>
                         <span class="stat-plus">+</span>
-                        <p class="stat-label">Products Available</p>
+                        <p class="stat-label">Productos Disponibles</p>
                     </div>
                 </div>
-                
+
                 <div class="stat-item">
                     <div class="stat-icon">
                         <i class="fas fa-smile"></i>
@@ -144,10 +144,10 @@
                     <div class="stat-content">
                         <span class="stat-number" data-target="15000">0</span>
                         <span class="stat-plus">+</span>
-                        <p class="stat-label">Happy Customers</p>
+                        <p class="stat-label">Clientes Satisfechos</p>
                     </div>
                 </div>
-                
+
                 <div class="stat-item">
                     <div class="stat-icon">
                         <i class="fas fa-globe"></i>
@@ -155,10 +155,10 @@
                     <div class="stat-content">
                         <span class="stat-number" data-target="45">0</span>
                         <span class="stat-plus">+</span>
-                        <p class="stat-label">Countries Served</p>
+                        <p class="stat-label">Estados atendidos</p>
                     </div>
                 </div>
-                
+
                 <div class="stat-item">
                     <div class="stat-icon">
                         <i class="fas fa-trophy"></i>
@@ -166,7 +166,7 @@
                     <div class="stat-content">
                         <span class="stat-number" data-target="28">0</span>
                         <span class="stat-plus">+</span>
-                        <p class="stat-label">Awards Won</p>
+                        <p class="stat-label">Premios ganados</p>
                     </div>
                 </div>
             </div>
@@ -179,9 +179,10 @@
             <div class="section-header">
                 <span class="section-label">Nuestro equipo</span>
                 <h2 class="section-title">Conocenos</h2>
-                <p class="section-description">Passionate professionals dedicated to bringing your vision to life</p>
+                <p class="section-description">
+                    Profesionales apasionados dedicados a darle vida a nuestra visión</p>
             </div>
-            
+
             <div class="team-grid">
                 <div class="team-card">
                     <div class="team-image">
@@ -200,7 +201,7 @@
                         <p class="team-description">Visionary leader with 20+ years in furniture design and sustainable manufacturing.</p>
                     </div>
                 </div>
-                
+
                 <div class="team-card">
                     <div class="team-image">
                         <div class="image-placeholder">
@@ -218,7 +219,7 @@
                         <p class="team-description">Award-winning designer specializing in modern minimalist aesthetics.</p>
                     </div>
                 </div>
-                
+
                 <div class="team-card">
                     <div class="team-image">
                         <div class="image-placeholder">
@@ -236,7 +237,7 @@
                         <p class="team-description">Expert in supply chain management and sustainable sourcing.</p>
                     </div>
                 </div>
-                
+
                 <div class="team-card">
                     <div class="team-image">
                         <div class="image-placeholder">
@@ -262,56 +263,48 @@
     <section class="achievements-section">
         <div class="container">
             <div class="section-header">
-                <span class="section-label">Our Achievements</span>
-                <h2 class="section-title">Milestones & Recognition</h2>
+                <span class="section-label">Nuestros Logros</span>
+                <h2 class="section-title">En LUMISPACE tambien compartimos nuestros logros y proyecciones</h2>
             </div>
-            
+
             <div class="timeline">
                 <div class="timeline-item left">
                     <div class="timeline-content">
-                        <div class="timeline-year">2009</div>
-                        <h3>The Beginning</h3>
-                        <p>Founded our first workshop with a team of 3 passionate craftsmen.</p>
+                        <div class="timeline-year">2025</div>
+                        <h3>El Comienzo</h3>
+                        <p>Nace LUMISPACE con la misión de transformar los espacios a través de la luz. Iniciamos con un pequeño equipo apasionado por el diseño, la tecnología y la estética.</p>
                     </div>
                 </div>
-                
+
                 <div class="timeline-item right">
                     <div class="timeline-content">
-                        <div class="timeline-year">2012</div>
-                        <h3>First Award</h3>
-                        <p>Received "Best New Furniture Brand" at the National Design Awards.</p>
+                        <div class="timeline-year">2025</div>
+                        <h3>Primera Colección</h3>
+                        <p>Lanzamos nuestra primera línea de luminarias decorativas, combinando elegancia y funcionalidad con materiales de alta calidad.</p>
                     </div>
                 </div>
-                
+
                 <div class="timeline-item left">
                     <div class="timeline-content">
-                        <div class="timeline-year">2015</div>
-                        <h3>Going Global</h3>
-                        <p>Expanded internationally, shipping to 20+ countries worldwide.</p>
+                        <div class="timeline-year">2025</div>
+                        <h3>Presencia Digital</h3>
+                        <p>Publicamos nuestra tienda en línea, creando una experiencia moderna y accesible para nuestros clientes.</p>
                     </div>
                 </div>
-                
-                <div class="timeline-item right">
-                    <div class="timeline-content">
-                        <div class="timeline-year">2018</div>
-                        <h3>Sustainability Champion</h3>
-                        <p>Achieved carbon-neutral production and FSC certification.</p>
-                    </div>
-                </div>
-                
+
                 <div class="timeline-item left">
                     <div class="timeline-content">
-                        <div class="timeline-year">2021</div>
-                        <h3>10,000 Customers</h3>
-                        <p>Celebrated serving our 10,000th satisfied customer milestone.</p>
+                        <div class="timeline-year">2026</div>
+                        <h3>Expansión en linea</h3>
+                        <p>Planeamos ampliar nuestro catálogo y llegar a nuevos mercados nacionales a través de nuestra plataforma web.</p>
                     </div>
                 </div>
-                
+
                 <div class="timeline-item right">
                     <div class="timeline-content">
-                        <div class="timeline-year">2024</div>
-                        <h3>Industry Leader</h3>
-                        <p>Named "Furniture Brand of the Year" for innovation and quality.</p>
+                        <div class="timeline-year">2027</div>
+                        <h3>Compromiso sustentable</h3>
+                        <p>Iniciamos nuestro programa “Luz Responsable”, enfocado en materiales ecológicos y eficiencia energética.</p>
                     </div>
                 </div>
             </div>
@@ -326,7 +319,7 @@
                 <h2 class="section-title">How We Create Quality</h2>
                 <p class="section-description">From concept to delivery, every step is carefully managed</p>
             </div>
-            
+
             <div class="process-grid">
                 <div class="process-step">
                     <div class="step-number">01</div>
@@ -336,11 +329,11 @@
                     <h3>Design</h3>
                     <p>Our designers create innovative concepts that blend form and function.</p>
                 </div>
-                
+
                 <div class="process-arrow">
                     <i class="fas fa-arrow-right"></i>
                 </div>
-                
+
                 <div class="process-step">
                     <div class="step-number">02</div>
                     <div class="step-icon">
@@ -349,11 +342,11 @@
                     <h3>Sourcing</h3>
                     <p>We carefully select sustainable, high-quality materials from trusted suppliers.</p>
                 </div>
-                
+
                 <div class="process-arrow">
                     <i class="fas fa-arrow-right"></i>
                 </div>
-                
+
                 <div class="process-step">
                     <div class="step-number">03</div>
                     <div class="step-icon">
@@ -362,11 +355,11 @@
                     <h3>Crafting</h3>
                     <p>Skilled artisans handcraft each piece with precision and care.</p>
                 </div>
-                
+
                 <div class="process-arrow">
                     <i class="fas fa-arrow-right"></i>
                 </div>
-                
+
                 <div class="process-step">
                     <div class="step-number">04</div>
                     <div class="step-icon">
@@ -375,11 +368,11 @@
                     <h3>Quality Check</h3>
                     <p>Rigorous inspection ensures every piece meets our standards.</p>
                 </div>
-                
+
                 <div class="process-arrow">
                     <i class="fas fa-arrow-right"></i>
                 </div>
-                
+
                 <div class="process-step">
                     <div class="step-number">05</div>
                     <div class="step-icon">
@@ -400,7 +393,7 @@
                     <span class="section-label">Visit Us</span>
                     <h2 class="section-title">Find Us Here</h2>
                     <p class="location-description">Visit our showroom to experience our furniture collection in person. Our expert team is ready to help you find the perfect pieces for your space.</p>
-                    
+
                     <div class="location-details">
                         <div class="location-item">
                             <i class="fas fa-map-marker-alt"></i>
@@ -409,7 +402,7 @@
                                 <p>123 Furniture Street<br>Design District, DC 12345</p>
                             </div>
                         </div>
-                        
+
                         <div class="location-item">
                             <i class="fas fa-phone"></i>
                             <div>
@@ -417,7 +410,7 @@
                                 <p>+123-456-789<br>+123-456-790</p>
                             </div>
                         </div>
-                        
+
                         <div class="location-item">
                             <i class="fas fa-envelope"></i>
                             <div>
@@ -425,7 +418,7 @@
                                 <p>info@furniture.com<br>support@furniture.com</p>
                             </div>
                         </div>
-                        
+
                         <div class="location-item">
                             <i class="fas fa-clock"></i>
                             <div>
@@ -434,13 +427,13 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <button class="get-directions-btn">
                         <i class="fas fa-directions"></i>
                         Get Directions
                     </button>
                 </div>
-                
+
                 <div class="location-map">
                     <div class="map-placeholder">
                         <i class="fas fa-map-marked-alt"></i>
@@ -458,7 +451,7 @@
                 <span class="section-label">Testimonios</span>
                 <h2 class="section-title">Opiniones de nuestros clientes</h2>
             </div>
-            
+
             <div class="testimonials-slider">
                 <div class="testimonial-card active">
                     <div class="testimonial-rating">
@@ -477,7 +470,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="testimonial-card">
                     <div class="testimonial-rating">
                         <i class="fas fa-star"></i>
@@ -495,7 +488,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="testimonial-card">
                     <div class="testimonial-rating">
                         <i class="fas fa-star"></i>
@@ -514,7 +507,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="testimonial-navigation">
                 <button class="nav-btn prev"><i class="fas fa-chevron-left"></i></button>
                 <div class="nav-dots">
@@ -540,7 +533,7 @@
                     </a>
                     <a href="#" class="cta-btn secondary">
                         <i class="fas fa-phone"></i>
-                        Contactanos 
+                        Contactanos
                     </a>
                 </div>
             </div>
@@ -549,4 +542,5 @@
 
     <script src="/js/about-script.js"></script>
 </body>
+
 </html>
