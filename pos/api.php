@@ -121,6 +121,32 @@ case 'cajeros_list': {
 }
 
 /* =========================
+   LISTA DE CAJAS (desde turnos_caja)
+========================= */
+case 'cajas_list': {
+  // Obtener los valores del ENUM directamente desde la estructura de la tabla
+  $sql = "SHOW COLUMNS FROM turnos_caja WHERE Field = 'caja_id'";
+  $result = $db->query($sql);
+  $rows = [];
+  
+  if ($result && $row = $result->fetch_assoc()) {
+    // Extraer los valores del ENUM
+    $type = $row['Type'];
+    // El tipo viene como: enum('Caja 1','Caja 2','Caja 3','Caja 4','Caja 5')
+    preg_match("/^enum\(\'(.*)\'\)$/", $type, $matches);
+    if (isset($matches[1])) {
+      $rows = explode("','", $matches[1]);
+    }
+  }
+  
+  // Fallback si falla la extracción
+  if (empty($rows)) {
+    $rows = ['Caja 1', 'Caja 2', 'Caja 3', 'Caja 4', 'Caja 5'];
+  }
+  
+  out(['ok'=>true, 'data'=>$rows]);
+  break;
+}/* =========================
    ÚLTIMO TURNO POR CAJA (prefill saldo inicial con el último saldo_final)
 ========================= */
 case 'turno_last_by_caja': {
@@ -142,8 +168,15 @@ case 'turno_open': {
   $caja_id       = trim($_POST['caja_id'] ?? '');
   $cajero_id     = (int)($_POST['cajero_id'] ?? 0);
   $saldo_inicial = (float)($_POST['saldo_inicial'] ?? 0);
+  
   if ($caja_id==='') out(['ok'=>false,'error'=>'caja_id requerido']);
   if ($cajero_id<=0)  out(['ok'=>false,'error'=>'Selecciona el cajero']);
+
+  // Validar que la caja sea válida (ENUM)
+  $cajas_validas = ['Caja 1','Caja 2','Caja 3','Caja 4','Caja 5'];
+  if (!in_array($caja_id, $cajas_validas, true)) {
+    out(['ok'=>false,'error'=>'Caja no válida. Opciones: Caja 1-5']);
+  }
 
   // Verificar que el cajero exista
   $stmt = $db->prepare("SELECT id FROM usuarios WHERE id=? LIMIT 1");
@@ -163,8 +196,6 @@ case 'turno_open': {
   out(['ok'=>true, 'turno_id'=>$stmt->insert_id]);
   break;
 }
-
-
 /* Cerrar turno */
 case 'turno_close': {
   $turno_id    = (int)($_POST['turno_id'] ?? 0);
@@ -190,7 +221,7 @@ case 'turno_actual': {
 
 /* ========= TURNOS ACTIVOS (todas las cajas abiertas ahora) ========= */
 case 'turnos_activos': {
-  // Nombre del cajero robusto (depende de tu tabla usuarios)
+  // Nombre del cajero robusto
   $res = $db->query("SHOW COLUMNS FROM usuarios");
   $nameCol = 'nombre';
   if ($res) {
@@ -198,12 +229,16 @@ case 'turnos_activos': {
     foreach(['nombre','name','usuario','email'] as $try){ if(isset($cols[$try])){$nameCol=$try;break;} }
   }
 
-  $sql = "SELECT t.id, t.caja_id, t.cajero_id, u.$nameCol AS cajero_nombre, t.fecha_apertura
+  $sql = "SELECT t.id, t.caja_id, t.cajero_id, u.$nameCol AS cajero_nombre, 
+                 t.fecha_apertura, t.saldo_inicial
           FROM turnos_caja t
           LEFT JOIN usuarios u ON u.id=t.cajero_id
           WHERE t.fecha_cierre IS NULL
-          ORDER BY t.caja_id ASC, t.id DESC";
-  $rows=[]; if ($q=$db->query($sql)) while($r=$q->fetch_assoc()) $rows[]=$r;
+          ORDER BY FIELD(t.caja_id, 'Caja 1','Caja 2','Caja 3','Caja 4','Caja 5'), t.id DESC";
+  
+  $rows=[]; 
+  if ($q=$db->query($sql)) while($r=$q->fetch_assoc()) $rows[]=$r;
+  
   out(['ok'=>true,'data'=>$rows]);
   break;
 }
@@ -216,16 +251,27 @@ case 'turnos_historial': {
 
   $where = "t.fecha_apertura BETWEEN ? AND ?";
   $types = 'ss'; $params = [$desde,$hasta];
-  if ($caja !== '') { $where .= " AND t.caja_id=?"; $types.='s'; $params[]=$caja; }
-  if ($cajero>0)    { $where .= " AND t.cajero_id=?"; $types.='i'; $params[]=$cajero; }
+  
+  if ($caja !== '') { 
+    // Validar ENUM
+    $cajas_validas = ['Caja 1','Caja 2','Caja 3','Caja 4','Caja 5'];
+    if (in_array($caja, $cajas_validas, true)) {
+      $where .= " AND t.caja_id=?"; 
+      $types.='s'; 
+      $params[]=$caja; 
+    }
+  }
+  if ($cajero>0) { $where .= " AND t.cajero_id=?"; $types.='i'; $params[]=$cajero; }
 
-  $sql = "SELECT t.*,
+  $sql = "SELECT t.id, t.cajero_id, t.fecha_apertura, t.fecha_cierre, 
+                 t.saldo_inicial, t.saldo_final, t.caja_id,
                  u.nombre AS cajero_nombre
           FROM turnos_caja t
           LEFT JOIN usuarios u ON u.id=t.cajero_id
           WHERE $where
           ORDER BY t.id DESC
           LIMIT 200";
+  
   $stmt = $db->prepare($sql);
   $stmt->bind_param($types, ...$params);
   $stmt->execute();
@@ -234,7 +280,6 @@ case 'turnos_historial': {
   out(['ok'=>true,'data'=>$rows]);
   break;
 }
-
 /* =========================
    VENTA (crear desde POS)
 ========================= */
@@ -327,8 +372,14 @@ case 'venta_crear': {
    Nota caja: inferimos caja por rango de turno donde cayó la venta.
 */
 case 'ventas_list': {
-  $desde   = $_REQUEST['desde'] ? ($_REQUEST['desde'].' 00:00:00') : '1970-01-01 00:00:00';
-  $hasta   = $_REQUEST['hasta'] ? ($_REQUEST['hasta'].' 23:59:59') : '2999-12-31 23:59:59';
+$desde = (isset($_REQUEST['desde']) && $_REQUEST['desde'] !== '')
+  ? ($_REQUEST['desde'].' 00:00:00')
+  : '1970-01-01 00:00:00';
+
+$hasta = (isset($_REQUEST['hasta']) && $_REQUEST['hasta'] !== '')
+  ? ($_REQUEST['hasta'].' 23:59:59')
+  : '2999-12-31 23:59:59';
+
   $metodo  = $_REQUEST['metodo'] ?? '';
   $caja    = trim($_REQUEST['caja'] ?? '');
   $cajero  = (int)($_REQUEST['cajero'] ?? 0);
@@ -432,17 +483,31 @@ case 'venta_detalle': {
 ========================= */
 /* Input: caja_id (string) */
 case 'corte_resumen': {
-  $caja = $_POST['caja_id'] ?? 'Caja 1';
+  $caja = trim($_POST['caja_id'] ?? $_GET['caja_id'] ?? 'Caja 1');
+  
+  // Validar ENUM
+  $cajas_validas = ['Caja 1','Caja 2','Caja 3','Caja 4','Caja 5'];
+  if (!in_array($caja, $cajas_validas, true)) {
+    out(['ok'=>false,'error'=>'Caja no válida']);
+  }
+  
   // turno abierto o último
   $stmt = $db->prepare("SELECT * FROM turnos_caja WHERE caja_id=? AND fecha_cierre IS NULL ORDER BY id DESC LIMIT 1");
-  $stmt->bind_param('s',$caja); $stmt->execute(); $turno = $stmt->get_result()->fetch_assoc();
+  $stmt->bind_param('s',$caja); 
+  $stmt->execute(); 
+  $turno = $stmt->get_result()->fetch_assoc();
+  
   if (!$turno) {
     $stmt = $db->prepare("SELECT * FROM turnos_caja WHERE caja_id=? ORDER BY id DESC LIMIT 1");
-    $stmt->bind_param('s',$caja); $stmt->execute(); $turno = $stmt->get_result()->fetch_assoc();
+    $stmt->bind_param('s',$caja); 
+    $stmt->execute(); 
+    $turno = $stmt->get_result()->fetch_assoc();
   }
+  
   if (!$turno) out(['ok'=>true,'data'=>null]);
 
-  $ini = $turno['fecha_apertura']; $fin = $turno['fecha_cierre'] ?: date('Y-m-d H:i:s');
+  $ini = $turno['fecha_apertura']; 
+  $fin = $turno['fecha_cierre'] ?: date('Y-m-d H:i:s');
 
   $stmt = $db->prepare("
      SELECT COALESCE(SUM(pago_efectivo),0) ef,
@@ -452,7 +517,8 @@ case 'corte_resumen': {
      FROM ventas
      WHERE fecha BETWEEN ? AND ?");
   $stmt->bind_param('ss',$ini,$fin);
-  $stmt->execute(); $s = $stmt->get_result()->fetch_assoc();
+  $stmt->execute(); 
+  $s = $stmt->get_result()->fetch_assoc();
 
   $saldo_inicial = (float)$turno['saldo_inicial'];
   $saldo_actual  = $saldo_inicial + (float)$s['ef'];
@@ -463,12 +529,14 @@ case 'corte_resumen': {
      WHERE fecha BETWEEN ? AND ?
      ORDER BY fecha DESC LIMIT 50");
   $stmt->bind_param('ss',$ini,$fin);
-  $stmt->execute(); $movs = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+  $stmt->execute(); 
+  $movs = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
   out(['ok'=>true,'data'=>[
     'turno_id'=>(int)$turno['id'],
     'caja_id'=>$caja,
-    'inicio'=>$ini,'fin'=>$fin,
+    'inicio'=>$ini,
+    'fin'=>$fin,
     'saldo_inicial'=>$saldo_inicial,
     'ventas_efectivo'=>(float)$s['ef'],
     'ventas_tarjeta' =>(float)$s['tj'],
@@ -515,8 +583,13 @@ case 'stats_semana': {
 
 /* Producto más vendido (por cantidad). Ventana opcional: desde/hasta */
 case 'stats_producto_top': {
-  $desde = $_REQUEST['desde'] ? ($_REQUEST['desde'].' 00:00:00') : '1970-01-01 00:00:00';
-  $hasta = $_REQUEST['hasta'] ? ($_REQUEST['hasta'].' 23:59:59') : '2999-12-31 23:59:59';
+$desde = (isset($_REQUEST['desde']) && $_REQUEST['desde'] !== '')
+  ? ($_REQUEST['desde'].' 00:00:00')
+  : '1970-01-01 00:00:00';
+
+$hasta = (isset($_REQUEST['hasta']) && $_REQUEST['hasta'] !== '')
+  ? ($_REQUEST['hasta'].' 23:59:59')
+  : '2999-12-31 23:59:59';
 
   $sql = "SELECT d.producto_id,
                  COALESCE(p.nombre, d.nombre) AS nombre,
@@ -539,8 +612,13 @@ case 'stats_producto_top': {
 
 /* Cajero más productivo (por #ventas) */
 case 'stats_cajero_top': {
-  $desde = $_REQUEST['desde'] ? ($_REQUEST['desde'].' 00:00:00') : '1970-01-01 00:00:00';
-  $hasta = $_REQUEST['hasta'] ? ($_REQUEST['hasta'].' 23:59:59') : '2999-12-31 23:59:59';
+$desde = (isset($_REQUEST['desde']) && $_REQUEST['desde'] !== '')
+  ? ($_REQUEST['desde'].' 00:00:00')
+  : '1970-01-01 00:00:00';
+
+$hasta = (isset($_REQUEST['hasta']) && $_REQUEST['hasta'] !== '')
+  ? ($_REQUEST['hasta'].' 23:59:59')
+  : '2999-12-31 23:59:59';
 
   // Detectar columna nombre en usuarios
   $res = $db->query("SHOW COLUMNS FROM usuarios");
@@ -595,8 +673,13 @@ case 'stats_ventas_por_dia': {
 
 /* Ventas por categoría (suma de importes). Si no hay categoría -> 'Sin categoría' */
 case 'stats_ventas_por_categoria': {
-  $desde = $_REQUEST['desde'] ? ($_REQUEST['desde'].' 00:00:00') : '1970-01-01 00:00:00';
-  $hasta = $_REQUEST['hasta'] ? ($_REQUEST['hasta'].' 23:59:59') : '2999-12-31 23:59:59';
+$desde = (isset($_REQUEST['desde']) && $_REQUEST['desde'] !== '')
+  ? ($_REQUEST['desde'].' 00:00:00')
+  : '1970-01-01 00:00:00';
+
+$hasta = (isset($_REQUEST['hasta']) && $_REQUEST['hasta'] !== '')
+  ? ($_REQUEST['hasta'].' 23:59:59')
+  : '2999-12-31 23:59:59';
 
   $sql="SELECT COALESCE(NULLIF(p.categoria,''),'Sin categoría') AS categoria,
                COALESCE(SUM(d.total_linea),0) AS total
@@ -616,6 +699,218 @@ case 'stats_ventas_por_categoria': {
   break;
 }
 
+/* =========================
+   ESTADÍSTICAS AVANZADAS - Agregar estos casos al switch de api.php
+========================= */
+
+/* Ventas por día con desglose efectivo/tarjeta */
+/* Ventas por día con desglose efectivo/tarjeta */
+case 'stats_ventas_diarias': {
+  $dias = max(1, min(60, (int)($_REQUEST['dias'] ?? 7)));
+  $ini = date('Y-m-d 00:00:00', strtotime("-".($dias-1)." days"));
+  $fin = date('Y-m-d 23:59:59');
+
+  $stmt = $db->prepare("
+    SELECT DATE(fecha) AS dia,
+           COALESCE(SUM(CASE WHEN metodo_principal='efectivo' THEN total ELSE 0 END), 0) AS efectivo,
+           COALESCE(SUM(CASE WHEN metodo_principal='tarjeta' THEN total ELSE 0 END), 0) AS tarjeta,
+           COALESCE(SUM(total), 0) AS total
+    FROM ventas
+    WHERE fecha BETWEEN ? AND ?
+    GROUP BY DATE(fecha)
+    ORDER BY dia ASC
+  ");
+  $stmt->bind_param('ss', $ini, $fin);
+  $stmt->execute();
+  
+  $map_ef = []; 
+  $map_tj = [];
+  $res = $stmt->get_result();
+  while($r = $res->fetch_assoc()) {
+    $map_ef[$r['dia']] = (float)$r['efectivo'];
+    $map_tj[$r['dia']] = (float)$r['tarjeta'];
+  }
+
+  // Construir serie completa
+  $labels = []; 
+  $data_ef = []; 
+  $data_tj = [];
+  
+  for($i = $dias-1; $i >= 0; $i--) {
+    $day = date('Y-m-d', strtotime("-$i days"));
+    $labels[] = $day;
+    $data_ef[] = isset($map_ef[$day]) ? $map_ef[$day] : 0.0;
+    $data_tj[] = isset($map_tj[$day]) ? $map_tj[$day] : 0.0;
+  }
+  
+  out([
+    'ok' => true,
+    'labels' => $labels,
+    'efectivo' => $data_ef,
+    'tarjeta' => $data_tj
+  ]);
+  break;
+}
+
+/* Ventas por semana (últimas N semanas) */
+case 'stats_ventas_semanales': {
+  $semanas = max(1, min(12, (int)($_REQUEST['semanas'] ?? 4)));
+  
+  $stmt = $db->prepare("
+    SELECT YEARWEEK(fecha, 1) AS semana,
+           MIN(DATE(fecha)) AS inicio_semana,
+           COALESCE(SUM(CASE WHEN metodo_principal='efectivo' THEN total ELSE 0 END), 0) AS efectivo,
+           COALESCE(SUM(CASE WHEN metodo_principal='tarjeta' THEN total ELSE 0 END), 0) AS tarjeta,
+           COALESCE(SUM(total), 0) AS total
+    FROM ventas
+    WHERE fecha >= DATE_SUB(NOW(), INTERVAL ? WEEK)
+    GROUP BY YEARWEEK(fecha, 1)
+    ORDER BY semana ASC
+  ");
+  $stmt->bind_param('i', $semanas);
+  $stmt->execute();
+  
+  $labels = [];
+  $data_ef = [];
+  $data_tj = [];
+  $data_total = [];
+  
+  $res = $stmt->get_result();
+  while($r = $res->fetch_assoc()) {
+    $labels[] = date('d M', strtotime($r['inicio_semana']));
+    $data_ef[] = (float)$r['efectivo'];
+    $data_tj[] = (float)$r['tarjeta'];
+    $data_total[] = (float)$r['total'];
+  }
+  
+  out([
+    'ok' => true,
+    'labels' => $labels,
+    'efectivo' => $data_ef,
+    'tarjeta' => $data_tj,
+    'total' => $data_total
+  ]);
+  break;
+}
+
+/* Ventas por mes (últimos N meses) */
+case 'stats_ventas_mensuales': {
+  $meses = max(1, min(12, (int)($_REQUEST['meses'] ?? 6)));
+  
+  $stmt = $db->prepare("
+    SELECT DATE_FORMAT(fecha, '%Y-%m') AS mes,
+           COALESCE(SUM(CASE WHEN metodo_principal='efectivo' THEN total ELSE 0 END), 0) AS efectivo,
+           COALESCE(SUM(CASE WHEN metodo_principal='tarjeta' THEN total ELSE 0 END), 0) AS tarjeta,
+           COALESCE(SUM(total), 0) AS total
+    FROM ventas
+    WHERE fecha >= DATE_SUB(NOW(), INTERVAL ? MONTH)
+    GROUP BY DATE_FORMAT(fecha, '%Y-%m')
+    ORDER BY mes ASC
+  ");
+  $stmt->bind_param('i', $meses);
+  $stmt->execute();
+  
+  $labels = [];
+  $data_ef = [];
+  $data_tj = [];
+  $data_total = [];
+  
+  $res = $stmt->get_result();
+  while($r = $res->fetch_assoc()) {
+    $labels[] = date('M Y', strtotime($r['mes'].'-01'));
+    $data_ef[] = (float)$r['efectivo'];
+    $data_tj[] = (float)$r['tarjeta'];
+    $data_total[] = (float)$r['total'];
+  }
+  
+  out([
+    'ok' => true,
+    'labels' => $labels,
+    'efectivo' => $data_ef,
+    'tarjeta' => $data_tj,
+    'total' => $data_total
+  ]);
+  break;
+}
+
+
+/* Productos más vendidos (top N) */
+case 'stats_productos_top': {
+  $limit = max(1, min(20, (int)($_REQUEST['limit'] ?? 10)));
+$desde = (isset($_REQUEST['desde']) && $_REQUEST['desde'] !== '')
+  ? ($_REQUEST['desde'].' 00:00:00')
+  : '1970-01-01 00:00:00';
+
+$hasta = (isset($_REQUEST['hasta']) && $_REQUEST['hasta'] !== '')
+  ? ($_REQUEST['hasta'].' 23:59:59')
+  : '2999-12-31 23:59:59';
+
+  $sql = "SELECT d.producto_id,
+                 COALESCE(p.nombre, d.nombre) AS nombre,
+                 COALESCE(SUM(d.cantidad), 0) AS cantidad_vendida,
+                 COALESCE(SUM(d.total_linea), 0) AS ingresos
+          FROM detalle_ventas d
+          JOIN ventas v ON v.id = d.venta_id
+          LEFT JOIN productos p ON p.id = d.producto_id
+          WHERE v.fecha BETWEEN ? AND ?
+          GROUP BY d.producto_id, nombre
+          ORDER BY cantidad_vendida DESC
+          LIMIT ?";
+  
+  $stmt = $db->prepare($sql);
+  $stmt->bind_param('ssi', $desde, $hasta, $limit);
+  $stmt->execute();
+  
+  $productos = [];
+  $res = $stmt->get_result();
+  while($r = $res->fetch_assoc()) {
+    $productos[] = [
+      'id' => (int)$r['producto_id'],
+      'nombre' => $r['nombre'],
+      'cantidad' => (int)$r['cantidad_vendida'],
+      'ingresos' => (float)$r['ingresos']
+    ];
+  }
+  
+  out(['ok' => true, 'data' => $productos]);
+  break;
+}
+
+/* Métricas por método de pago */
+case 'stats_metodos_pago': {
+$desde = (isset($_REQUEST['desde']) && $_REQUEST['desde'] !== '')
+  ? ($_REQUEST['desde'].' 00:00:00')
+  : '1970-01-01 00:00:00';
+
+$hasta = (isset($_REQUEST['hasta']) && $_REQUEST['hasta'] !== '')
+  ? ($_REQUEST['hasta'].' 23:59:59')
+  : '2999-12-31 23:59:59';
+
+  $stmt = $db->prepare("
+    SELECT metodo_principal AS metodo,
+           COUNT(*) AS transacciones,
+           COALESCE(SUM(total), 0) AS total
+    FROM ventas
+    WHERE fecha BETWEEN ? AND ?
+    GROUP BY metodo_principal
+    ORDER BY total DESC
+  ");
+  $stmt->bind_param('ss', $desde, $hasta);
+  $stmt->execute();
+  
+  $metodos = [];
+  $res = $stmt->get_result();
+  while($r = $res->fetch_assoc()) {
+    $metodos[] = [
+      'metodo' => $r['metodo'],
+      'transacciones' => (int)$r['transacciones'],
+      'total' => (float)$r['total']
+    ];
+  }
+  
+  out(['ok' => true, 'data' => $metodos]);
+  break;
+}
 /* =========================
    INVENTARIO (ajuste simple)
 ========================= */
@@ -640,6 +935,8 @@ case 'inventario_ajuste': {
   out(['ok'=>true]);
   break;
 }
+
+
     default:
       out(['ok'=>false, 'error'=>'Acción no definida']);
   }
