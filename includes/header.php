@@ -72,6 +72,7 @@ if (!empty($_SESSION['usuario_id'])) {
       <li><a href="<?= $BASE ?>views/marcas.php" class="<?= $currentPage === 'marcas.php' ? 'active' : '' ?>">Marcas</a></li>
       <li><a href="<?= $BASE ?>views/catalogo.php" class="<?= $currentPage === 'catalogo.php' ? 'active' : '' ?>">Catálogo</a></li>
       <li><a href="<?= $BASE ?>views/contacto.php" class="<?= $currentPage === 'contacto.php' ? 'active' : '' ?>">Contacto</a></li>
+
     </ul>
 
     <!-- Íconos -->
@@ -82,7 +83,7 @@ if (!empty($_SESSION['usuario_id'])) {
       </a>
 
       <!-- Favoritos -->
-      <a href="<?= $BASE ?>views/favoritos.php" class="icon-btn <?= $currentPage === 'favoritos.php' ? 'active' : '' ?>">
+      <a href="<?= $BASE ?>index/favoritos.html" class="icon-btn <?= $currentPage === 'favoritos.html' ? 'active' : '' ?>">
         <i class="fas fa-heart"></i>
         <span class="badge" id="fav-badge" style="<?= $favoritosCount ? '' : 'display:none;' ?>"><?= $favoritosCount ?></span>
       </a>
@@ -118,6 +119,7 @@ if (!empty($_SESSION['usuario_id'])) {
   <a href="<?= $BASE ?>views/catalogo.php" class="btn <?= $currentPage === 'catalogo.php' ? 'active' : '' ?>">🛍 Catálogo</a>
   <a href="<?= $BASE ?>views/blog.php" class="btn <?= $currentPage === 'blog.php' ? 'active' : '' ?>">📰 Blog</a>
   <a href="<?= $BASE ?>views/contacto.php" class="btn <?= $currentPage === 'contacto.php' ? 'active' : '' ?>">📞 Contacto</a>
+      <li><a href="<?= $BASE ?>index/configuracion.html" class="<?= $currentPage === 'configuracion.html' ? 'active' : '' ?>">Ajustes</a></li>
 
   <hr>
 
