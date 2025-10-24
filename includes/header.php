@@ -85,7 +85,7 @@ if (!empty($_SESSION['usuario_id'])) {
         <i class="fas fa-search"></i>
       </a>
 
-
+      <a href="<?= $BASE ?>index/favoritos.html" class="icon-btn <?= $currentPage === 'favoritos.html' ? 'active' : '' ?>">
         <i class="fas fa-heart"></i>
         <span class="badge" id="fav-badge" style="<?= $favoritosCount ? '' : 'display:none;' ?>"><?= $favoritosCount ?></span>
       </a>
