@@ -27,55 +27,50 @@ async function prefillSaldo(cajaId) {
 // ===== Mostrar popup de apertura si no hay turno (global para todas las páginas) =====
 async function showAperturaIfNeeded() {
   const dlg = $('#dlgTurno');
-  if (!dlg) return; // por si acaso
+  if (!dlg) return;
 
   const cajaDefault = getCajaLS();
   let r = await api({action:'turno_actual', caja_id: cajaDefault});
-  if (r.ok && r.turno) return; // ya hay turno
+  if (r.ok && r.turno) return;
 
   // Preparar selects
   const selCaja = $('#selCaja');
   const selCajero = $('#selCajero');
   const btnAbrir = $('#btnAbrirTurno');
 
+  // Cargar cajeros
   const cajeros = await cargarCajeros();
   selCajero.innerHTML = cajeros.length
     ? cajeros.map(c=>`<option value="${c.id}">${c.id} — ${c.nombre}</option>`).join('')
     : '<option value="">(sin usuarios)</option>';
 
-  selCaja.value = cajaDefault;
-  await prefillSaldo(selCaja.value);
-  selCaja.onchange = () => prefillSaldo(selCaja.value);
-
-  dlg.showModal();
-
-  btnAbrir.onclick = async ()=>{
-    const caja_id = selCaja.value;
-    const cajero_id = Number(selCajero.value || 0);
-    const saldo_inicial = Number($('#inpSaldoInicial').value || '0');
-
-    if (!caja_id) return alert('Selecciona la caja');
-    if (!cajero_id) return alert('Selecciona el cajero');
-
-    const rr = await api({action:'turno_open', caja_id, cajero_id, saldo_inicial});
-    if (!rr.ok) return alert(rr.error||'No se pudo abrir el turno');
-
-    setCajaLS(caja_id);
-    dlg.close();
-    location.reload();
-  };
+  // Cargar cajas desde la BD
+  const rCajas = await api({action:'cajas_list'});
+  if (rCajas.ok && rCajas.data && rCajas.data.length) {
+    selCaja.innerHTML = rCajas.data.map(c => `<option value="${c}">${c}</option>`).join('');
+    // Seleccionar la caja guardada si existe en la lista
+    if (rCajas.data.includes(cajaDefault)) {
+      selCaja.value = cajaDefault;
+    }
+  }
 }
-
 // ===== Corte de Caja =====
 function money(n){ return `$${Number(n || 0).toFixed(2)}`; }
 
-function fillCajaSelectForCorte(sel){
-  // Si más adelante lees cajas desde BD, reemplaza este array.
-  const cajas = ['Caja 1','Caja 2','Caja 3'];
+async function fillCajaSelectForCorte(sel){
+  // Cargar cajas desde la BD
+  const rCajas = await api({action:'cajas_list'});
+  let cajas = ['Caja 1', 'Caja 2', 'Caja 3', 'Caja 4', 'Caja 5', 'Caja 6']; // fallback
+  if (rCajas.ok && rCajas.data && rCajas.data.length) {
+    cajas = rCajas.data;
+  }
+  
   sel.innerHTML = cajas.map(c => `<option value="${c}">${c}</option>`).join('');
-  sel.value = getCajaLS();
+  const preferida = getCajaLS();
+  if (cajas.includes(preferida)) {
+    sel.value = preferida;
+  }
 }
-
 function renderMovs(movs){
   const tb = $('#tbMovs');
   if (!movs || !movs.length){
@@ -352,18 +347,16 @@ async function corteFillCajaSelect() {
     }
   } catch (_) {}
 
-  // fallback si no hay turnos abiertos
-  if (!cajas.length) cajas = ['Caja 1', 'Caja 2', 'Caja 3'];
-
-  const preferida = getCajaLS();
-  if (!cajas.includes(preferida)) cajas.unshift(preferida);
-  cajas = [...new Set(cajas)];
-
-  sel.innerHTML = cajas.map(c => `<option value="${c}">${c}</option>`).join('');
-  sel.value = preferida;
-  return true;
+  // fallback: cargar desde la BD
+  if (!cajas.length) {
+    const rCajas = await api({action:'cajas_list'});
+    if (rCajas.ok && rCajas.data && rCajas.data.length) {
+      cajas = rCajas.data;
+    } else {
+      cajas = ['Caja 1', 'Caja 2', 'Caja 3']; // fallback absoluto
+    }
+  }
 }
-
 function cortePintarKPIs(d) {
   const k = (id,v)=>{ const el = document.getElementById(id); if (el) el.textContent = money(v||0); };
   k('kSaldoIni', d?.saldo_inicial);
