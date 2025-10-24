@@ -2,13 +2,17 @@
 if (session_status() === PHP_SESSION_NONE) session_start();
 require_once __DIR__ . '/../config/functions.php';
 
-/* BASE para rutas absolutas/relativas */
-$BASE = defined('BASE_URL') ? rtrim(BASE_URL, '/').'/' : '/';
+/* ============================================================
+   🔹 BASE dinámica: detecta el nivel de carpeta automáticamente
+   ============================================================ */
+$scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME']));
+$depth = substr_count($scriptDir, '/');
+$BASE = ($depth > 1) ? str_repeat('../', $depth - 1) : './';
 
 /* Página actual */
 $currentPage = basename($_SERVER['PHP_SELF']);
 
-/* Contadores */
+/* 🔹 Contadores */
 $carritoCount = isset($_SESSION['carrito']) ? count($_SESSION['carrito']) : 0;
 
 $favoritosCount = 0;
@@ -22,7 +26,6 @@ if (!empty($_SESSION['usuario_id'])) {
         $stmt->close();
     }
 } else {
-    // fallback si aún usas favoritos en sesión cuando no hay login
     $favoritosCount = isset($_SESSION['favoritos']) ? count($_SESSION['favoritos']) : 0;
 }
 ?>
@@ -30,19 +33,20 @@ if (!empty($_SESSION['usuario_id'])) {
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>LumiSpace</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LumiSpace</title>
 
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
-  <!-- Estilos (rutas limpias con BASE) -->
-  <link rel="stylesheet" href="<?= $BASE ?>css/styles/header.css" />
-  <link rel="stylesheet" href="<?= $BASE ?>css/styles/sidebar.css" />
+  <!-- ✅ Estilos globales -->
+  <link rel="stylesheet" href="<?= $BASE ?>css/styles/header.css">
+  <link rel="stylesheet" href="<?= $BASE ?>css/styles/sidebar.css">
 </head>
+
 <body data-base="<?= htmlspecialchars($BASE) ?>">
 
-<!-- Top Bar -->
+<!-- 🔹 Top Bar -->
 <div class="top-bar">
   <div class="container">
     <span>📞 +52 123 456 7890 | ✉ contacto@lumispace.com</span>
@@ -54,48 +58,45 @@ if (!empty($_SESSION['usuario_id'])) {
   </div>
 </div>
 
-<!-- Header -->
+<!-- 🔹 Header principal -->
 <header class="header">
   <div class="container">
-    <!-- Logo -->
-   <a href="<?= $BASE ?>index.php" class="logo">
-  <div class="logo-icon">
-    <i class="fas fa-lightbulb"></i>
-  </div>
-  <span>LumiSpace</span>
-</a>
 
-    <!-- Menú Desktop -->
+    <!-- Logo -->
+    <a href="<?= $BASE ?>index.php" class="logo">
+      <div class="logo-icon"><i class="fas fa-lightbulb"></i></div>
+      <span>LumiSpace</span>
+    </a>
+
+    <!-- 🔹 Menú de escritorio -->
     <ul class="nav-menu">
       <li><a href="<?= $BASE ?>index.php" class="<?= $currentPage === 'index.php' ? 'active' : '' ?>">Inicio</a></li>
       <li><a href="<?= $BASE ?>views/categorias.php" class="<?= $currentPage === 'categorias.php' ? 'active' : '' ?>">Categorías</a></li>
       <li><a href="<?= $BASE ?>views/marcas.php" class="<?= $currentPage === 'marcas.php' ? 'active' : '' ?>">Marcas</a></li>
       <li><a href="<?= $BASE ?>views/catalogo.php" class="<?= $currentPage === 'catalogo.php' ? 'active' : '' ?>">Catálogo</a></li>
+      <li><a href="<?= $BASE ?>views/blog.php" class="<?= $currentPage === 'blog.php' ? 'active' : '' ?>">Blog</a></li>
       <li><a href="<?= $BASE ?>views/contacto.php" class="<?= $currentPage === 'contacto.php' ? 'active' : '' ?>">Contacto</a></li>
 
     </ul>
 
-    <!-- Íconos -->
+    <!-- 🔹 Íconos (funcionales en escritorio y móvil) -->
     <div class="header-icons">
-      <!-- Buscar -->
       <a href="<?= $BASE ?>views/search.php" class="icon-btn <?= $currentPage === 'search.php' ? 'active' : '' ?>">
         <i class="fas fa-search"></i>
       </a>
 
-      <!-- Favoritos -->
-      <a href="<?= $BASE ?>index/favoritos.html" class="icon-btn <?= $currentPage === 'favoritos.html' ? 'active' : '' ?>">
+
         <i class="fas fa-heart"></i>
         <span class="badge" id="fav-badge" style="<?= $favoritosCount ? '' : 'display:none;' ?>"><?= $favoritosCount ?></span>
       </a>
 
-      <!-- Carrito -->
       <a href="<?= $BASE ?>includes/carrito.php" class="icon-btn <?= $currentPage === 'carrito.php' ? 'active' : '' ?>">
         <i class="fas fa-shopping-cart"></i>
         <span class="badge" id="cart-badge" style="<?= $carritoCount ? '' : 'display:none;' ?>"><?= $carritoCount ?></span>
       </a>
 
-      <!-- Hamburguesa -->
-      <button class="menu-toggle" id="menu-btn" aria-label="Abrir menú" aria-expanded="false">
+      <!-- 🔹 Botón hamburguesa -->
+      <button class="menu-toggle" id="menu-btn" aria-label="Abrir menú lateral" aria-expanded="false">
         <span class="top"></span>
         <span class="middle"></span>
         <span class="bottom"></span>
@@ -104,15 +105,13 @@ if (!empty($_SESSION['usuario_id'])) {
   </div>
 </header>
 
-<!-- Overlay -->
+<!-- 🔹 Overlay para fondo oscuro al abrir sidebar -->
 <div class="overlay" id="overlay"></div>
 
-<!-- Sidebar (Móvil) -->
+<!-- 🔹 Sidebar (modo móvil y también accesible en escritorio pequeño) -->
 <aside class="sidebar" id="sidebar">
-  <!-- Botón cambio de tema (si lo usas) -->
   <button id="theme-toggle" class="btn">🌙 Modo Oscuro</button>
 
-  <!-- Menú móvil -->
   <a href="<?= $BASE ?>index.php" class="btn <?= $currentPage === 'index.php' ? 'active' : '' ?>">🏠 Inicio</a>
   <a href="<?= $BASE ?>views/categorias.php" class="btn <?= $currentPage === 'categorias.php' ? 'active' : '' ?>">📂 Categorías</a>
   <a href="<?= $BASE ?>views/marcas.php" class="btn <?= $currentPage === 'marcas.php' ? 'active' : '' ?>">🏷 Marcas</a>
@@ -124,9 +123,7 @@ if (!empty($_SESSION['usuario_id'])) {
   <hr>
 
   <?php if (!empty($_SESSION['usuario_id'])): ?>
-    <p style="margin:10px 0; font-weight:bold;">
-      👋 Hola, <?= htmlspecialchars($_SESSION['usuario_nombre'] ?? 'Usuario') ?>
-    </p>
+    <p style="margin:10px 0; font-weight:bold;">👋 Hola, <?= htmlspecialchars($_SESSION['usuario_nombre'] ?? 'Usuario') ?></p>
     <a href="<?= $BASE ?>logout.php" class="btn">🚪 Cerrar Sesión</a>
   <?php else: ?>
     <a href="<?= $BASE ?>views/login.php" class="btn">🔑 Iniciar Sesión</a>
@@ -134,7 +131,7 @@ if (!empty($_SESSION['usuario_id'])) {
   <?php endif; ?>
 </aside>
 
-<!-- Scripts -->
-<script src="<?= $BASE ?>js/header.js"></script>
+<!-- ✅ Script (controla menú, overlay y animaciones) -->
+<script src="<?= $BASE ?>js/header.js" defer></script>
 </body>
 </html>

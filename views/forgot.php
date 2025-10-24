@@ -63,7 +63,7 @@ if (!isset($_SESSION["last_login_email"])) {
 </head>
 <body>
   <div class="auth-wrapper">
-    <div class="auth-image"></div>
+        <div class="auth-image" style="background: url('../images/pos-logi.jpg') no-repeat center center/cover;"></div>
     <div class="auth-form">
       <h2>🔑 Recuperar contraseña</h2>
       <p class="subtitle">Haz clic en el botón para enviarte un enlace de recuperación</p>

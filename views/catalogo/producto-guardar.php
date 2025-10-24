@@ -55,7 +55,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 VALUES (?, ?, ?, ?, NULL, ?, NOW())";
         $stmt = $conn->prepare($sql);
         // 5 parámetros: s (nombre), s (desc), d (precio), i (categoria), s (imagen)
-        $stmt->bind_param("ssd is", $nombre, $descripcion, $precio, $categoria_id, $imagenNombre);
+        $stmt->bind_param("ssdis", $nombre, $descripcion, $precio, $categoria_id, $imagenNombre);
     } else {
         $sql = "INSERT INTO productos (nombre, descripcion, precio, categoria_id, proveedor_id, imagen, creado_en)
                 VALUES (?, ?, ?, ?, ?, ?, NOW())";
