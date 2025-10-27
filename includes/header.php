@@ -49,14 +49,191 @@ if (!empty($_SESSION['usuario_id'])) {
 <!-- 🔹 Top Bar -->
 <div class="top-bar">
   <div class="container">
-    <span>📞 +52 123 456 7890 | ✉ contacto@lumispace.com</span>
+    <!-- Mensaje rotativo -->
+    <span id="dynamic-message">
+      <i class="fas fa-phone-alt"></i> +52 313 118 1746 | 
+      <i class="fas fa-envelope"></i> lumispace0@gmail.com
+    </span>
+    
     <div class="social-icons">
-      <a href="#"><i class="fab fa-facebook-f"></i></a>
-      <a href="#"><i class="fab fa-twitter"></i></a>
-      <a href="#"><i class="fab fa-instagram"></i></a>
+      <!-- Facebook -->
+      <a href="https://facebook.com/tu_pagina" target="_blank" data-social="facebook">
+        <i class="fab fa-facebook-f"></i>
+        <span class="tooltip">Facebook</span>
+      </a>
+
+      <!-- Twitter/X -->
+      <a href="https://twitter.com/@LumiSpace_" target="_blank" data-social="twitter">
+        <i class="fab fa-twitter"></i>
+        <span class="tooltip">Twitter</span>
+      </a>
+
+      <!-- Instagram -->
+      <a href="https://instagram.com/lumi_space0" target="_blank" data-social="instagram">
+        <i class="fab fa-instagram"></i>
+        <span class="tooltip">Instagram</span>
+      </a>
+
+
+      <!-- WhatsApp -->
+      <a href="https://wa.me/3131181746" target="_blank" data-social="whatsapp">
+        <i class="fab fa-whatsapp"></i>
+        <span class="tooltip">WhatsApp</span>
+      </a>
     </div>
   </div>
 </div>
+
+<script>
+// Mensajes rotativos dinámicos
+const messages = [
+  '<i class="fas fa-phone-alt"></i> +52 123 456 7890 | <i class="fas fa-envelope"></i> lumi_space0@gmail.com',
+  '<i class="fas fa-clock"></i> Lun - Vie: 9:00 AM - 6:00 PM',
+  '<i class="fas fa-shipping-fast"></i> ¡Envíos gratis en compras mayores a $500!',
+  '<i class="fas fa-star"></i> ¡Síguenos en redes sociales para promociones exclusivas!',
+  '<i class="fas fa-headset"></i> Soporte 24/7 disponible'
+];
+
+let currentMessageIndex = 0;
+const messageElement = document.getElementById('dynamic-message');
+
+// Cambiar mensaje cada 4 segundos
+function rotateMessages() {
+  messageElement.style.opacity = '0';
+  
+  setTimeout(() => {
+    currentMessageIndex = (currentMessageIndex + 1) % messages.length;
+    messageElement.innerHTML = messages[currentMessageIndex];
+    messageElement.style.opacity = '1';
+  }, 500);
+}
+
+setInterval(rotateMessages, 4000);
+
+// Hacer clic en teléfono/email cuando se muestra ese mensaje
+messageElement.addEventListener('click', function() {
+  if (currentMessageIndex === 0) {
+    // Si está mostrando contacto, copiar email al portapapeles
+    navigator.clipboard.writeText('lumispace0@gmail.com').then(() => {
+      const originalMessage = messageElement.innerHTML;
+      messageElement.innerHTML = '<i class="fas fa-check"></i> ¡Email copiado al portapapeles!';
+      setTimeout(() => {
+        messageElement.innerHTML = originalMessage;
+      }, 2000);
+    });
+  }
+});
+
+// Contador de clics en redes sociales (analytics básico)
+const socialLinks = document.querySelectorAll('[data-social]');
+socialLinks.forEach(link => {
+  link.addEventListener('click', function(e) {
+    const social = this.getAttribute('data-social');
+    console.log(`Clic en ${social} - ${new Date().toLocaleString()}`);
+    
+    // Opcional: Enviar a Google Analytics o tu sistema de tracking
+    // gtag('event', 'social_click', { 'social_network': social });
+  });
+});
+
+// Animación suave al hacer scroll
+let lastScroll = 0;
+const topBar = document.querySelector('.top-bar');
+
+window.addEventListener('scroll', () => {
+  const currentScroll = window.pageYOffset;
+  
+  if (currentScroll > lastScroll && currentScroll > 100) {
+    // Scrolling down
+    topBar.style.transform = 'translateY(-100%)';
+  } else {
+    // Scrolling up
+    topBar.style.transform = 'translateY(0)';
+  }
+  
+  lastScroll = currentScroll;
+});
+
+// Detectar si el usuario está en móvil
+function isMobile() {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+
+// Si es móvil, convertir el teléfono en enlace clickeable automáticamente
+if (isMobile()) {
+  messageElement.addEventListener('click', function() {
+    if (currentMessageIndex === 0) {
+      window.location.href = 'tel:+521234567890';
+    }
+  });
+}
+
+// Mostrar hora actual en tiempo real (opcional)
+function showCurrentTime() {
+  const now = new Date();
+  const timeString = now.toLocaleTimeString('es-MX', { 
+    hour: '2-digit', 
+    minute: '2-digit',
+    timeZone: 'America/Mexico_City'
+  });
+  
+  // Reemplazar el mensaje de horario con la hora actual
+  messages[1] = `<i class="fas fa-clock"></i> ${timeString} - Lun - Vie: 9:00 AM - 6:00 PM`;
+}
+
+// Actualizar hora cada minuto
+showCurrentTime();
+setInterval(showCurrentTime, 60000);
+
+// Animación de entrada inicial
+window.addEventListener('load', () => {
+  topBar.style.transition = 'all 0.3s ease';
+  messageElement.style.transition = 'opacity 0.5s ease';
+});
+</script>
+
+<style>
+/* Solo estilos mínimos para las nuevas funciones */
+.top-bar {
+  transition: transform 0.3s ease;
+}
+
+#dynamic-message {
+  cursor: pointer;
+  transition: opacity 0.5s ease;
+  display: inline-block;
+}
+
+#dynamic-message:hover {
+  opacity: 0.8;
+}
+
+.tooltip {
+  visibility: hidden;
+  position: absolute;
+  background: rgba(0,0,0,0.8);
+  color: white;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  bottom: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+
+.social-icons a {
+  position: relative;
+}
+
+.social-icons a:hover .tooltip {
+  visibility: visible;
+  opacity: 1;
+}
+</style>
 
 <!-- 🔹 Header principal -->
 <header class="header">
