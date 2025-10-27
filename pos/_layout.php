@@ -53,7 +53,6 @@ function start_pos_page(string $title = '', ?string $cajeroN = null, ?string $ca
       <nav class="menu">
         <a class="<?= is_active('pos.php')          ?>" href="pos.php">Punto de Venta</a>
         <a class="<?= is_active('ventas.php')       ?>" href="ventas.php">Facturación</a>
-        <a class="<?= is_active('inventario.php')   ?>" href="inventario.php">Inventario</a>
         <a class="<?= is_active('estadisticas.php') ?>" href="estadisticas.php">Estadísticas</a>
         <a class="<?= is_active('corte.php')        ?>" href="corte.php">Corte de Caja</a>
       </nav>
@@ -67,7 +66,7 @@ function start_pos_page(string $title = '', ?string $cajeroN = null, ?string $ca
         </div>
 
         <!-- Botón Cerrar turno -->
-        <button id="btnCerrarTurno" class="btn-exit" style="background:#e74c3c;color:#fff;margin-bottom:8px">
+        <button id="btnCerrarTurno" class="btn-exit danger" style="margin-bottom:8px">
           Cerrar turno
         </button>
 
@@ -91,6 +90,7 @@ function end_pos_page(): void {
     <!-- DIALOGOS GLOBALES -->
 
  <!-- Popup apertura de turno -->
+<!-- Popup apertura de turno -->
 <dialog id="dlgTurno" class="dlg">
   <form method="dialog" id="frmTurno" class="dlg-body" onsubmit="return false;">
     <h3>Apertura de turno</h3>
@@ -103,23 +103,26 @@ function end_pos_page(): void {
     </select>
 
     <label>Cajero</label>
-    <select id="selCajero" class="input"></select>
+    <select id="selCajero" class="input">
+      <option value="">(cargando...)</option>
+    </select>
 
     <label>Saldo inicial</label>
     <input id="inpSaldoInicial" type="number" step="0.01" min="0" class="input" placeholder="0.00" />
 
     <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:24px">
-      <button type="button" id="btnAbrirTurno" class="btn">Confirmar apertura</button>
+      <button type="button" id="btnAbrirTurno" class="btn btn-primary">Confirmar apertura</button>
     </div>
   </form>
 </dialog>
 
     <!-- Cerrar turno -->
-    <dialog id="dlgCerrarTurno" class="dlg">
+<!-- Cerrar turno -->
+<dialog id="dlgCerrarTurno" class="dlg">
   <form method="dialog" id="frmCerrarTurno" class="dlg-body" onsubmit="return false;">
     <h3>Cerrar turno</h3>
 
-        <<div style="background:var(--bg-2);padding:16px;border-radius:12px;margin-bottom:20px">
+    <div style="background:var(--bg-2);padding:16px;border-radius:12px;margin-bottom:20px">
       <div style="display:grid;gap:12px">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <small style="color:var(--ink-muted);text-transform:uppercase;font-size:11px;font-weight:600;letter-spacing:0.5px">Caja</small>
@@ -136,14 +139,13 @@ function end_pos_page(): void {
     <input id="inpSaldoFinal" type="number" step="0.01" min="0" class="input" placeholder="0.00" />
 
     <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:24px">
-      <button type="button" id="btnConfirmClose" class="btn" style="background:linear-gradient(135deg, var(--danger) 0%, #dc2626 100%);color:#fff;box-shadow:0 4px 12px rgba(239,68,68,0.4)">Cerrar turno</button>
+      <button type="button" id="btnConfirmClose" class="btn btn-danger">Cerrar turno</button>
     </div>
   </form>
 </dialog>
 
     </main>
     <script src="assets/pos.js"></script>
-    <script src="assets/poss.js"></script>
   </body>
   </html>
   <?php
