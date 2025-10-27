@@ -156,7 +156,10 @@ start_pos_page('Inventario', $cajeroNombre, $cajaLabel);
           <td style="text-align:right">${fmt(p.precio)}</td>
           <td style="text-align:right">${p.stock}</td>
           <td>${p.categoria||'-'}</td>
-          <td><button class="btn btn-sm" data-editar='${JSON.stringify(p)}'>Editar</button></td>
+          <td>
+            <button class="btn btn-sm" data-editar='${JSON.stringify(p)}' style="margin-right:4px;">✏️ Editar</button>
+            <button class="btn btn-sm btn-danger" data-borrar="${p.id}">🗑️ Eliminar</button>
+          </td>
         `;
         tb.appendChild(tr);
       });
@@ -174,18 +177,28 @@ start_pos_page('Inventario', $cajeroNombre, $cajaLabel);
   pPrev.addEventListener('click', ()=>{ if(st.page>1){ st.page--; cargar(); }});
   pNext.addEventListener('click', ()=>{ const pages=Math.max(1,Math.ceil(st.total/st.per_page)); if(st.page<pages){ st.page++; cargar(); }});
 
-  // seleccionar producto
+  // seleccionar producto para edición rápida
   tb.addEventListener('click', ev=>{
-    const btn = ev.target.closest('[data-editar]');
-    if(!btn) return;
-    const p = JSON.parse(btn.getAttribute('data-editar'));
-    eId.value = p.id;
-    eNombre.value = p.nombre;
-    ePrecio.value = Number(p.precio||0).toFixed(2);
-    aCantidad.value = 0;
-    aMotivo.value = '';
-    selInfo.textContent = `Seleccionado: #${p.id} — ${p.nombre}`;
-    enablePanel(true);
+    const btnEdit = ev.target.closest('[data-editar]');
+    const btnDel = ev.target.closest('[data-borrar]');
+    
+    if(btnEdit){
+      const p = JSON.parse(btnEdit.getAttribute('data-editar'));
+      eId.value = p.id;
+      eNombre.value = p.nombre;
+      ePrecio.value = Number(p.precio||0).toFixed(2);
+      aCantidad.value = 0;
+      aMotivo.value = '';
+      selInfo.textContent = `Seleccionado: #${p.id} — ${p.nombre}`;
+      enablePanel(true);
+    }
+    
+    if(btnDel){
+      const id = btnDel.getAttribute('data-borrar');
+      if(confirm('¿Eliminar este producto?')){
+        eliminarProducto(id);
+      }
+    }
   });
 
   // guardar info rápida
@@ -203,7 +216,7 @@ start_pos_page('Inventario', $cajeroNombre, $cajaLabel);
     const cantidad = parseInt(aCantidad.value,10)||0;
     if(!cantidad){ alert('Cantidad inválida'); return; }
 
-    // cajero desde turno actual (caja en localStorage)
+    // cajero desde turno actual
     let caja = 'Caja 1';
     try{ if (typeof getCajaLS==='function') caja = getCajaLS(); }catch(e){}
     const t = await api({action:'turno_actual', caja_id:caja});
@@ -212,7 +225,7 @@ start_pos_page('Inventario', $cajeroNombre, $cajaLabel);
     const r = await api({
       action:'inventario_ajuste',
       producto_id: eId.value,
-      cantidad: cantidad, // +entrada / -salida
+      cantidad: cantidad,
       motivo: aMotivo.value || 'Ajuste',
       usuario_id: uid
     });
@@ -220,6 +233,13 @@ start_pos_page('Inventario', $cajeroNombre, $cajaLabel);
     alert('Ajuste aplicado');
     cargar();
   });
+
+  async function eliminarProducto(id){
+    const r = await api({action:'productos_eliminar', id});
+    if(!r.ok){ alert(r.error||'No se pudo eliminar'); return; }
+    alert('Producto eliminado');
+    cargar();
+  }
 
   // inicio
   enablePanel(false);

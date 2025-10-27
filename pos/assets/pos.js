@@ -30,29 +30,112 @@ async function showAperturaIfNeeded() {
   if (!dlg) return;
 
   const cajaDefault = getCajaLS();
+  
+  // Verificar turno actual
   let r = await api({action:'turno_actual', caja_id: cajaDefault});
-  if (r.ok && r.turno) return;
+  
+  // Si ya hay turno, no mostrar popup
+  if (r.ok && r.turno) {
+    console.log('Ya hay turno activo:', r.turno);
+    return;
+  }
 
-  // Preparar selects
+  console.log('No hay turno, mostrando popup de apertura...');
+
+  // Preparar elementos
   const selCaja = $('#selCaja');
   const selCajero = $('#selCajero');
   const btnAbrir = $('#btnAbrirTurno');
+  const inpSaldo = $('#inpSaldoInicial');
+
+  if (!selCaja || !selCajero || !btnAbrir || !inpSaldo) {
+    console.error('Faltan elementos del formulario de apertura');
+    return;
+  }
 
   // Cargar cajeros
   const cajeros = await cargarCajeros();
-  selCajero.innerHTML = cajeros.length
-    ? cajeros.map(c=>`<option value="${c.id}">${c.id} — ${c.nombre}</option>`).join('')
-    : '<option value="">(sin usuarios)</option>';
+  if (!cajeros || cajeros.length === 0) {
+    alert('No hay cajeros disponibles. Por favor contacta al administrador.');
+    return;
+  }
+
+  selCajero.innerHTML = cajeros.map(c => 
+    `<option value="${c.id}">${c.nombre}</option>`
+  ).join('');
 
   // Cargar cajas desde la BD
   const rCajas = await api({action:'cajas_list'});
   if (rCajas.ok && rCajas.data && rCajas.data.length) {
-    selCaja.innerHTML = rCajas.data.map(c => `<option value="${c}">${c}</option>`).join('');
-    // Seleccionar la caja guardada si existe en la lista
+    selCaja.innerHTML = rCajas.data.map(c => 
+      `<option value="${c}">${c}</option>`
+    ).join('');
+    
+    // Seleccionar la caja guardada si existe
     if (rCajas.data.includes(cajaDefault)) {
       selCaja.value = cajaDefault;
     }
   }
+
+  // Evento para prefill cuando cambia la caja
+  selCaja.onchange = () => prefillSaldo(selCaja.value);
+  
+  // Prefill inicial
+  await prefillSaldo(selCaja.value);
+
+  // IMPORTANTE: Remover eventos anteriores para evitar duplicados
+  btnAbrir.onclick = null;
+
+  // Mostrar el modal
+  dlg.showModal();
+
+  // Configurar evento de confirmación
+  btnAbrir.onclick = async () => {
+    const caja_id = selCaja.value;
+    const cajero_id = parseInt(selCajero.value);
+    const saldo_inicial = parseFloat(inpSaldo.value || '0');
+
+    if (!caja_id) {
+      alert('Por favor selecciona una caja');
+      return;
+    }
+
+    if (!cajero_id || isNaN(cajero_id)) {
+      alert('Por favor selecciona un cajero');
+      return;
+    }
+
+    console.log('Abriendo turno:', {caja_id, cajero_id, saldo_inicial});
+
+    try {
+      const r = await api({
+        action: 'turno_open',
+        caja_id,
+        cajero_id,
+        saldo_inicial
+      });
+
+      if (!r.ok) {
+        alert(r.error || 'Error al abrir turno');
+        return;
+      }
+
+      console.log('Turno abierto exitosamente:', r);
+      
+      // Guardar caja en localStorage
+      setCajaLS(caja_id);
+      
+      // Cerrar modal
+      dlg.close();
+      
+      // Recargar página para actualizar la interfaz
+      location.reload();
+      
+    } catch (error) {
+      console.error('Error al abrir turno:', error);
+      alert('Error al abrir turno: ' + error.message);
+    }
+  };
 }
 // ===== Corte de Caja =====
 function money(n){ return `$${Number(n || 0).toFixed(2)}`; }
@@ -92,17 +175,20 @@ async function loadCorteCaja(){
   const caja = sel?.value || getCajaLS();
 
   const r = await api({action:'corte_resumen', caja_id: caja});
-  if (!r.ok){ alert(r.error || 'Error al cargar el corte'); return; }
+  if (!r.ok){ 
+    alert(r.error || 'Error al cargar el corte'); 
+    return; 
+  }
 
   const d = r.data;
   if (!d){
-    // No hay turno abierto para esta caja
+    // No hay turno para esta caja
     $('#kSaldoIni').textContent = money(0);
     $('#kEf').textContent       = money(0);
     $('#kTj').textContent       = money(0);
     $('#kSaldoAct').textContent = money(0);
     $('#lblWindow').textContent = '—';
-    $('#msgCorte').textContent  = `No hay turno abierto en ${caja}.`;
+    $('#msgCorte').textContent  = `No hay turno disponible en ${caja}.`;
     renderMovs([]);
     return;
   }
@@ -116,7 +202,6 @@ async function loadCorteCaja(){
 
   renderMovs(d.movimientos || []);
 }
-
 function setupCorteEvents(){
   const sel = $('#selCajaCorte');
   const btn = $('#btnVerCorte');
@@ -142,43 +227,73 @@ document.addEventListener('DOMContentLoaded', () => {
 async function setupCerrarTurno() {
   const btn = $('#btnCerrarTurno');
   if (!btn) return;
-  btn.addEventListener('click', async ()=>{
+  
+  btn.addEventListener('click', async () => {
     const caja_id = getCajaLS();
     const d = $('#dlgCerrarTurno');
+    
+    if (!d) {
+      alert('No se encuentra el diálogo de cierre');
+      return;
+    }
+
     $('#lblCajaClose').textContent = caja_id;
+
+    // Traer turno actual para verificar que existe
+    const rTurno = await api({action:'turno_actual', caja_id});
+    if (!rTurno.ok || !rTurno.turno) {
+      alert('No hay turno activo para cerrar');
+      return;
+    }
+
+    const turno_id = Number(rTurno.turno.id);
 
     // Traer saldo actual (sugerido)
     const r = await api({action:'corte_resumen', caja_id});
-    if (!r.ok) return alert(r.error||'Error al obtener resumen');
+    if (!r.ok) {
+      alert(r.error || 'Error al obtener resumen');
+      return;
+    }
+
     const saldoAct = Number((r.data && r.data.saldo_actual) || 0);
     $('#lblSaldoActual').textContent = `$${saldoAct.toFixed(2)}`;
     $('#inpSaldoFinal').value = saldoAct.toFixed(2);
 
     d.showModal();
 
-    document.querySelector('#btnConfirmClose').onclick = async ()=>{
-      const ra = await api({action:'turno_actual', caja_id});
-      if (!ra.ok || !ra.turno) { alert('No hay turno activo'); return; }
-      const turno_id = Number(ra.turno.id);
-      const saldo_final = Number((document.querySelector('#inpSaldoFinal').value||'0'));
+    // Configurar evento de confirmación
+    const btnConfirm = $('#btnConfirmClose');
+    if (btnConfirm) {
+      btnConfirm.onclick = async () => {
+        const saldo_final = parseFloat($('#inpSaldoFinal').value || '0');
 
-      const rc = await api({action:'turno_close', turno_id, saldo_final});
-      if (!rc.ok) return alert(rc.error||'No se pudo cerrar el turno');
+        const rc = await api({
+          action:'turno_close',
+          turno_id,
+          saldo_final
+        });
 
-      localStorage.removeItem('pos_caja');
-      document.cookie = 'pos_caja=; Max-Age=0; path=/;';
-      d.close();
-      location.href = 'pos.php';
-    };
+        if (!rc.ok) {
+          alert(rc.error || 'No se pudo cerrar el turno');
+          return;
+        }
+
+        alert('Turno cerrado exitosamente');
+        localStorage.removeItem('pos_caja');
+        document.cookie = 'pos_caja=; Max-Age=0; path=/;';
+        d.close();
+        location.href = 'pos.php';
+      };
+    }
   });
 }
-
 
 
 // ========= estado del POS =========
 let productos = [];
 let cart = []; // {id, nombre, precio, qty}
 
+// ========= UI render =========
 // ========= UI render =========
 function renderProductos() {
   const grid = $('#gridProductos');
@@ -187,25 +302,31 @@ function renderProductos() {
     grid.innerHTML = `<div class="card" style="height:120px;display:grid;place-items:center;color:#777">(sin datos)</div>`;
     return;
   }
-  grid.innerHTML = productos.map(p => `
-    <div class="card" style="display:grid;gap:8px">
-      <div style="font-weight:600">${p.nombre}</div>
-      <div style="color:#666">Stock: ${p.stock}</div>
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <b>$${Number(p.precio).toFixed(2)}</b>
-        <button class="card btnAdd" data-id="${p.id}" data-nombre="${p.nombre}" data-precio="${p.precio}">Agregar</button>
+  
+  grid.innerHTML = productos.map(p => {
+  const imgSrc = p.imagen 
+  ? `../images/productos/${p.imagen}` 
+  : 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect fill="%23f5f5f5" width="100" height="100"/%3E%3Ctext x="50" y="50" text-anchor="middle" dy=".3em" fill="%23999" font-size="14"%3ESin imagen%3C/text%3E%3C/svg%3E';
+    
+    return `
+      <div class="card" data-id="${p.id}" data-nombre="${p.nombre}" data-precio="${p.precio}">
+        <img src="${imgSrc}" alt="${p.nombre}" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 100 100\\'%3E%3Crect fill=\\'%23f5f5f5\\' width=\\'100\\' height=\\'100\\'/%3E%3Ctext x=\\'50\\' y=\\'50\\' text-anchor=\\'middle\\' dy=\\'.3em\\' fill=\\'%23999\\' font-size=\\'14\\'%3ESin imagen%3C/text%3E%3C/svg%3E'">
+        <strong>${p.nombre}</strong>
+        <div class="stock-info">Stock: ${p.stock}</div>
+        <div class="price">$${Number(p.precio).toFixed(2)}</div>
       </div>
-    </div>
-  `).join('');
-
-  $$('.btnAdd', grid).forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const id = Number(btn.dataset.id);
-      const nombre = btn.dataset.nombre;
-      const precio = Number(btn.dataset.precio);
-      const found = cart.find(x=>x.id===id);
+    `;
+  }).join('');
+  
+  // Agregar event listener a cada card
+  $$('.card[data-id]', grid).forEach(card => {
+    card.addEventListener('click', () => {
+      const id = Number(card.dataset.id);
+      const nombre = card.dataset.nombre;
+      const precio = Number(card.dataset.precio);
+      const found = cart.find(x => x.id === id);
       if (found) found.qty++;
-      else cart.push({id, nombre, precio, qty:1});
+      else cart.push({id, nombre, precio, qty: 1});
       renderCart();
     });
   });

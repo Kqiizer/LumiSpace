@@ -30,35 +30,57 @@ case 'productos_list': {
   $types  = '';
   $params = [];
 
-  if ($q !== '') { $where[] = 'nombre LIKE ?'; $types .= 's'; $params[] = "%$q%"; }
-  if ($categoria !== '') { $where[] = 'categoria = ?'; $types .= 's'; $params[] = $categoria; }
-
-  if ($estado === 'en_stock') {
-    $where[] = 'stock > 0';
-  } elseif ($estado === 'agotado') {
-    $where[] = 'stock <= 0';
-  } elseif ($estado === 'bajo') {
-    $where[] = 'stock > 0 AND stock <= ?';
-    $types  .= 'i'; $params[] = $umbral;
-  }
+  if ($q !== '') { $where[] = 'p.nombre LIKE ?'; $types .= 's'; $params[] = "%$q%"; }
+  if ($categoria !== '') { $where[] = 'p.categoria = ?'; $types .= 's'; $params[] = $categoria; }
 
   $whereSql = $where ? ('WHERE '.implode(' AND ', $where)) : '';
 
-  // total
-  $sqlCnt = "SELECT COUNT(*) c FROM productos $whereSql";
+  // Calcular stock desde movimientos_inventario
+  $stockCalc = "(
+    COALESCE(
+      (SELECT SUM(CASE WHEN tipo='entrada' THEN cantidad ELSE -cantidad END) 
+       FROM movimientos_inventario 
+       WHERE producto_id = p.id), 
+      0
+    )
+  )";
+
+  // Aplicar filtro de estado basado en stock calculado
+  $havingSql = '';
+  if ($estado === 'en_stock') {
+    $havingSql = "HAVING stock_actual > 0";
+  } elseif ($estado === 'agotado') {
+    $havingSql = "HAVING stock_actual <= 0";
+  } elseif ($estado === 'bajo') {
+    $havingSql = "HAVING stock_actual > 0 AND stock_actual <= $umbral";
+  }
+
+  // Total
+  $sqlCnt = "SELECT COUNT(*) c FROM (
+    SELECT p.id, $stockCalc AS stock_actual
+    FROM productos p
+    $whereSql
+    $havingSql
+  ) AS subq";
+  
   $stmt = $db->prepare($sqlCnt);
   if ($types !== '') $stmt->bind_param($types, ...$params);
-  $stmt->execute(); $total = (int)$stmt->get_result()->fetch_assoc()['c'];
+  $stmt->execute(); 
+  $total = (int)$stmt->get_result()->fetch_assoc()['c'];
 
   // order seguro
   $allowed = ['fecha_creado','nombre','stock','precio','id'];
   if (!in_array($order, $allowed, true)) $order = 'fecha_creado';
+  
+  // Si ordenan por stock, usar el calculado
+  if ($order === 'stock') $order = 'stock_actual';
 
-  $sql = "SELECT id, nombre, precio, stock, estado, imagen, categoria
-          FROM productos
+  $sql = "SELECT p.id, p.nombre, p.precio, $stockCalc AS stock, p.estado, p.imagen, p.categoria
+          FROM productos p
           $whereSql
           ORDER BY $order $dir
           LIMIT ?, ?";
+  
   $types2  = $types.'ii';
   $params2 = array_merge($params, [$offset, $perPage]);
 
@@ -304,7 +326,14 @@ case 'venta_crear': {
   $types = str_repeat('i', count($ids));
   $precios = []; $nombres = [];
 
-  $sql = "SELECT id, nombre, precio, stock FROM productos WHERE id IN ($in)";
+ $sql = "SELECT p.id, p.nombre, p.precio,
+        COALESCE(
+          (SELECT SUM(CASE WHEN tipo='entrada' THEN cantidad ELSE -cantidad END) 
+           FROM movimientos_inventario 
+           WHERE producto_id = p.id), 
+          0
+        ) AS stock
+        FROM productos p WHERE p.id IN ($in)";
   $stmt = $db->prepare($sql);
   $stmt->bind_param($types, ...$ids);
   $stmt->execute();

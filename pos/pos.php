@@ -10,10 +10,9 @@ start_pos_page('Punto de Venta');
   <section class="card pos-products">
     <header style="display:flex;gap:10px;align-items:center;margin-bottom:8px;">
       <input type="search" placeholder="Buscar productos..." style="flex:1;padding:10px;border:1px solid #e5e5e5;border-radius:10px;">
-      <button class="card" style="padding:8px 12px;">Recargar</button>
       
     </header>
-    <div id="gridProductos" class="grid" style="grid-template-columns: repeat(4, minmax(0,1fr));">
+    <div id="gridProductos" class="grid" style="grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));">
       <div class="card" style="height:120px;display:grid;place-items:center;color:#777">Productos…</div>
     </div>
   </section>
@@ -29,10 +28,16 @@ start_pos_page('Punto de Venta');
       <div style="display:flex;justify-content:space-between;font-size:16px"><span>Total</span><b id="cTotal">$0.00</b></div>
     </div>
     <div style="margin-top:12px;display:grid;gap:8px">
-      <label><input type="radio" name="metodo" value="efectivo" checked> Efectivo</label>
-      <label><input type="radio" name="metodo" value="tarjeta"> Tarjeta</label>
-      <button id="btnPagar" class="card" style="padding:10px 12px;font-weight:700">Procesar pago</button>
-    </div>
+  <label style="display:flex;align-items:center;padding:10px;border:2px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:var(--transition)">
+    <input type="radio" name="metodo" value="efectivo" checked style="margin-right:8px"> 
+    <span style="font-weight:500">💵 Efectivo</span>
+  </label>
+  <label style="display:flex;align-items:center;padding:10px;border:2px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:var(--transition)">
+    <input type="radio" name="metodo" value="tarjeta" style="margin-right:8px"> 
+    <span style="font-weight:500">💳 Tarjeta</span>
+  </label>
+  <button id="btnPagar" class="btn-primary" style="padding:14px;font-size:15px;margin-top:8px">Procesar pago</button>
+</div>
   </aside>
 </div>
 
