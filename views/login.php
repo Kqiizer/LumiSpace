@@ -17,7 +17,7 @@ if (isset($_SESSION['usuario_id'], $_SESSION['usuario_rol'])) {
     $rol = strtolower($_SESSION['usuario_rol']);
     $rutas = [
         'admin'   => 'dashboard-admin.php',
-        'gestor'  => 'dashboard-gestor.php',
+        'gestor'  => '../pos/pos.php',
         'cajero'  => 'pos.php',
         'usuario' => 'index.php'
     ];
@@ -62,7 +62,7 @@ function normalizarRol(?string $rol): string {
 function redirSegunRol(string $rol): never {
     switch ($rol) {
         case 'admin':   header("Location: dashboard-admin.php"); break;
-        case 'gestor':  header("Location: dashboard-gestor.php"); break;
+        case 'gestor':  header("Location: ../pos/pos.php"); break;
         case 'cajero':  header("Location: pos.php"); break;
         case 'usuario': header("Location: dashboard-usuario.php"); break;
         default:        header("Location: ../index.php");
@@ -80,8 +80,11 @@ $emailVal = "";
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $emailVal = norm_email((string)($_POST['email'] ?? ''));
     $password = (string)($_POST['password'] ?? '');
+    $acepto   = isset($_POST['acepto']); // 🔒 NUEVO: campo de aceptación
 
-    if ($emailVal !== '' && $password !== '') {
+    if (!$acepto) {
+        $error = "⚠️ Debes aceptar los Términos y Condiciones antes de continuar.";
+    } elseif ($emailVal !== '' && $password !== '') {
         try {
             $user = obtenerUsuarioPorEmail($emailVal);
 
@@ -126,9 +129,11 @@ if (isset($google_client) && $google_client instanceof Google_Client) {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Login - POS</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../css/auth.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
   <style>
+    body, input, button, label, a, p, h2 { font-family: "Poppins", sans-serif; }
     .error { background:#ffe6e6; color:#b10000; padding:.75rem 1rem; border-radius:.5rem; margin:.5rem 0; animation: fadeIn .5s; }
     .info  { background:#eef6ff; color:#0b5394; padding:.75rem 1rem; border-radius:.5rem; margin:.5rem 0; animation: fadeIn .5s; }
     @keyframes fadeIn { from{opacity:0; transform:translateY(-5px);} to{opacity:1; transform:translateY(0);} }
@@ -139,11 +144,23 @@ if (isset($google_client) && $google_client instanceof Google_Client) {
       text-decoration: none; color: #555; transition: all .3s;
     }
     .back-arrow:hover { color:#0b5394; transform: translateX(-3px); }
+    .terms-check {
+      margin-top: 0.8rem;
+      font-size: 0.85rem;
+      color: #555;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .terms-check a {
+      color: #0b5394;
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
   <div class="auth-wrapper">
-        <div class="auth-image" style="background: url('../images/pos-logi.jpg') no-repeat center center/cover;"></div>
+    <div class="auth-image" style="background: url('../images/pos-logi.jpg') no-repeat center center/cover;"></div>
 
     <div class="auth-form">
 
@@ -165,7 +182,7 @@ if (isset($google_client) && $google_client instanceof Google_Client) {
         </div>
       <?php endif; ?>
 
-      <form method="POST" novalidate>
+      <form method="POST" onsubmit="return validarTerminos();" novalidate>
         <div class="input-group" style="position:relative">
           <label for="email">Correo electrónico</label>
           <input type="email" name="email" value="<?= htmlspecialchars($emailVal) ?>" required autocomplete="email" autofocus/>
@@ -176,7 +193,17 @@ if (isset($google_client) && $google_client instanceof Google_Client) {
           <label for="password">Contraseña</label>
           <input type="password" id="password" name="password" required autocomplete="current-password" />
           <i class="fa-solid fa-lock icon"></i>
-          <span class="toggle-pass" onclick="togglePassword()"><i class=></i></span>
+          <span class="toggle-pass" onclick="togglePassword()"><i class="fa fa-eye"></i></span>
+        </div>
+
+        <!-- 🔒 NUEVO: Checkbox obligatorio -->
+        <div class="terms-check">
+          <input type="checkbox" id="acepto" name="acepto" required>
+          <label for="acepto">
+            Acepto los 
+            <a href="../docs/terminos-condiciones.html" target="_blank">Términos y Condiciones</a> y la 
+            <a href="../docs/politica-privacidad.html" target="_blank">Política de Privacidad</a>.
+          </label>
         </div>
 
         <button type="submit" class="btn-login">Entrar</button>
@@ -208,6 +235,16 @@ if (isset($google_client) && $google_client instanceof Google_Client) {
         toggle.classList.remove("fa-eye-slash");
         toggle.classList.add("fa-eye");
       }
+    }
+
+    // 🔒 Validar aceptación antes de enviar
+    function validarTerminos(){
+      const checkbox = document.getElementById("acepto");
+      if(!checkbox.checked){
+        alert("Debes aceptar los Términos y Condiciones antes de continuar.");
+        return false;
+      }
+      return true;
     }
   </script>
 </body>

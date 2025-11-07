@@ -2905,26 +2905,28 @@ function prod_img_url($raw, $BASE) {
       });
     });
 
-    $grid.addEventListener('click', e => {
+    // ========================================
+    // EVENT LISTENER UNIFICADO Y OPTIMIZADO
+    // ========================================
+    $grid.addEventListener('click', async e => {
       const card = e.target.closest('.product-card');
       if (!card) return;
       
-      const isAction = e.target.closest('.action-btn, .quick-action, .rating-count, .quick-view-btn');
-      if (!isAction) {
+      // Detectar si se clickeó un elemento de acción específico
+      const actionBtn = e.target.closest('.action-btn, .quick-action');
+      const isOtherAction = e.target.closest('.rating-count, .quick-view-btn');
+      
+      // Si NO es una acción, navegar al detalle del producto
+      if (!actionBtn && !isOtherAction) {
         const prodId = card.dataset.id;
         window.location.href = `${BASE}views/productos-detal.php?id=${prodId}`;
+        return;
       }
-    }, true);
-
-    $grid.addEventListener('click', async e => {
-      const actionBtn = e.target.closest('.action-btn, .quick-action');
-      if (!actionBtn) return;
-
-      e.preventDefault();
-      e.stopPropagation();
-
-      const card = actionBtn.closest('.product-card');
-      if (!card) return;
+      
+      // Si es un botón de acción, prevenir navegación y procesar
+      if (actionBtn) {
+        e.preventDefault();
+        e.stopPropagation();
 
       const prodId = parseInt(card.dataset.id, 10);
       const cantidad = parseInt(card.dataset.cantidad, 10);
@@ -3110,6 +3112,7 @@ function prod_img_url($raw, $BASE) {
         
         return;
       }
+      } // Fin del if (actionBtn)
     });
 
     allCards = Array.from($grid.querySelectorAll('.product-card'));

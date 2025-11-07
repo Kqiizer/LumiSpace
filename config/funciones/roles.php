@@ -28,30 +28,29 @@ function getRoles(): array {
                 r.id,
                 r.nombre,
                 r.descripcion,
-                r.creado_en,
-                r.actualizado_en,
-                COUNT(DISTINCT u.id) AS usuarios_count,
-                COUNT(DISTINCT rp.permiso_id) AS permisos_count,
-                GROUP_CONCAT(DISTINCT p.nombre SEPARATOR ',') AS permisos
+                r.fecha_creacion AS creado_en,
+                NULL AS actualizado_en,
+                IFNULL(COUNT(DISTINCT u.id), 0) AS usuarios_count,
+                IFNULL(COUNT(DISTINCT rp.permiso_id), 0) AS permisos_count,
+                IFNULL(GROUP_CONCAT(DISTINCT p.nombre ORDER BY p.nombre SEPARATOR ', '), '') AS permisos
             FROM roles r
-            LEFT JOIN usuarios u ON u.rol_id = r.id
+            LEFT JOIN usuarios u ON LOWER(u.rol) = LOWER(r.nombre)
             LEFT JOIN rol_permisos rp ON rp.rol_id = r.id
             LEFT JOIN permisos p ON p.id = rp.permiso_id
-            GROUP BY r.id, r.nombre, r.descripcion, r.creado_en, r.actualizado_en
+            GROUP BY r.id, r.nombre, r.descripcion, r.fecha_creacion
             ORDER BY r.id ASC
         ";
-        
-        $result = $conn->query($sql);
 
+        $result = $conn->query($sql);
         if (!$result) {
-            error_log("Error en getRoles(): " . $conn->error);
+            error_log("❌ Error SQL getRoles(): " . $conn->error);
             return [];
         }
 
-        return $result->fetch_all(MYSQLI_ASSOC);
+        return $result->fetch_all(MYSQLI_ASSOC) ?: [];
 
-    } catch (Exception $e) {
-        error_log("Excepción en getRoles(): " . $e->getMessage());
+    } catch (Throwable $e) {
+        error_log("⚠️ Excepción en getRoles(): " . $e->getMessage());
         return [];
     }
 }
