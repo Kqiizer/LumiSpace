@@ -1,1071 +1,1132 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) session_start();
+/**
+ * ============================================
+ * CATÁLOGO DE PRODUCTOS - LUMISPACE
+ * ============================================
+ * Archivo: catalogo.php
+ * Descripción: Catálogo completo de productos con filtros y búsqueda
+ * ============================================
+ */
+
+// ==========================================
+// INICIALIZACIÓN
+// ==========================================
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 require_once __DIR__ . "/../config/functions.php";
 
+// Configuración base
 $BASE = defined('BASE_URL') ? rtrim(BASE_URL, '/') . '/' : '/';
 $usuario_id = $_SESSION['usuario_id'] ?? 0;
-
-// Obtener todas las categorías y productos
-$categorias_db = getCategorias();
 $conn = getDBConnection();
 
-// Verificar columna activo
-$check_activo = $conn->query("SHOW COLUMNS FROM productos LIKE 'activo'");
-$has_activo = $check_activo && $check_activo->num_rows > 0;
+// ==========================================
+// OBTENER CATEGORÍAS Y PRODUCTOS
+// ==========================================
+$categorias_db = getCategorias();
 
-// Obtener todos los productos agrupados por categoría
-$productos_agrupados = [];
+$sql = "SELECT p.*, c.nombre AS categoria
+        FROM productos p
+        LEFT JOIN categorias c ON p.categoria_id = c.id
+        WHERE p.activo = 1
+        ORDER BY p.id DESC";
+$res = $conn->query($sql);
+$todos_productos = $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
+
+// Contar productos por categoría
 $productos_por_categoria = [];
-$todos_productos = [];
-
-foreach ($categorias_db as $cat) {
-  $cat_id = (int)$cat['id'];
-  $productos = getProductosPorCategoria($cat_id, 200);
-  
-  if (!empty($productos)) {
-    $productos_agrupados[$cat_id] = [
-      'categoria' => $cat,
-      'productos' => $productos
-    ];
-    $productos_por_categoria[$cat_id] = count($productos);
-    $todos_productos = array_merge($todos_productos, $productos);
-  } else {
-    $productos_por_categoria[$cat_id] = 0;
-  }
+foreach ($todos_productos as $p) {
+    $cat_id = (int)($p['categoria_id'] ?? 0);
+    $productos_por_categoria[$cat_id] = ($productos_por_categoria[$cat_id] ?? 0) + 1;
 }
 
-// Obtener favoritos
+// ==========================================
+// OBTENER FAVORITOS DEL USUARIO
+// ==========================================
 $favoritosSet = [];
-if ($usuario_id) {
-  $chk = $conn->query("SHOW TABLES LIKE 'favoritos'");
-  if ($chk && $chk->num_rows > 0) {
-    if ($stmt = $conn->prepare("SELECT producto_id FROM favoritos WHERE usuario_id=?")) {
-      $stmt->bind_param("i", $usuario_id);
-      if ($stmt->execute()) {
-        $res = $stmt->get_result();
-        while ($row = $res->fetch_assoc()) {
-          $favoritosSet[(int)$row['producto_id']] = true;
-        }
-      }
-      $stmt->close();
+if ($usuario_id && $conn->query("SHOW TABLES LIKE 'favoritos'")->num_rows > 0) {
+    $stmt = $conn->prepare("SELECT producto_id FROM favoritos WHERE usuario_id=?");
+    $stmt->bind_param("i", $usuario_id);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    while ($row = $res->fetch_assoc()) {
+        $favoritosSet[(int)$row['producto_id']] = true;
     }
-  }
+    $stmt->close();
 }
 
-// Estadísticas
-$stats = ['productos' => 0, 'clientes' => 0, 'pedidos' => 0, 'categorias' => count($categorias_db)];
-$result = $conn->query("SELECT COUNT(*) as total FROM productos");
-if ($result) $stats['productos'] = $result->fetch_assoc()['total'];
-$result = $conn->query("SELECT COUNT(*) as total FROM usuarios WHERE rol != 'admin'");
-if ($result) $stats['clientes'] = $result->fetch_assoc()['total'];
+// ==========================================
+// ESTADÍSTICAS DEL SISTEMA
+// ==========================================
+$stats = [
+    'productos' => count($todos_productos),
+    'categorias' => count($categorias_db),
+    'clientes' => (int)($conn->query("SELECT COUNT(*) as total FROM usuarios WHERE rol!='admin'")->fetch_assoc()['total'] ?? 0),
+];
 
-function getCategoryImage($imagen, $BASE) {
-  if (empty($imagen)) return $BASE . 'images/categorias/default.jpg';
-  if (preg_match('#^https?://#i', $imagen)) return $imagen;
-  if (strpos($imagen, '/') === 0) return $BASE . ltrim($imagen, '/');
-  return $BASE . 'images/categorias/' . $imagen;
-}
-
-function prod_img_url($raw, $BASE) {
-  $raw = trim((string)$raw);
-  if ($raw === '') return $BASE . 'images/default.png';
-  $raw = str_replace('\\', '/', $raw);
-  if (preg_match('#^https?://#i', $raw)) return $raw;
-  if (stripos($raw, '/images/productos/') === 0) return $BASE . ltrim($raw, '/');
-  if (stripos($raw, 'images/productos/') === 0) return $BASE . $raw;
-  if (stripos($raw, '/uploads/productos/') === 0) return $BASE . ltrim($raw, '/');
-  if (stripos($raw, 'uploads/productos/') === 0) return $BASE . $raw;
-  if (strpos($raw, '/') !== false) return $BASE . ltrim($raw, '/');
-  return $BASE . 'images/productos/' . $raw;
+// ==========================================
+// FUNCIÓN HELPER PARA IMÁGENES
+// ==========================================
+function img_url($path, $BASE, $folder = 'productos') {
+    $path = trim((string)$path);
+    if ($path === '') return $BASE . "images/default.png";
+    if (preg_match('#^https?://#i', $path)) return $path;
+    return $BASE . "images/{$folder}/" . ltrim($path, '/');
 }
 ?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Catálogo Completo - LumiSpace</title>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-  
-  <link rel="stylesheet" href="<?= $BASE ?>css/styles/reset.css">
-  <link rel="stylesheet" href="<?= $BASE ?>css/styles/header.css">
-  <link rel="stylesheet" href="<?= $BASE ?>css/styles/sidebar.css">
-  <link rel="stylesheet" href="<?= $BASE ?>css/styles/footer.css">
-  <link rel="stylesheet" href="<?= $BASE ?>css/styles/responsive.css">
-
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Catálogo completo de productos LumiSpace - <?= $stats['productos'] ?> productos disponibles">
+    <title>Catálogo de Productos - LumiSpace</title>
     
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #f5f5f5;
-      color: #333;
-    }
-
-    .page-wrapper { min-height: 100vh; display: flex; flex-direction: column; }
-    .main-content { flex: 1; }
-    .container { max-width: 1400px; margin: 0 auto; padding: 0 20px; }
-
-    /* Hero */
-    .catalog-hero {
-      background: linear-gradient(135deg, #a1683a 0%, #8f5e4b 100%);
-      padding: 80px 0 60px;
-      color: white;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .catalog-hero::before {
-      content: '';
-      position: absolute;
-      top: -50%;
-      right: -10%;
-      width: 500px;
-      height: 500px;
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 50%;
-    }
-
-    .hero-content {
-      position: relative;
-      z-index: 1;
-      text-align: center;
-    }
-
-    .hero-title {
-      font-size: 48px;
-      font-weight: 800;
-      margin-bottom: 16px;
-    }
-
-    .hero-subtitle {
-      font-size: 18px;
-      opacity: 0.95;
-      margin-bottom: 30px;
-    }
-
-    .hero-stats {
-      display: flex;
-      justify-content: center;
-      gap: 40px;
-      flex-wrap: wrap;
-    }
-
-    .hero-stat {
-      text-align: center;
-    }
-
-    .hero-stat-number {
-      font-size: 32px;
-      font-weight: 800;
-      display: block;
-    }
-
-    .hero-stat-label {
-      font-size: 14px;
-      opacity: 0.9;
-    }
-
-    /* Toolbar */
-    .catalog-toolbar {
-      background: white;
-      padding: 20px 0;
-      border-bottom: 1px solid #e0e0e0;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    }
-
-    .toolbar-content {
-      display: flex;
-      gap: 20px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-
-    .search-box {
-      flex: 1;
-      min-width: 280px;
-      position: relative;
-    }
-
-    .search-box input {
-      width: 100%;
-      padding: 12px 16px 12px 44px;
-      border: 2px solid #e0e0e0;
-      border-radius: 8px;
-      font-size: 15px;
-      transition: all 0.3s;
-    }
-
-    .search-box input:focus {
-      outline: none;
-      border-color: #a1683a;
-      box-shadow: 0 0 0 3px rgba(161, 104, 58, 0.1);
-    }
-
-    .search-box i {
-      position: absolute;
-      left: 16px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: #666;
-    }
-
-    .clear-search {
-      position: absolute;
-      right: 12px;
-      top: 50%;
-      transform: translateY(-50%);
-      background: none;
-      border: none;
-      color: #999;
-      cursor: pointer;
-      padding: 4px 8px;
-      display: none;
-    }
-
-    .clear-search.visible { display: block; }
-
-    .filter-group {
-      display: flex;
-      gap: 12px;
-      align-items: center;
-    }
-
-    .filter-select {
-      padding: 10px 16px;
-      border: 2px solid #e0e0e0;
-      border-radius: 8px;
-      font-size: 14px;
-      cursor: pointer;
-      background: white;
-      min-width: 150px;
-    }
-
-    .filter-select:focus {
-      outline: none;
-      border-color: #a1683a;
-    }
-
-    .results-count {
-      padding: 10px 20px;
-      background: rgba(161, 104, 58, 0.1);
-      border-radius: 8px;
-      font-weight: 600;
-      font-size: 14px;
-      color: #a1683a;
-      white-space: nowrap;
-    }
-
-    .view-toggle {
-      display: flex;
-      gap: 8px;
-      background: #f0f0f0;
-      padding: 4px;
-      border-radius: 8px;
-    }
-
-    .view-btn {
-      padding: 8px 12px;
-      border: none;
-      background: transparent;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: all 0.3s;
-      color: #666;
-    }
-
-    .view-btn.active {
-      background: white;
-      color: #a1683a;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-
-    /* Filtros rápidos */
-    .quick-filters {
-      background: white;
-      padding: 20px 0;
-    }
-
-    .filters-scroll {
-      display: flex;
-      gap: 12px;
-      overflow-x: auto;
-      padding-bottom: 8px;
-    }
-
-    .filters-scroll::-webkit-scrollbar { height: 6px; }
-    .filters-scroll::-webkit-scrollbar-thumb {
-      background: #a1683a;
-      border-radius: 3px;
-    }
-
-    .filter-chip {
-      padding: 10px 20px;
-      border: 2px solid #e0e0e0;
-      border-radius: 50px;
-      background: white;
-      cursor: pointer;
-      white-space: nowrap;
-      font-weight: 600;
-      font-size: 14px;
-      transition: all 0.3s;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .filter-chip:hover {
-      border-color: #a1683a;
-      transform: translateY(-2px);
-    }
-
-    .filter-chip.active {
-      background: linear-gradient(135deg, #a1683a, #8f5e4b);
-      color: white;
-      border-color: #a1683a;
-    }
-
-    .filter-chip .count {
-      background: rgba(255,255,255,0.3);
-      padding: 2px 8px;
-      border-radius: 12px;
-      font-size: 12px;
-    }
-
-    .filter-chip.active .count {
-      background: rgba(255,255,255,0.25);
-    }
-
-    /* Productos Grid */
-    .products-section {
-      padding: 40px 0 80px;
-    }
-
-    .products-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 24px;
-      transition: all 0.3s;
-    }
-
-    .products-grid.list-view {
-      grid-template-columns: 1fr;
-    }
-
-    .products-grid.list-view .product-card {
-      display: grid;
-      grid-template-columns: 250px 1fr;
-      gap: 24px;
-    }
-
-    .products-grid.list-view .product-image-wrapper {
-      height: 100%;
-      min-height: 200px;
-    }
-
-    /* Product Card */
-    .product-card {
-      background: white;
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-      transition: all 0.3s ease;
-      cursor: pointer;
-      position: relative;
-    }
-
-    .product-card:hover {
-      transform: translateY(-8px);
-      box-shadow: 0 12px 24px rgba(0,0,0,0.15);
-    }
-
-    .product-card.hidden { display: none; }
-
-    .product-image-wrapper {
-      position: relative;
-      height: 280px;
-      overflow: hidden;
-      background: #f5f5f5;
-    }
-
-    .product-image {
-      width: 100%;
-      height: 100%;
-      background-size: cover;
-      background-position: center;
-      transition: transform 0.5s ease;
-    }
-
-    .product-card:hover .product-image {
-      transform: scale(1.1);
-    }
-
-    .product-badge {
-      position: absolute;
-      top: 12px;
-      left: 12px;
-      background: #ff6b6b;
-      color: white;
-      padding: 6px 12px;
-      border-radius: 6px;
-      font-weight: 700;
-      font-size: 0.8rem;
-      z-index: 2;
-    }
-
-    .product-actions {
-      position: absolute;
-      top: 12px;
-      right: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      opacity: 0;
-      transform: translateX(20px);
-      transition: all 0.3s ease;
-      z-index: 2;
-    }
-
-    .product-card:hover .product-actions {
-      opacity: 1;
-      transform: translateX(0);
-    }
-
-    .action-btn {
-      width: 40px;
-      height: 40px;
-      border: none;
-      background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(10px);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: all 0.3s;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      color: #333;
-    }
-
-    .action-btn:hover {
-      transform: scale(1.15);
-      background: #a1683a;
-      color: white;
-    }
-
-    .action-btn.active {
-      background: #ff6b6b;
-      color: white;
-    }
-
-    .product-info {
-      padding: 20px;
-    }
-
-    .product-category-tag {
-      color: #a1683a;
-      font-size: 0.75rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 8px;
-    }
-
-    .product-name {
-      font-size: 1.05rem;
-      font-weight: 700;
-      margin-bottom: 10px;
-      color: #333;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-      min-height: 2.2em;
-    }
-
-    .product-rating {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 12px;
-    }
-
-    .stars {
-      color: #ffc107;
-      font-size: 0.85rem;
-    }
-
-    .rating-number {
-      font-weight: 600;
-      font-size: 0.8rem;
-      color: #666;
-    }
-
-    .product-price {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .current-price {
-      font-size: 1.35rem;
-      font-weight: 800;
-      color: #a1683a;
-    }
-
-    .original-price {
-      font-size: 0.95rem;
-      color: #999;
-      text-decoration: line-through;
-    }
-
-    /* Estado vacío */
-    .empty-state {
-      text-align: center;
-      padding: 80px 20px;
-      color: #999;
-    }
-
-    .empty-state i {
-      font-size: 64px;
-      margin-bottom: 20px;
-      opacity: 0.3;
-    }
-
-    .empty-state h3 {
-      font-size: 24px;
-      margin-bottom: 12px;
-      color: #666;
-    }
-
-    .empty-state button {
-      margin-top: 20px;
-      padding: 12px 32px;
-      background: #a1683a;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.3s;
-    }
-
-    .empty-state button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(161, 104, 58, 0.3);
-    }
-
-    /* Loading */
-    .loading-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.5);
-      backdrop-filter: blur(4px);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 9999;
-    }
-
-    .loading-overlay.active { display: flex; }
-
-    .spinner {
-      width: 50px;
-      height: 50px;
-      border: 4px solid rgba(255,255,255,0.3);
-      border-top-color: white;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    /* Toast */
-    .toast {
-      position: fixed;
-      bottom: 30px;
-      right: 30px;
-      background: white;
-      color: #333;
-      padding: 16px 24px;
-      border-radius: 12px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      z-index: 10000;
-      animation: slideIn 0.3s ease;
-      max-width: 400px;
-    }
-
-    @keyframes slideIn {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .toast.success { border-left: 4px solid #51cf66; }
-    .toast.error { border-left: 4px solid #ff6b6b; }
-    .toast.warning { border-left: 4px solid #ffd43b; }
-    .toast.info { border-left: 4px solid #4dabf7; }
-
-    /* Responsive */
-    @media (max-width: 1200px) {
-      .products-grid { grid-template-columns: repeat(3, 1fr); }
-    }
-
-    @media (max-width: 768px) {
-      .hero-title { font-size: 36px; }
-      .toolbar-content { flex-direction: column; align-items: stretch; }
-      .filter-group { flex-wrap: wrap; }
-      .products-grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
-      .products-grid.list-view { grid-template-columns: 1fr; }
-      .products-grid.list-view .product-card { grid-template-columns: 1fr; }
-      .product-actions { opacity: 1; transform: translateX(0); }
-    }
-
-    @media (max-width: 480px) {
-      .products-grid { grid-template-columns: 1fr; }
-      .hero-stats { gap: 20px; }
-    }
-  </style>
+    <!-- Fonts & Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="<?= $BASE ?>css/styles/reset.css">
+    <link rel="stylesheet" href="<?= $BASE ?>css/styles/header.css">
+    <link rel="stylesheet" href="<?= $BASE ?>css/styles/footer.css">
+    <link rel="stylesheet" href="<?= $BASE ?>css/styles/responsive.css">
+    
+    <style>
+        /* ==========================================
+           VARIABLES Y CONFIGURACIÓN BASE
+           ========================================== */
+        :root {
+            --primary-color: #a1683a;
+            --primary-dark: #8f5e4b;
+            --primary-light: #c2a98f;
+            --secondary-color: #ff6b6b;
+            --success-color: #51cf66;
+            --warning-color: #ffd43b;
+            --text-primary: #333;
+            --text-secondary: #666;
+            --text-muted: #999;
+            --bg-primary: #fafafa;
+            --bg-white: #ffffff;
+            --bg-secondary: #f7f7f7;
+            --bg-image: #f0f0f0;
+            --border-color: #e0e0e0;
+            --shadow-sm: 0 2px 8px rgba(0,0,0,.1);
+            --shadow-md: 0 4px 12px rgba(0,0,0,.12);
+            --shadow-lg: 0 8px 18px rgba(0,0,0,.15);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --transition: all 0.3s ease;
+        }
+
+        /* ==========================================
+           MODO OSCURO - Compatible con reset.css
+           ========================================== */
+        body.dark {
+            --primary-color: #d4af7f;
+            --primary-dark: #c2a98f;
+            --primary-light: #8f7a5d;
+            --secondary-color: #ff8787;
+            --success-color: #69db7c;
+            --warning-color: #ffe066;
+            --text-primary: #f0f0f0;
+            --text-secondary: #b8b8b8;
+            --text-muted: #888888;
+            --bg-primary: #1e1e1e;
+            --bg-white: #2a2a2a;
+            --bg-secondary: #2b2b2b;
+            --bg-image: #2e2e2e;
+            --border-color: #404040;
+            --shadow-sm: 0 2px 8px rgba(0,0,0,.4);
+            --shadow-md: 0 4px 12px rgba(0,0,0,.5);
+            --shadow-lg: 0 8px 18px rgba(0,0,0,.6);
+        }
+
+        /* Transición suave al cambiar tema */
+        body {
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* Asegurar que todos los elementos tengan transición suave */
+        *,
+        *::before,
+        *::after {
+            transition-property: background-color, color, border-color, box-shadow;
+            transition-duration: 0.3s;
+            transition-timing-function: ease;
+        }
+
+        /* Excepciones para animaciones específicas */
+        .product-image,
+        .action-btn,
+        .product-card {
+            transition: all 0.3s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        /* ==========================================
+           BOTÓN DE TOGGLE MODO OSCURO
+           ========================================== */
+        .theme-toggle {
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: var(--shadow-lg);
+            transition: var(--transition);
+            z-index: 1000;
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1) rotate(15deg);
+            box-shadow: 0 8px 25px rgba(161, 104, 58, 0.4);
+        }
+
+        .theme-toggle:active {
+            transform: scale(0.95);
+        }
+
+        /* Icono animado */
+        .theme-toggle i {
+            transition: transform 0.5s ease;
+        }
+
+        .theme-toggle:hover i {
+            transform: rotate(180deg);
+        }
+
+        /* ==========================================
+           LAYOUT PRINCIPAL
+           ========================================== */
+        .page-wrapper {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ==========================================
+           HERO SECTION
+           ========================================== */
+        .catalog-hero {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+            color: white;
+            text-align: center;
+            padding: 80px 20px 60px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .catalog-hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 80%, rgba(255,255,255,0.08) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        /* Modo oscuro - hero con menor opacidad */
+        body.dark .catalog-hero::before {
+            background: radial-gradient(circle at 20% 50%, rgba(255,255,255,0.05) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 80%, rgba(255,255,255,0.03) 0%, transparent 50%);
+        }
+
+        .catalog-hero-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .catalog-hero h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            letter-spacing: -1px;
+        }
+
+        .catalog-hero p {
+            font-size: 1.2rem;
+            opacity: 0.95;
+            margin-bottom: 30px;
+        }
+
+        .hero-stats {
+            display: flex;
+            justify-content: center;
+            gap: 50px;
+            margin-top: 40px;
+            flex-wrap: wrap;
+        }
+
+        .hero-stat {
+            text-align: center;
+        }
+
+        .hero-stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .hero-stat-label {
+            font-size: 0.95rem;
+            opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* ==========================================
+           BARRA DE FILTROS Y BÚSQUEDA
+           ========================================== */
+        .filters-bar {
+            background: var(--bg-white);
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0,0,0,.05);
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+        }
+
+        .filters-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px 15px;
+        }
+
+        /* Barra de búsqueda */
+        .search-bar {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .search-input-wrapper {
+            flex: 1;
+            min-width: 250px;
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 45px 12px 18px;
+            border: 2px solid var(--border-color);
+            border-radius: var(--radius-md);
+            font-size: 1rem;
+            transition: var(--transition);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        .search-input::placeholder {
+            color: var(--text-muted);
+            opacity: 0.7;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            background: var(--bg-white);
+            box-shadow: 0 0 0 4px rgba(161, 104, 58, 0.1);
+        }
+
+        body.dark .search-input:focus {
+            box-shadow: 0 0 0 4px rgba(212, 175, 127, 0.2);
+        }
+
+        /* Asegurar que todos los inputs en modo oscuro se vean bien */
+        body.dark input,
+        body.dark select,
+        body.dark textarea {
+            color-scheme: dark;
+        }
+
+        .search-icon {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            pointer-events: none;
+        }
+
+        .search-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-icon {
+            padding: 12px 20px;
+            border: 2px solid var(--border-color);
+            background: var(--bg-white);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .btn-icon:hover {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+            background: var(--bg-secondary);
+        }
+
+        /* Chips de categorías */
+        .category-filters {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+            scrollbar-color: var(--primary-light) var(--bg-secondary);
+        }
+
+        .category-filters::-webkit-scrollbar {
+            height: 6px;
+            background: var(--bg-secondary);
+        }
+
+        .category-filters::-webkit-scrollbar-thumb {
+            background: var(--primary-light);
+            border-radius: 3px;
+        }
+
+        .category-filters::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-color);
+        }
+
+        .filters-scroll {
+            display: flex;
+            gap: 12px;
+            padding-bottom: 5px;
+        }
+
+        .filter-chip {
+            background: var(--bg-white);
+            border: 2px solid var(--border-color);
+            border-radius: 25px;
+            padding: 10px 24px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+            transition: var(--transition);
+            color: var(--text-primary);
+        }
+
+        .filter-chip:hover {
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .filter-chip.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .filter-chip .chip-count {
+            opacity: 0.8;
+            font-size: 0.85rem;
+            margin-left: 5px;
+        }
+
+        /* ==========================================
+           GRID DE PRODUCTOS
+           ========================================== */
+        .products-section {
+            flex: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+            padding: 40px 15px;
+        }
+
+        .products-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .products-count {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+        }
+
+        .products-count strong {
+            color: var(--primary-color);
+            font-weight: 700;
+        }
+
+        .view-toggle {
+            display: flex;
+            gap: 8px;
+            background: var(--bg-white);
+            padding: 5px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+        }
+
+        .view-btn {
+            padding: 8px 16px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            border-radius: var(--radius-sm);
+            transition: var(--transition);
+            color: var(--text-secondary);
+        }
+
+        .view-btn.active {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 25px;
+        }
+
+        /* ==========================================
+           TARJETAS DE PRODUCTOS
+           ========================================== */
+        .product-card {
+            background: var(--bg-white);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+            border: 1px solid var(--border-color);
+        }
+
+        .product-card:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--primary-color);
+        }
+
+        .product-image-wrapper {
+            position: relative;
+            height: 280px;
+            background: var(--bg-image);
+            overflow: hidden;
+        }
+
+        .product-image {
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            transition: transform 0.5s ease;
+        }
+
+        .product-card:hover .product-image {
+            transform: scale(1.08);
+        }
+
+        .product-badge {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: var(--secondary-color);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            box-shadow: 0 2px 8px rgba(255, 107, 107, 0.4);
+        }
+
+        .product-actions {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            opacity: 0;
+            transform: translateX(10px);
+            transition: all 0.3s ease;
+        }
+
+        .product-card:hover .product-actions {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .action-btn {
+            width: 42px;
+            height: 42px;
+            border: none;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transition: var(--transition);
+            color: var(--text-primary);
+        }
+
+        /* Modo oscuro - botones de acción */
+        body.dark .action-btn {
+            background: rgba(42, 42, 42, 0.95);
+            color: var(--text-primary);
+        }
+
+        .action-btn:hover {
+            background: var(--primary-color);
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .action-btn.active {
+            background: var(--secondary-color);
+            color: white;
+        }
+
+        .product-info {
+            padding: 20px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .product-category-tag {
+            font-size: 0.75rem;
+            color: var(--primary-color);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .product-name {
+            font-size: 1.05rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            min-height: 2.4em;
+            line-height: 1.4;
+            color: var(--text-primary);
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .product-price-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: auto;
+        }
+
+        .product-price {
+            font-weight: 700;
+            color: var(--primary-color);
+            font-size: 1.4rem;
+        }
+
+        .original-price {
+            text-decoration: line-through;
+            color: var(--text-muted);
+            font-size: 1rem;
+        }
+
+        /* ==========================================
+           ESTADO VACÍO
+           ========================================== */
+        .empty-state {
+            text-align: center;
+            padding: 100px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .empty-state h3 {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+
+        .empty-state p {
+            color: var(--text-muted);
+        }
+
+        /* ==========================================
+           TOAST NOTIFICATIONS
+           ========================================== */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: var(--bg-white);
+            padding: 16px 24px;
+            border-radius: var(--radius-md);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: slideIn 0.3s ease;
+            z-index: 1000;
+            max-width: 350px;
+            border: 1px solid var(--border-color);
+        }
+
+        .toast.success {
+            border-left: 4px solid var(--success-color);
+        }
+
+        .toast.error {
+            border-left: 4px solid var(--secondary-color);
+        }
+
+        .toast.warning {
+            border-left: 4px solid var(--warning-color);
+        }
+
+        .toast i {
+            font-size: 1.2rem;
+        }
+
+        .toast.success i {
+            color: var(--success-color);
+        }
+
+        .toast.error i {
+            color: var(--secondary-color);
+        }
+
+        .toast.warning i {
+            color: var(--warning-color);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ==========================================
+           LOADING SKELETON
+           ========================================== */
+        .skeleton {
+            animation: skeleton-loading 1s linear infinite alternate;
+        }
+
+        @keyframes skeleton-loading {
+            0% {
+                background-color: hsl(200, 20%, 80%);
+            }
+            100% {
+                background-color: hsl(200, 20%, 95%);
+            }
+        }
+
+        body.dark .skeleton {
+            animation: skeleton-loading-dark 1s linear infinite alternate;
+        }
+
+        @keyframes skeleton-loading-dark {
+            0% {
+                background-color: hsl(0, 0%, 25%);
+            }
+            100% {
+                background-color: hsl(0, 0%, 35%);
+            }
+        }
+
+        /* ==========================================
+           RESPONSIVE DESIGN
+           ========================================== */
+        @media (max-width: 1200px) {
+            .products-grid {
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            }
+        }
+
+        @media (max-width: 768px) {
+            .catalog-hero h1 {
+                font-size: 2.2rem;
+            }
+
+            .hero-stats {
+                gap: 30px;
+            }
+
+            .hero-stat-number {
+                font-size: 2rem;
+            }
+
+            .products-grid {
+                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+                gap: 15px;
+            }
+
+            .product-image-wrapper {
+                height: 220px;
+            }
+
+            .search-bar {
+                flex-direction: column;
+            }
+
+            .search-input-wrapper {
+                width: 100%;
+            }
+
+            .search-actions {
+                width: 100%;
+            }
+
+            .btn-icon {
+                flex: 1;
+                justify-content: center;
+            }
+
+            .toast {
+                bottom: 15px;
+                right: 15px;
+                left: 15px;
+                max-width: none;
+            }
+
+            .theme-toggle {
+                bottom: 100px;
+                width: 50px;
+                height: 50px;
+                font-size: 1.2rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .catalog-hero {
+                padding: 50px 15px 40px;
+            }
+
+            .catalog-hero h1 {
+                font-size: 1.8rem;
+            }
+
+            .hero-stats {
+                gap: 20px;
+            }
+
+            .products-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
+
+            .product-info {
+                padding: 15px;
+            }
+
+            .product-name {
+                font-size: 0.95rem;
+            }
+
+            .product-price {
+                font-size: 1.2rem;
+            }
+
+            .theme-toggle {
+                left: 15px;
+                bottom: 80px;
+            }
+        }
+    </style>
 </head>
+
 <body>
+    <div class="page-wrapper">
+        <!-- Botón de Toggle Tema -->
+        <button class="theme-toggle" id="themeToggle" aria-label="Cambiar tema">
+            <i class="fas fa-moon"></i>
+        </button>
 
-  <div class="loading-overlay" id="loadingOverlay">
-    <div class="spinner"></div>
-  </div>
+        <!-- Header -->
+        <?php include __DIR__ . "/../includes/header.php"; ?>
 
-  <div class="page-wrapper">
-    <div class="main-content">
-      
-      <?php include __DIR__ . "/../includes/header.php"; ?>
-
-      <!-- Hero -->
-      <section class="catalog-hero">
-        <div class="container">
-          <div class="hero-content">
-            <h1 class="hero-title">Catálogo Completo</h1>
-            <p class="hero-subtitle">Explora toda nuestra colección de <?= count($todos_productos) ?> productos</p>
-            <div class="hero-stats">
-              <div class="hero-stat">
-                <span class="hero-stat-number"><?= $stats['productos'] ?></span>
-                <span class="hero-stat-label">Productos</span>
-              </div>
-              <div class="hero-stat">
-                <span class="hero-stat-number"><?= $stats['categorias'] ?></span>
-                <span class="hero-stat-label">Categorías</span>
-              </div>
-              <div class="hero-stat">
-                <span class="hero-stat-number"><?= $stats['clientes'] ?></span>
-                <span class="hero-stat-label">Clientes</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Toolbar -->
-      <section class="catalog-toolbar">
-        <div class="container">
-          <div class="toolbar-content">
-            <!-- Búsqueda -->
-            <div class="search-box">
-              <i class="fas fa-search"></i>
-              <input type="text" id="searchInput" placeholder="Buscar productos...">
-              <button class="clear-search" id="clearSearch">
-                <i class="fas fa-times"></i>
-              </button>
-            </div>
-
-            <!-- Filtros -->
-            <div class="filter-group">
-              <select id="sortSelect" class="filter-select">
-                <option value="recientes">Más recientes</option>
-                <option value="precio_asc">Precio: Menor a Mayor</option>
-                <option value="precio_desc">Precio: Mayor a Menor</option>
-                <option value="nombre">Nombre: A-Z</option>
-                <option value="rating">Mejor valorados</option>
-              </select>
-
-              <div class="results-count">
-                <i class="fas fa-box"></i>
-                <span id="resultsCount"><?= count($todos_productos) ?></span> productos
-              </div>
-
-              <div class="view-toggle">
-                <button class="view-btn active" data-view="grid" title="Vista Grid">
-                  <i class="fas fa-th"></i>
-                </button>
-                <button class="view-btn" data-view="list" title="Vista Lista">
-                  <i class="fas fa-list"></i>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Filtros por categoría -->
-      <section class="quick-filters">
-        <div class="container">
-          <div class="filters-scroll">
-            <button class="filter-chip active" data-category="">
-              <i class="fas fa-th"></i>
-              <span>Todos</span>
-              <span class="count"><?= count($todos_productos) ?></span>
-            </button>
-            <?php foreach ($categorias_db as $cat): 
-              $count = $productos_por_categoria[(int)$cat['id']] ?? 0;
-              if ($count > 0):
-            ?>
-              <button class="filter-chip" data-category="<?= (int)$cat['id'] ?>">
-                <span><?= htmlspecialchars($cat['nombre']) ?></span>
-                <span class="count"><?= $count ?></span>
-              </button>
-            <?php endif; endforeach; ?>
-          </div>
-        </div>
-      </section>
-
-      <!-- Productos -->
-      <section class="products-section">
-        <div class="container">
-          <div class="products-grid" id="productsGrid" data-base="<?= htmlspecialchars($BASE) ?>">
-            <?php foreach ($todos_productos as $p): 
-              $prodId = (int)($p['id'] ?? 0);
-              $img = prod_img_url($p['imagen'] ?? '', $BASE);
-              $precio = (float)($p['precio'] ?? 0);
-              $precioOriginal = isset($p['precio_original']) ? (float)$p['precio_original'] : 0;
-              $mostrarOriginal = $precioOriginal > 0 && $precioOriginal > $precio;
-              $descuento = !empty($p['descuento']) ? (int)$p['descuento'] : ($mostrarOriginal ? (int)round(100 - ($precio*100/max(0.01,$precioOriginal))) : 0);
-              $enFav = !empty($favoritosSet[$prodId]);
-              $rating = $p['rating'] ?? 4.5;
-              $catId = $p['categoria_id'] ?? 0;
-              $catNombre = $p['categoria'] ?? 'Producto';
-            ?>
-              <div class="product-card"
-                   data-id="<?= $prodId ?>"
-                   data-category="<?= $catId ?>"
-                   data-nombre="<?= htmlspecialchars($p["nombre"] ?? "", ENT_QUOTES) ?>"
-                   data-precio="<?= number_format($precio, 2, '.', '') ?>"
-                   data-rating="<?= $rating ?>">
-
-                <div class="product-image-wrapper">
-                  <div class="product-image" style="background-image: url('<?= htmlspecialchars($img) ?>');"></div>
-                  <?php if ($descuento > 0): ?>
-                    <div class="product-badge">-<?= $descuento ?>%</div>
-                  <?php endif; ?>
-
-                  <div class="product-actions">
-                    <button class="action-btn js-wish <?= $enFav ? 'active' : '' ?>" title="Favorito">
-                      <i class="fas fa-heart"></i>
-                    </button>
-                    <a class="action-btn" title="Ver detalle" href="<?= $BASE ?>views/productos-detal.php?id=<?= $prodId ?>">
-                      <i class="fas fa-eye"></i>
-                    </a>
-                    <button class="action-btn js-cart" title="Agregar al carrito">
-                      <i class="fas fa-shopping-cart"></i>
-                    </button>
-                  </div>
-                </div>
-
-                <div class="product-info">
-                  <div class="product-category-tag"><?= htmlspecialchars($catNombre) ?></div>
-                  <div class="product-name"><?= htmlspecialchars($p['nombre'] ?? '') ?></div>
-
-                  <div class="product-rating">
-                    <div class="stars">
-                      <?php 
-                      $fullStars = floor($rating);
-                      for ($i = 0; $i < $fullStars; $i++) echo '⭐';
-                      ?>
+        <!-- Hero Section -->
+        <section class="catalog-hero">
+            <div class="catalog-hero-content">
+                <h1>
+                    <i class="fas fa-store"></i>
+                    Catálogo Completo
+                </h1>
+                <p>Explora nuestra selección de <?= $stats['productos'] ?> productos en <?= $stats['categorias'] ?> categorías diferentes</p>
+                
+                <div class="hero-stats">
+                    <div class="hero-stat">
+                        <span class="hero-stat-number"><?= $stats['productos'] ?></span>
+                        <span class="hero-stat-label">Productos</span>
                     </div>
-                    <span class="rating-number"><?= number_format($rating, 1) ?></span>
-                  </div>
-
-                  <div class="product-price">
-                    <span class="current-price">$<?= number_format($precio, 2) ?></span>
-                    <?php if ($mostrarOriginal): ?>
-                      <span class="original-price">$<?= number_format($precioOriginal, 2) ?></span>
-                    <?php endif; ?>
-                  </div>
+                    <div class="hero-stat">
+                        <span class="hero-stat-number"><?= $stats['categorias'] ?></span>
+                        <span class="hero-stat-label">Categorías</span>
+                    </div>
+                    <div class="hero-stat">
+                        <span class="hero-stat-number"><?= $stats['clientes'] ?></span>
+                        <span class="hero-stat-label">Clientes</span>
+                    </div>
                 </div>
-              </div>
-            <?php endforeach; ?>
-          </div>
+            </div>
+        </section>
 
-          <div class="empty-state" id="emptyState" style="display: none;">
-            <i class="fas fa-search"></i>
-            <h3>No se encontraron productos</h3>
-            <p>Intenta ajustar los filtros o términos de búsqueda</p>
-            <button onclick="resetFilters()">Limpiar filtros</button>
-          </div>
+        <!-- Barra de Filtros y Búsqueda -->
+        <div class="filters-bar">
+            <div class="filters-container">
+                <!-- Búsqueda -->
+                <div class="search-bar">
+                    <div class="search-input-wrapper">
+                        <input type="text" 
+                               class="search-input" 
+                               id="searchInput" 
+                               placeholder="Buscar productos por nombre...">
+                        <i class="fas fa-search search-icon"></i>
+                    </div>
+                    <div class="search-actions">
+                        <button class="btn-icon" id="btnClearFilters" title="Limpiar filtros">
+                            <i class="fas fa-times"></i>
+                            <span>Limpiar</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Filtros de Categorías -->
+                <div class="category-filters">
+                    <div class="filters-scroll">
+                        <button class="filter-chip active" data-category="">
+                            Todos
+                            <span class="chip-count">(<?= count($todos_productos) ?>)</span>
+                        </button>
+                        <?php foreach ($categorias_db as $cat): 
+                            $count = $productos_por_categoria[$cat['id']] ?? 0;
+                            if ($count > 0): ?>
+                            <button class="filter-chip" data-category="<?= $cat['id'] ?>">
+                                <?= htmlspecialchars($cat['nombre']) ?>
+                                <span class="chip-count">(<?= $count ?>)</span>
+                            </button>
+                        <?php endif; endforeach; ?>
+                    </div>
+                </div>
+            </div>
         </div>
-      </section>
 
+        <!-- Productos -->
+        <section class="products-section">
+            <div class="products-header">
+                <div class="products-count">
+                    Mostrando <strong id="visibleCount"><?= count($todos_productos) ?></strong> de <strong><?= count($todos_productos) ?></strong> productos
+                </div>
+            </div>
+
+            <div class="products-grid" id="productsGrid" data-base="<?= htmlspecialchars($BASE) ?>">
+                <?php foreach ($todos_productos as $p): 
+                    $img = img_url($p['imagen'], $BASE);
+                    $precio = (float)$p['precio'];
+                    $precioOriginal = (float)($p['precio_original'] ?? 0);
+                    $desc = $precioOriginal > $precio ? round(100 - ($precio * 100 / $precioOriginal)) : 0;
+                    $fav = !empty($favoritosSet[$p['id']]);
+                ?>
+                <div class="product-card" 
+                     data-id="<?= $p['id'] ?>" 
+                     data-category="<?= $p['categoria_id'] ?>" 
+                     data-nombre="<?= htmlspecialchars($p['nombre'], ENT_QUOTES) ?>">
+                    
+                    <div class="product-image-wrapper">
+                        <div class="product-image" style="background-image:url('<?= $img ?>')"></div>
+                        
+                        <?php if ($desc): ?>
+                        <div class="product-badge">-<?= $desc ?>%</div>
+                        <?php endif; ?>
+                        
+                        <div class="product-actions">
+                            <button class="action-btn js-wish <?= $fav ? 'active' : '' ?>" 
+                                    title="<?= $fav ? 'Quitar de favoritos' : 'Agregar a favoritos' ?>">
+                                <i class="fas fa-heart"></i>
+                            </button>
+                            <a class="action-btn" 
+                               href="<?= $BASE ?>views/productos-detal.php?id=<?= $p['id'] ?>" 
+                               title="Ver detalles del producto">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <button class="action-btn js-cart" 
+                                    title="Agregar al carrito">
+                                <i class="fas fa-shopping-cart"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="product-info">
+                        <div class="product-category-tag">
+                            <?= htmlspecialchars($p['categoria']) ?>
+                        </div>
+                        <div class="product-name">
+                            <?= htmlspecialchars($p['nombre']) ?>
+                        </div>
+                        <div class="product-price-wrapper">
+                            <span class="product-price">$<?= number_format($precio, 2) ?></span>
+                            <?php if ($desc): ?>
+                            <span class="original-price">$<?= number_format($precioOriginal, 2) ?></span>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+
+            <!-- Estado Vacío -->
+            <div class="empty-state" id="emptyState" style="display:none;">
+                <i class="fas fa-search"></i>
+                <h3>No se encontraron productos</h3>
+                <p>Intenta con otros filtros o términos de búsqueda</p>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <?php include __DIR__ . "/../includes/footer.php"; ?>
     </div>
 
-    <?php include __DIR__ . "/../includes/footer.php"; ?>
-  </div>
+    /* ---------- Carrito (sincronizado con header y flotante) ---------- */
+const addBtn = document.getElementById('addToCartBtn');
+const buyBtn = document.getElementById('buyNowBtn');
+const getQty = () => Math.max(1, parseInt(qtyInput?.value || '1', 10));
 
-  <script src="<?= $BASE ?>js/header.js"></script>
-  <script>
-  (()=>{
-    const BASE_URL = '<?= $BASE ?>';
-    const USER_ID = <?= $usuario_id ?>;
-    
-    const $grid = document.getElementById('productsGrid');
-    const $search = document.getElementById('searchInput');
-    const $clearSearch = document.getElementById('clearSearch');
-    const $sort = document.getElementById('sortSelect');
-    const $count = document.getElementById('resultsCount');
-    const $empty = document.getElementById('emptyState');
-    const $loading = document.getElementById('loadingOverlay');
-    
-    const LS_CART = 'ls_cart';
-    let allCards = [];
-    let currentCategory = '';
-    let searchTimeout;
-    
-    const getCart = () => JSON.parse(localStorage.getItem(LS_CART) || '[]');
-    const saveCart = c => localStorage.setItem(LS_CART, JSON.stringify(c));
-    
-    // Toast
-    const toast = (msg, type = 'info') => {
-      const existing = document.querySelector('.toast');
-      if (existing) existing.remove();
-      
-      const t = document.createElement('div');
-      t.className = `toast ${type}`;
-      const icons = { success: 'check-circle', error: 'exclamation-circle', warning: 'exclamation-triangle', info: 'info-circle' };
-      t.innerHTML = `<i class="fas fa-${icons[type]}"></i><span>${msg}</span>`;
-      document.body.appendChild(t);
-      
-      setTimeout(() => {
-        t.style.opacity = '0';
-        setTimeout(() => t.remove(), 300);
-      }, 3000);
-    };
-    
-    // Filtrar y ordenar
-    const filterAndSort = () => {
-      const query = $search.value.trim().toLowerCase();
-      
-      let visible = allCards.filter(card => {
-        // Filtro de categoría
-        const catMatch = currentCategory === '' || card.dataset.category === currentCategory;
-        if (!catMatch) return false;
-        
-        // Filtro de búsqueda
-        if (!query) return true;
-        
-        const nombre = card.dataset.nombre.toLowerCase();
-        return nombre.includes(query);
-      });
+const CART_KEY = 'lumispace_cart';
+function getCart(){ return JSON.parse(localStorage.getItem(CART_KEY) || '[]'); }
+function saveCart(c){ localStorage.setItem(CART_KEY, JSON.stringify(c)); }
+function syncCartUI(){ if (typeof syncCarts === 'function') syncCarts(); }
 
-      // Ordenar
-      const orden = $sort.value;
-      if (orden !== 'recientes') {
-        visible.sort((a, b) => {
-          switch(orden) {
-            case 'precio_asc':
-              return parseFloat(a.dataset.precio) - parseFloat(b.dataset.precio);
-            case 'precio_desc':
-              return parseFloat(b.dataset.precio) - parseFloat(a.dataset.precio);
-            case 'nombre':
-              return a.dataset.nombre.localeCompare(b.dataset.nombre);
-            case 'rating':
-              return parseFloat(b.dataset.rating) - parseFloat(a.dataset.rating);
-            default:
-              return 0;
-          }
-        });
-      }
+async function postJSON(url, data){
+  try {
+    const res = await fetch(url, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(data)
+    });
+    const json = await res.json().catch(()=>null);
+    return {ok: res.ok, json, status: res.status};
+  } catch(e){
+    return {ok:false, error:String(e)};
+  }
+}
 
-      // Aplicar visibilidad
-      allCards.forEach(card => card.classList.add('hidden'));
-      visible.forEach((card, i) => {
-        card.classList.remove('hidden');
-        card.style.order = i;
-      });
+async function addToCart(qty, thenGo=false){
+  const payload = { producto_id: pid, cantidad: qty };
+  const r = await postJSON(BASE+'api/cart/add.php', payload);
 
-      $count.textContent = visible.length;
-
-      // Mostrar/ocultar estado vacío
-      if (visible.length === 0) {
-        $grid.style.display = 'none';
-        $empty.style.display = 'block';
-      } else {
-        $grid.style.display = '';
-        $empty.style.display = 'none';
-      }
+  if (r.ok && r.json?.ok) {
+    // ✅ Agregar al localStorage para reflejarlo visualmente
+    const cart = getCart();
+    const prod = r.json.producto || {
+      id: pid,
+      nombre: document.querySelector('.product-info h1')?.textContent?.trim() || 'Producto',
+      precio: parseFloat(document.querySelector('.product-info .price')?.textContent?.replace(/[^0-9.]/g,'')||0),
+      imagen: document.getElementById('mainImage')?.src || '',
+      cantidad: qty
     };
 
-    // Reset filtros
-    window.resetFilters = () => {
-      currentCategory = '';
-      $search.value = '';
-      $clearSearch.classList.remove('visible');
-      $sort.value = 'recientes';
-      document.querySelectorAll('.filter-chip').forEach(chip => {
-        chip.classList.toggle('active', chip.dataset.category === '');
-      });
-      filterAndSort();
-      toast('Filtros limpiados', 'info');
-    };
+    const existing = cart.find(p => p.id === prod.id);
+    if (existing) existing.cantidad += qty;
+    else cart.push(prod);
+    saveCart(cart);
 
-    // Búsqueda con debounce
-    $search.addEventListener('input', (e) => {
-      $clearSearch.classList.toggle('visible', e.target.value.trim() !== '');
-      clearTimeout(searchTimeout);
-      searchTimeout = setTimeout(filterAndSort, 300);
-    });
+    syncCartUI(); // 🔁 Actualiza header y flotante
 
-    $clearSearch.addEventListener('click', () => {
-      $search.value = '';
-      $clearSearch.classList.remove('visible');
-      filterAndSort();
-    });
+    if (thenGo) location.href = BASE + 'includes/carrito.php';
+    return true;
+  }
 
-    // Ordenamiento
-    $sort.addEventListener('change', filterAndSort);
+  // ❌ fallback si API falla
+  toast(r.json?.msg || 'Error al agregar al carrito', 'error');
+  return false;
+}
 
-    // Filtros por categoría
-    document.querySelectorAll('.filter-chip').forEach(chip => {
-      chip.addEventListener('click', () => {
-        document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
-        chip.classList.add('active');
-        currentCategory = chip.dataset.category;
-        filterAndSort();
-      });
-    });
+addBtn?.addEventListener('click', async ()=>{
+  if (!pid) return;
+  const qty = getQty();
+  addBtn.disabled = true;
+  const original = addBtn.innerHTML;
+  addBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Agregando...';
+  const ok = await addToCart(qty, false);
+  if (ok) {
+    addBtn.innerHTML = '<i class="fas fa-check"></i> ¡Agregado!';
+    toast('🛒 Producto agregado al carrito', 'success');
+    setTimeout(()=>{ addBtn.innerHTML = original; addBtn.disabled = false; }, 1000);
+  } else {
+    addBtn.innerHTML = original;
+    addBtn.disabled = false;
+  }
+});
 
-    // Toggle vista
-    document.querySelectorAll('.view-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        
-        const view = btn.dataset.view;
-        $grid.classList.toggle('list-view', view === 'list');
-        localStorage.setItem('catalogView', view);
-      });
-    });
+buyBtn?.addEventListener('click', async ()=>{
+  if (!pid) return;
+  const qty = getQty();
 
-    // Restaurar vista guardada
-    const savedView = localStorage.getItem('catalogView');
-    if (savedView === 'list') {
-      document.querySelector('.view-btn[data-view="list"]').click();
-    }
+  // Si no hay usuario, redirigir al login
+  if (!USER) {
+    const nextAfter = `${BASE}includes/carrito.php?add=${encodeURIComponent(pid)}&qty=${encodeURIComponent(qty)}`;
+    location.href = `${BASE}views/login.php?next=${encodeURIComponent(nextAfter)}`;
+    return;
+  }
 
-    // Favoritos
-    document.querySelectorAll('.js-wish').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        if (!USER_ID) {
-          toast('Debes iniciar sesión para agregar favoritos', 'warning');
-          setTimeout(() => {
-            location.href = BASE_URL + 'views/login.php?next=' + encodeURIComponent(location.pathname);
-          }, 1500);
-          return;
-        }
+  buyBtn.disabled = true;
+  buyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+  await addToCart(qty, true); // redirige dentro
+});
 
-        const card = btn.closest('.product-card');
-        const prodId = parseInt(card.dataset.id);
-        btn.disabled = true;
-
-        try {
-          const res = await fetch(BASE_URL + 'api/wishlist/toggle.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ producto_id: prodId })
-          });
-
-          const data = await res.json();
-          if (!data.ok) throw new Error(data.msg || 'Error');
-
-          btn.classList.toggle('active', data.in_wishlist);
-          toast(data.in_wishlist ? '❤️ Agregado a favoritos' : '💔 Eliminado de favoritos', 'success');
-        } catch (err) {
-          console.error(err);
-          toast('Error al actualizar favoritos', 'error');
-        } finally {
-          btn.disabled = false;
-        }
-      });
-    });
-
-    // Carrito
-    document.querySelectorAll('.js-cart').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        const card = btn.closest('.product-card');
-        const prodId = parseInt(card.dataset.id);
-        const nombre = card.dataset.nombre;
-        const precio = parseFloat(card.dataset.precio);
-        const imagen = card.querySelector('.product-image').style.backgroundImage.slice(5, -2);
-        
-        const cart = getCart();
-        const existing = cart.find(item => item.id === prodId);
-        
-        if (existing) {
-          existing.cantidad++;
-          toast(`Cantidad actualizada (${existing.cantidad})`, 'success');
-        } else {
-          cart.push({
-            id: prodId,
-            nombre: nombre,
-            precio: precio,
-            imagen: imagen,
-            cantidad: 1
-          });
-          toast('🛒 Agregado al carrito', 'success');
-        }
-        
-        saveCart(cart);
-        
-        // Actualizar badge
-        const badge = document.querySelector('.cart-badge');
-        if (badge) {
-          const total = cart.reduce((sum, item) => sum + item.cantidad, 0);
-          badge.textContent = total;
-          badge.style.display = total > 0 ? 'flex' : 'none';
-        }
-
-        // Animación
-        btn.style.animation = 'pulse 0.5s';
-        setTimeout(() => btn.style.animation = '', 500);
-      });
-    });
-
-    // Click en producto
-    document.querySelectorAll('.product-card').forEach(card => {
-      card.addEventListener('click', (e) => {
-        if (!e.target.closest('.action-btn')) {
-          const prodId = card.dataset.id;
-          window.location.href = `${BASE_URL}views/productos-detal.php?id=${prodId}`;
-        }
-      });
-    });
-
-    // Inicializar
-    allCards = Array.from($grid.querySelectorAll('.product-card'));
-    
-    // Scroll al top
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-
-    console.log('✅ Catálogo dinámico cargado');
-    console.log(`📦 ${allCards.length} productos disponibles`);
-  })();
-  </script>
 </body>
 </html>

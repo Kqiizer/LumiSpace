@@ -7,41 +7,81 @@ $BASE = defined('BASE_URL') ? rtrim(BASE_URL, '/') . '/' : '/';
 // Obtener todas las categorías desde la base de datos
 $categorias_db = getCategorias();
 
-// Contar productos por categoría
+// Contar productos por categoría de manera más eficiente
 $productos_por_categoria = [];
 $conn = getDBConnection();
 
+// Verificar si existe la columna 'activo'
 $check_activo = $conn->query("SHOW COLUMNS FROM productos LIKE 'activo'");
 $has_activo = $check_activo && $check_activo->num_rows > 0;
 
-if ($categorias_db) {
-  foreach ($categorias_db as $cat) {
-    $cat_id = (int)$cat['id'];
+if ($categorias_db && is_array($categorias_db)) {
+  // Obtener todos los conteos en una sola consulta para mejor rendimiento
+  $cat_ids = array_map(function($cat) { return (int)$cat['id']; }, $categorias_db);
+  $placeholders = implode(',', array_fill(0, count($cat_ids), '?'));
+  
+  $where_clause = $has_activo ? "AND activo = 1" : "";
+  $sql = "SELECT categoria_id, COUNT(*) as total FROM productos 
+          WHERE categoria_id IN ($placeholders) $where_clause 
+          GROUP BY categoria_id";
+  
+  $stmt = $conn->prepare($sql);
+  if ($stmt) {
+    $types = str_repeat('i', count($cat_ids));
+    $stmt->bind_param($types, ...$cat_ids);
+    $stmt->execute();
+    $result = $stmt->get_result();
     
-    if ($has_activo) {
-      $stmt = $conn->prepare("SELECT COUNT(*) as total FROM productos WHERE categoria_id = ? AND activo = 1");
-    } else {
-      $stmt = $conn->prepare("SELECT COUNT(*) as total FROM productos WHERE categoria_id = ?");
+    while ($row = $result->fetch_assoc()) {
+      $productos_por_categoria[(int)$row['categoria_id']] = (int)$row['total'];
     }
-    
-    if ($stmt) {
-      $stmt->bind_param("i", $cat_id);
-      $stmt->execute();
-      $result = $stmt->get_result();
-      $row = $result->fetch_assoc();
-      $productos_por_categoria[$cat_id] = (int)($row['total'] ?? 0);
-      $stmt->close();
-    } else {
+    $stmt->close();
+  }
+  
+  // Inicializar en 0 las categorías sin productos
+  foreach ($cat_ids as $cat_id) {
+    if (!isset($productos_por_categoria[$cat_id])) {
       $productos_por_categoria[$cat_id] = 0;
     }
   }
 }
 
+/**
+ * Obtiene la URL de la imagen de categoría
+ */
 function getCategoryImage($imagen, $BASE) {
-  if (empty($imagen)) return $BASE . 'images/categorias/default.jpg';
-  if (preg_match('#^https?://#i', $imagen)) return $imagen;
-  if (strpos($imagen, '/') === 0) return $BASE . ltrim($imagen, '/');
+  if (empty($imagen)) {
+    return $BASE . 'images/categorias/default.jpg';
+  }
+  
+  // Si es URL completa
+  if (preg_match('#^https?://#i', $imagen)) {
+    return $imagen;
+  }
+  
+  // Si empieza con /
+  if (strpos($imagen, '/') === 0) {
+    return $BASE . ltrim($imagen, '/');
+  }
+  
+  // Ruta relativa
   return $BASE . 'images/categorias/' . $imagen;
+}
+
+/**
+ * Procesa las subcategorías
+ */
+function getSubcategorias($subcats_data) {
+  if (empty($subcats_data)) {
+    return [];
+  }
+  
+  if (is_string($subcats_data)) {
+    $decoded = json_decode($subcats_data, true);
+    return is_array($decoded) ? $decoded : [];
+  }
+  
+  return is_array($subcats_data) ? $subcats_data : [];
 }
 ?>
 
@@ -50,8 +90,35 @@ function getCategoryImage($imagen, $BASE) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Categorías - Tienda</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <style>
+    :root {
+      --primary: #a1683a;
+      --primary-dark: #7d4e2a;
+      --primary-light: #c08552;
+      --accent: #d4a574;
+      --bg-light: #fafaf8;
+      --bg-dark: #0f0e0d;
+      --text-light: #1a1816;
+      --text-dark: #f8f7f5;
+      --text-muted: #6b6966;
+      --border-color: #e6e4e0;
+      --card-bg: #ffffff;
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+      --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.08);
+      --shadow-lg: 0 10px 40px rgba(0, 0, 0, 0.12);
+      --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.16);
+      --radius-sm: 8px;
+      --radius-md: 16px;
+      --radius-lg: 24px;
+      --transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-spring: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
     * {
       margin: 0;
       padding: 0;
@@ -59,13 +126,17 @@ function getCategoryImage($imagen, $BASE) {
     }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #f5f5f5;
-      color: #333;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', sans-serif;
+      background: var(--bg-light);
+      color: var(--text-light);
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
 
     .products {
       padding: 60px 0;
+      min-height: 60vh;
     }
 
     .container {
@@ -74,58 +145,177 @@ function getCategoryImage($imagen, $BASE) {
       padding: 0 20px;
     }
 
+    .section-header {
+      text-align: center;
+      margin-bottom: 60px;
+    }
+
+    .section-header h1 {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: clamp(36px, 5vw, 48px);
+      font-weight: 800;
+      color: var(--text-light);
+      margin-bottom: 16px;
+      letter-spacing: -0.02em;
+      position: relative;
+      display: inline-block;
+    }
+
+    .section-header h1::after {
+      content: '';
+      position: absolute;
+      bottom: -8px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60px;
+      height: 3px;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      border-radius: 2px;
+    }
+
+    .section-header p {
+      font-size: 18px;
+      color: var(--text-muted);
+      max-width: 600px;
+      margin: 0 auto;
+      margin-top: 24px;
+    }
+
     .products-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
       gap: 30px;
     }
 
     /* Tarjeta de categoría */
     .product-category {
-      background: white;
-      border-radius: 8px;
+      background: var(--card-bg);
+      border-radius: var(--radius-md);
       overflow: hidden;
       cursor: pointer;
-      transition: all 0.3s ease;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      transition: var(--transition-smooth);
+      box-shadow: var(--shadow-sm);
       display: flex;
       flex-direction: column;
+      position: relative;
+      border: 1px solid var(--border-color);
     }
 
     .product-category:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+      transform: translateY(-8px);
+      box-shadow: var(--shadow-lg);
+      border-color: var(--primary-light);
+    }
+
+    .product-category.no-products {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .product-category.no-products:hover {
+      transform: none;
+      box-shadow: var(--shadow-sm);
+      border-color: var(--border-color);
+    }
+
+    /* Badge de productos */
+    .products-badge {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      padding: 10px 18px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-light);
+      box-shadow: var(--shadow-md);
+      z-index: 10;
+      border: 1px solid rgba(161, 104, 58, 0.2);
+      transition: var(--transition-smooth);
+    }
+
+    .product-category:hover .products-badge {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .products-badge.empty {
+      background: rgba(239, 68, 68, 0.1);
+      color: #dc2626;
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    .product-category:hover .products-badge.empty {
+      background: rgba(239, 68, 68, 0.15);
+      color: #dc2626;
+      border-color: rgba(239, 68, 68, 0.4);
+    }
+
+    /* Imagen de la categoría */
+    .category-image-wrapper {
+      width: 100%;
+      height: 260px;
+      overflow: hidden;
+      position: relative;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    }
+
+    .category-image {
+      width: 100%;
+      height: 100%;
+      background-size: cover;
+      background-position: center;
+      transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .product-category:hover .category-image {
+      transform: scale(1.15) rotate(2deg);
+    }
+
+    /* Overlay gradient */
+    .category-image-wrapper::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 60%;
+      background: linear-gradient(to top, rgba(0,0,0,0.5), transparent);
+      pointer-events: none;
+      transition: var(--transition-smooth);
+    }
+
+    .product-category:hover .category-image-wrapper::after {
+      background: linear-gradient(to top, rgba(161, 104, 58, 0.6), transparent);
     }
 
     /* Header de la categoría */
     .category-header {
-      padding: 30px;
+      padding: 32px;
       flex: 1;
       display: flex;
       flex-direction: column;
     }
 
-    .item-count {
-      display: inline-block;
-      font-size: 14px;
-      color: #888;
-      margin-bottom: 12px;
-      font-weight: 500;
-    }
-
     .category-title {
-      font-size: 32px;
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 30px;
       font-weight: 700;
-      color: #333;
+      color: var(--text-light);
       margin-bottom: 12px;
-      line-height: 1.2;
+      line-height: 1.3;
+      letter-spacing: -0.01em;
     }
 
     .category-description {
       font-size: 15px;
-      color: #666;
-      margin-bottom: 20px;
-      line-height: 1.5;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+      line-height: 1.6;
+      flex: 1;
     }
 
     /* Lista de subcategorías */
@@ -135,54 +325,122 @@ function getCategoryImage($imagen, $BASE) {
       margin: 0;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 10px;
     }
 
     .category-list li {
       font-size: 14px;
-      color: #555;
+      color: var(--text-muted);
       line-height: 1.5;
+      padding-left: 24px;
+      position: relative;
+      transition: var(--transition-smooth);
     }
 
-    /* Imagen de la categoría */
-    .category-image {
-      width: 100%;
-      height: 200px;
-      background-size: cover;
-      background-position: center;
-      background-color: #e0e0e0;
-      transition: transform 0.3s ease;
+    .product-category:hover .category-list li {
+      color: var(--text-light);
     }
 
-    .product-category:hover .category-image {
-      transform: scale(1.05);
+    .category-list li::before {
+      content: '→';
+      position: absolute;
+      left: 0;
+      color: var(--primary);
+      font-weight: bold;
+      transition: var(--transition-smooth);
+    }
+
+    .product-category:hover .category-list li::before {
+      left: 4px;
+      color: var(--accent);
+    }
+
+    /* Footer de la categoría */
+    .category-footer {
+      padding: 24px 32px;
+      background: var(--bg-light);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid var(--border-color);
+      transition: var(--transition-smooth);
+    }
+
+    .product-category:hover .category-footer {
+      background: linear-gradient(135deg, rgba(161, 104, 58, 0.05), rgba(212, 165, 116, 0.05));
+    }
+
+    .view-products-btn {
+      color: var(--primary);
+      font-weight: 600;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: var(--transition-smooth);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .product-category:hover .view-products-btn {
+      color: var(--primary-dark);
+      gap: 14px;
+    }
+
+    .view-products-btn i {
+      transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .product-category:hover .view-products-btn i {
+      transform: translateX(6px) scale(1.1);
     }
 
     /* Estado vacío */
     .empty-state {
       grid-column: 1 / -1;
       text-align: center;
-      padding: 80px 20px;
-      color: #999;
+      padding: 120px 20px;
+      color: var(--text-muted);
     }
 
     .empty-state i {
-      font-size: 60px;
-      margin-bottom: 20px;
-      opacity: 0.3;
+      font-size: 80px;
+      margin-bottom: 30px;
+      opacity: 0.15;
+      color: var(--primary-light);
     }
 
     .empty-state h3 {
-      font-size: 24px;
-      margin-bottom: 10px;
-      color: #666;
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 32px;
+      margin-bottom: 16px;
+      color: var(--text-light);
+      font-weight: 700;
+    }
+
+    .empty-state p {
+      font-size: 16px;
+      color: var(--text-muted);
     }
 
     /* Skeleton loader */
     .skeleton {
-      background: linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);
+      background: linear-gradient(
+        90deg, 
+        var(--border-color) 25%, 
+        var(--bg-light) 50%, 
+        var(--border-color) 75%
+      );
       background-size: 200% 100%;
       animation: loading 1.5s infinite;
+      position: relative;
+    }
+
+    .skeleton::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(161, 104, 58, 0.02);
     }
 
     @keyframes loading {
@@ -190,54 +448,148 @@ function getCategoryImage($imagen, $BASE) {
       100% { background-position: -200% 0; }
     }
 
-    /* Toast */
+    /* Toast mejorado */
     .toast {
       position: fixed;
-      bottom: 30px;
-      right: 30px;
+      bottom: 32px;
+      right: 32px;
       background: white;
-      color: #333;
-      padding: 16px 24px;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      color: var(--text-light);
+      padding: 20px 26px;
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow-xl);
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 16px;
       z-index: 10000;
-      animation: slideIn 0.3s ease;
+      animation: slideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      min-width: 320px;
+      border: 1px solid var(--border-color);
+      border-left: 4px solid var(--primary);
+    }
+
+    .toast.warning {
+      border-left-color: #f59e0b;
+    }
+
+    .toast.success {
+      border-left-color: #10b981;
+    }
+
+    .toast.error {
+      border-left-color: #ef4444;
     }
 
     .toast i {
-      font-size: 18px;
+      font-size: 20px;
+      flex-shrink: 0;
     }
 
     .toast.warning i {
       color: #f59e0b;
     }
 
+    .toast.success i {
+      color: #10b981;
+    }
+
+    .toast.error i {
+      color: #ef4444;
+    }
+
+    .toast-message {
+      flex: 1;
+      font-size: 15px;
+      font-weight: 500;
+      line-height: 1.5;
+    }
+
+    .toast-close {
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 18px;
+      padding: 4px;
+      transition: var(--transition-smooth);
+      border-radius: 4px;
+    }
+
+    .toast-close:hover {
+      color: var(--text-light);
+      background: var(--bg-light);
+    }
+
     @keyframes slideIn {
       from {
         opacity: 0;
-        transform: translateY(20px);
+        transform: translateY(30px) scale(0.95);
       }
       to {
         opacity: 1;
-        transform: translateY(0);
+        transform: translateY(0) scale(1);
       }
+    }
+
+    /* Loading spinner */
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(250, 250, 248, 0.98);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .loading-overlay.active {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .spinner {
+      width: 60px;
+      height: 60px;
+      border: 4px solid var(--border-color);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
 
     /* Responsive */
     @media (max-width: 1200px) {
       .products-grid {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
         gap: 24px;
       }
     }
 
     @media (max-width: 768px) {
+      .products {
+        padding: 40px 0;
+      }
+
+      .section-header h1 {
+        font-size: 32px;
+      }
+
+      .section-header p {
+        font-size: 16px;
+      }
+
       .products-grid {
         grid-template-columns: 1fr;
         gap: 20px;
+      }
+
+      .category-image-wrapper {
+        height: 200px;
       }
 
       .category-header {
@@ -245,7 +597,7 @@ function getCategoryImage($imagen, $BASE) {
       }
 
       .category-title {
-        font-size: 28px;
+        font-size: 24px;
       }
 
       .category-description {
@@ -255,60 +607,103 @@ function getCategoryImage($imagen, $BASE) {
       .toast {
         left: 20px;
         right: 20px;
+        min-width: auto;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .section-header h1 {
+        font-size: 28px;
+      }
+
+      .products-badge {
+        top: 15px;
+        right: 15px;
+        padding: 6px 12px;
+        font-size: 12px;
       }
     }
   </style>
 </head>
 <body>
 
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+</div>
+
 <!-- Categorías de Productos -->
 <section class="products">
   <div class="container">
+    
+    <div class="section-header">
+      <h1>Nuestras Categorías</h1>
+      <p>Explora nuestra amplia selección de productos</p>
+    </div>
+
     <div class="products-grid" data-base="<?= htmlspecialchars($BASE) ?>">
 
-      <?php if (!empty($categorias_db)): ?>
+      <?php if (!empty($categorias_db) && is_array($categorias_db)): ?>
         <?php foreach ($categorias_db as $cat): 
           $cat_id = (int)$cat['id'];
-          $nombre = htmlspecialchars($cat['nombre']);
+          $nombre = htmlspecialchars($cat['nombre'] ?? 'Sin nombre');
           $descripcion = htmlspecialchars($cat['descripcion'] ?? 'Encuentra la mejor selección de productos');
           $imagen = getCategoryImage($cat['imagen'] ?? '', $BASE);
           $total_productos = $productos_por_categoria[$cat_id] ?? 0;
+          $subcats = getSubcategorias($cat['subcategorias'] ?? null);
         ?>
-          <div class="product-category" 
+          <div class="product-category <?= $total_productos === 0 ? 'no-products' : '' ?>" 
                data-category-id="<?= $cat_id ?>"
                data-category-name="<?= $nombre ?>"
-               data-products-count="<?= $total_productos ?>">
+               data-products-count="<?= $total_productos ?>"
+               role="button"
+               tabindex="0"
+               aria-label="Ver productos de <?= $nombre ?>">
             
+            <div class="category-image-wrapper">
+              <div class="products-badge <?= $total_productos === 0 ? 'empty' : '' ?>">
+                <?= $total_productos === 0 ? 'Sin productos' : number_format($total_productos) . ' producto' . ($total_productos !== 1 ? 's' : '') ?>
+              </div>
+              <div class="category-image skeleton" data-bg="<?= htmlspecialchars($imagen) ?>"></div>
+            </div>
+
             <div class="category-header">
-              <div class="item-count"><?= number_format($total_productos) ?>+ Artículos</div>
               <h2 class="category-title"><?= $nombre ?></h2>
               <p class="category-description"><?= $descripcion ?></p>
               
-              <?php 
-              // Obtener subcategorías si existen
-              $subcats = [];
-              if (isset($cat['subcategorias']) && !empty($cat['subcategorias'])) {
-                $subcats = is_string($cat['subcategorias']) ? json_decode($cat['subcategorias'], true) : $cat['subcategorias'];
-              }
-              
-              if (!empty($subcats) && is_array($subcats)):
-              ?>
+              <?php if (!empty($subcats) && is_array($subcats)): ?>
                 <ul class="category-list">
-                  <?php foreach (array_slice($subcats, 0, 4) as $sub): ?>
-                    <li><?= htmlspecialchars(is_array($sub) ? ($sub['nombre'] ?? $sub) : $sub) ?></li>
+                  <?php 
+                  $display_subcats = array_slice($subcats, 0, 4);
+                  foreach ($display_subcats as $sub): 
+                    $sub_name = is_array($sub) ? ($sub['nombre'] ?? $sub) : $sub;
+                  ?>
+                    <li><?= htmlspecialchars($sub_name) ?></li>
                   <?php endforeach; ?>
+                  
+                  <?php if (count($subcats) > 4): ?>
+                    <li style="color: var(--primary); font-weight: 600; letter-spacing: 0.3px;">
+                      +<?= count($subcats) - 4 ?> más...
+                    </li>
+                  <?php endif; ?>
                 </ul>
               <?php endif; ?>
             </div>
 
-            <div class="category-image skeleton" data-bg="<?= htmlspecialchars($imagen) ?>"></div>
+            <?php if ($total_productos > 0): ?>
+              <div class="category-footer">
+                <span class="view-products-btn">
+                  Ver productos <i class="fas fa-arrow-right"></i>
+                </span>
+              </div>
+            <?php endif; ?>
           </div>
         <?php endforeach; ?>
       <?php else: ?>
         <div class="empty-state">
           <i class="fas fa-box-open"></i>
           <h3>No hay categorías disponibles</h3>
-          <p>Las categorías aparecerán aquí cuando se agreguen</p>
+          <p>Las categorías aparecerán aquí cuando se agreguen al sistema</p>
         </div>
       <?php endif; ?>
 
@@ -317,98 +712,209 @@ function getCategoryImage($imagen, $BASE) {
 </section>
 
 <script>
-(()=>{
-  const BASE_URL = document.querySelector('.products-grid')?.dataset.base || '/';
+(function() {
+  'use strict';
   
-  // Toast notification
-  const showToast = (message, type = 'info') => {
+  const BASE_URL = document.querySelector('.products-grid')?.dataset.base || '/';
+  const loadingOverlay = document.getElementById('loadingOverlay');
+  
+  /**
+   * Muestra un toast de notificación
+   */
+  function showToast(message, type = 'info', duration = 3000) {
+    // Remover toast existente
     const existing = document.querySelector('.toast');
     if (existing) existing.remove();
     
     const icons = {
       info: 'fa-info-circle',
       warning: 'fa-exclamation-triangle',
-      success: 'fa-check-circle'
+      success: 'fa-check-circle',
+      error: 'fa-times-circle'
     };
     
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
     toast.innerHTML = `
       <i class="fas ${icons[type] || icons.info}"></i>
-      <span>${message}</span>
+      <div class="toast-message">${message}</div>
+      <i class="fas fa-times toast-close"></i>
     `;
+    
     document.body.appendChild(toast);
     
-    setTimeout(() => {
-      toast.style.opacity = '0';
-      toast.style.transform = 'translateY(20px)';
-      setTimeout(() => toast.remove(), 300);
-    }, 3000);
-  };
+    // Click en cerrar
+    toast.querySelector('.toast-close').addEventListener('click', () => {
+      hideToast(toast);
+    });
+    
+    // Auto ocultar
+    const timeoutId = setTimeout(() => {
+      hideToast(toast);
+    }, duration);
+    
+    // Guardar timeout para poder cancelarlo
+    toast.dataset.timeoutId = timeoutId;
+  }
   
-  // Lazy loading de imágenes
-  const imageObserver = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        const img = entry.target;
-        const bgUrl = img.dataset.bg;
-        
-        if (bgUrl) {
-          const testImg = new Image();
-          testImg.onload = () => {
-            img.style.backgroundImage = `url('${bgUrl}')`;
+  /**
+   * Oculta el toast con animación
+   */
+  function hideToast(toast) {
+    if (toast.dataset.timeoutId) {
+      clearTimeout(parseInt(toast.dataset.timeoutId));
+    }
+    
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(20px) scale(0.95)';
+    
+    setTimeout(() => {
+      toast.remove();
+    }, 300);
+  }
+  
+  /**
+   * Muestra/oculta el overlay de carga
+   */
+  function toggleLoading(show = true) {
+    if (loadingOverlay) {
+      if (show) {
+        loadingOverlay.classList.add('active');
+      } else {
+        loadingOverlay.classList.remove('active');
+      }
+    }
+  }
+  
+  /**
+   * Lazy loading de imágenes con IntersectionObserver
+   */
+  function initImageLazyLoading() {
+    const imageObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const img = entry.target;
+          const bgUrl = img.dataset.bg;
+          
+          if (bgUrl) {
+            const testImg = new Image();
+            
+            testImg.onload = () => {
+              img.style.backgroundImage = `url('${bgUrl}')`;
+              img.classList.remove('skeleton');
+            };
+            
+            testImg.onerror = () => {
+              // Imagen por defecto si falla la carga
+              img.style.backgroundImage = `url('${BASE_URL}images/categorias/default.jpg')`;
+              img.classList.remove('skeleton');
+              console.warn('Error cargando imagen:', bgUrl);
+            };
+            
+            testImg.src = bgUrl;
+          } else {
             img.classList.remove('skeleton');
-          };
-          testImg.onerror = () => {
-            img.style.backgroundImage = `url('${BASE_URL}images/default.png')`;
-            img.classList.remove('skeleton');
-          };
-          testImg.src = bgUrl;
+          }
+          
+          imageObserver.unobserve(img);
         }
+      });
+    }, {
+      rootMargin: '50px' // Cargar imágenes 50px antes de entrar en viewport
+    });
+
+    document.querySelectorAll('.category-image').forEach(img => {
+      imageObserver.observe(img);
+    });
+  }
+  
+  /**
+   * Navegar a la página de categoría
+   */
+  function navigateToCategory(categoryId, categoryName, productsCount) {
+    if (productsCount === 0) {
+      showToast('Esta categoría aún no tiene productos disponibles', 'warning');
+      return;
+    }
+    
+    toggleLoading(true);
+    
+    // Agregar pequeño delay para mejor UX
+    setTimeout(() => {
+      window.location.href = `${BASE_URL}views/categoria.php?id=${categoryId}`;
+    }, 200);
+  }
+  
+  /**
+   * Inicializar clicks en categorías
+   */
+  function initCategoryClicks() {
+    document.querySelectorAll('.product-category').forEach(card => {
+      const catId = card.dataset.categoryId;
+      const catName = card.dataset.categoryName;
+      const productsCount = parseInt(card.dataset.productsCount || 0);
+
+      // Click con mouse
+      card.addEventListener('click', (e) => {
+        // Prevenir navegación si se clickea en elementos específicos
+        if (e.target.closest('.toast-close')) return;
         
-        imageObserver.unobserve(img);
-      }
+        navigateToCategory(catId, catName, productsCount);
+      });
+      
+      // Soporte para teclado (accesibilidad)
+      card.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          navigateToCategory(catId, catName, productsCount);
+        }
+      });
     });
-  });
-
-  document.querySelectorAll('.category-image').forEach(img => {
-    imageObserver.observe(img);
-  });
-
-  // Click en categoría
-  document.querySelectorAll('.product-category').forEach(card => {
-    const catId = card.dataset.categoryId;
-    const catName = card.dataset.categoryName;
-    const productsCount = parseInt(card.dataset.productsCount || 0);
-
-    card.addEventListener('click', () => {
-      if (productsCount === 0) {
-        showToast('Esta categoría no tiene productos disponibles', 'warning');
-        return;
-      }
-
-      // Redirigir a la página de categoría
-      window.location.href = `${BASE_URL}views/categoria.php?id=${catId}`;
+  }
+  
+  /**
+   * Eventos personalizados para admin
+   */
+  function initCustomEvents() {
+    window.addEventListener('categoryAdded', () => {
+      showToast('Nueva categoría agregada correctamente', 'success');
+      setTimeout(() => location.reload(), 1500);
     });
-  });
 
-  // Eventos para admin
-  window.addEventListener('categoryAdded', () => {
-    showToast('Nueva categoría agregada', 'success');
-    setTimeout(() => location.reload(), 1500);
-  });
+    window.addEventListener('categoryUpdated', () => {
+      showToast('Categoría actualizada correctamente', 'success');
+      setTimeout(() => location.reload(), 1500);
+    });
 
-  window.addEventListener('categoryUpdated', () => {
-    showToast('Categoría actualizada', 'success');
-    setTimeout(() => location.reload(), 1500);
-  });
-
-  window.addEventListener('categoryDeleted', () => {
-    showToast('Categoría eliminada', 'success');
-    setTimeout(() => location.reload(), 1500);
-  });
-
-  console.log('✅ Categorías cargadas:', document.querySelectorAll('.product-category').length);
+    window.addEventListener('categoryDeleted', () => {
+      showToast('Categoría eliminada correctamente', 'success');
+      setTimeout(() => location.reload(), 1500);
+    });
+  }
+  
+  /**
+   * Inicialización
+   */
+  function init() {
+    initImageLazyLoading();
+    initCategoryClicks();
+    initCustomEvents();
+    
+    const categoryCount = document.querySelectorAll('.product-category').length;
+    console.log('✅ Sistema de categorías inicializado');
+    console.log(`📦 Categorías cargadas: ${categoryCount}`);
+    
+    // Ocultar loading si estaba visible
+    toggleLoading(false);
+  }
+  
+  // Ejecutar cuando el DOM esté listo
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+  
 })();
 </script>
 </body>

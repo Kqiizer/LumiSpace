@@ -22,6 +22,79 @@ function _sanitizeRol(?string $rol): string {
 }
 
 /* ============================================================
+   🛒 CARRITO (versión con detalles de productos)
+   ============================================================ */
+
+// Agregar un producto al carrito
+function carritoAgregar(int $producto_id, int $cantidad = 1): void {
+    if (session_status() === PHP_SESSION_NONE) session_start();
+    $_SESSION['carrito'] = $_SESSION['carrito'] ?? [];
+
+    // Si ya existe, sumar cantidad
+    if (isset($_SESSION['carrito'][$producto_id])) {
+        $_SESSION['carrito'][$producto_id]['cantidad'] += $cantidad;
+    } else {
+        $producto = getProductoById($producto_id);
+        if ($producto) {
+            $_SESSION['carrito'][$producto_id] = [
+                'producto_id' => $producto['id'],
+                'nombre'      => $producto['nombre'],
+                'precio'      => (float)$producto['precio'],
+                'imagen'      => $producto['imagen'] ?? 'images/default.png',
+                'cantidad'    => $cantidad,
+                'categoria'   => $producto['categoria'] ?? '',
+                'subtotal'    => (float)$producto['precio'] * $cantidad
+            ];
+        }
+    }
+}
+
+// Eliminar producto del carrito
+function carritoEliminar(int $producto_id): void {
+    if (session_status() === PHP_SESSION_NONE) session_start();
+    unset($_SESSION['carrito'][$producto_id]);
+}
+
+// Vaciar todo el carrito
+function carritoVaciar(): void {
+    if (session_status() === PHP_SESSION_NONE) session_start();
+    unset($_SESSION['carrito']);
+}
+
+// Obtener todos los productos del carrito (ya con detalles)
+function carritoObtener(): array {
+    if (session_status() === PHP_SESSION_NONE) session_start();
+    $carrito = $_SESSION['carrito'] ?? [];
+    $resultado = [];
+
+    foreach ($carrito as $id => $item) {
+        if (!isset($item['precio'], $item['cantidad'])) continue;
+
+        $subtotal = $item['precio'] * $item['cantidad'];
+        $resultado[] = [
+            'producto_id' => $id,
+            'nombre'      => $item['nombre'],
+            'precio'      => $item['precio'],
+            'imagen'      => publicImageUrl($item['imagen']),
+            'cantidad'    => $item['cantidad'],
+            'subtotal'    => $subtotal
+        ];
+    }
+
+    return $resultado;
+}
+
+// Calcular total general del carrito
+function carritoTotal(): float {
+    $items = carritoObtener();
+    $total = 0;
+    foreach ($items as $i) {
+        $total += $i['subtotal'];
+    }
+    return $total;
+}
+
+/* ============================================================
    Usuarios (auth + registro)
    ============================================================ */
 function obtenerUsuarioPorEmail(string $email): ?array {
@@ -479,13 +552,48 @@ function getTodosLosUsuarios(): array {
 
 function getUsuarioPorId(int $id): ?array {
     $conn = getDBConnection();
-    $stmt = $conn->prepare("SELECT id, nombre, email, rol, estado, proveedor, email_verificado 
-                            FROM usuarios WHERE id = ?");
+
+    $sql = "SELECT 
+                id,
+                nombre,
+                email,
+                password,
+                telefono,
+                direccion,
+                rol,
+                puesto,
+                num_empleado,
+                fecha_ingreso,
+                salario,
+                sucursal,
+                estado,
+                proveedor,
+                provider_id,
+                email_verificado,
+                token_verificacion,
+                reset_token,
+                reset_expira,
+                ultimo_acceso,
+                fecha_registro
+            FROM usuarios
+            WHERE id = ?
+            LIMIT 1";
+
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        error_log("Error en prepare getUsuarioPorId: " . $conn->error);
+        return null;
+    }
+
     $stmt->bind_param("i", $id);
     $stmt->execute();
     $res = $stmt->get_result();
-    return $res->fetch_assoc() ?: null;
+    $usuario = $res->fetch_assoc() ?: null;
+
+    $stmt->close();
+    return $usuario;
 }
+
 
 function actualizarUsuarioAdmin(int $id, string $nombre, string $email, string $rol, string $estado): bool {
     $conn = getDBConnection();
@@ -531,9 +639,45 @@ function getTotalUsuarios(): int {
 
 function getTotalGestores(): int {
     $conn = getDBConnection();
-    $sql = "SELECT COUNT(*) as total FROM usuarios WHERE rol='gestor'";
+    $sql = "SELECT COUNT(*) AS total FROM usuarios WHERE rol = 'gestor'";
     $res = $conn->query($sql);
-    return (int)($res->fetch_assoc()['total'] ?? 0);
+
+    if (!$res) {
+        error_log("❌ Error SQL en getTotalGestores(): " . $conn->error);
+        return 0;
+    }
+
+    $row = $res->fetch_assoc();
+    return (int)($row['total'] ?? 0);
+}
+function getTotalPorRol(string $rol): int {
+    $conn = getDBConnection();
+
+    // 🔍 Verificar conexión
+    if (!$conn) {
+        error_log("❌ Error: conexión a BD no disponible en getTotalPorRol()");
+        return 0;
+    }
+
+    // 🔹 Usar el campo correcto: "roles"
+    $stmt = $conn->prepare("SELECT COUNT(*) AS total FROM usuarios WHERE roles = ?");
+    if (!$stmt) {
+        error_log("❌ Error en prepare getTotalPorRol(): " . $conn->error);
+        return 0;
+    }
+
+    // Enlazar parámetro
+    $stmt->bind_param("s", $rol);
+    $stmt->execute();
+    $res = $stmt->get_result();
+
+    if (!$res) {
+        error_log("⚠️ Error al ejecutar getTotalPorRol(): " . $stmt->error);
+        return 0;
+    }
+
+    $row = $res->fetch_assoc();
+    return (int)($row['total'] ?? 0);
 }
 
 function getTotalProductos(): int {
