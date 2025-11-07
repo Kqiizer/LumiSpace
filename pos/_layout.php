@@ -42,31 +42,58 @@ function start_pos_page(string $title = '', ?string $cajeroN = null, ?string $ca
   </head>
   <body class="pos-layout">
     <aside class="sidebar">
-      <div class="brand">
-        <div class="logo">LS</div>
-        <div class="brand-text">
-          <strong>LumiSpace</strong>
-          <small>Iluminación premium</small>
-        </div>
-      </div>
+      <!-- Brand -->
+      <a href="pos.php" class="brand">
+        <img
+          src="../images/LOGO LUMISPACE.png"
+          alt="LumiSpace"
+          class="brand-logo"
+          width="48"
+          height="48"
+          loading="eager"
+          decoding="async"
+          onerror="this.style.display='none'"
+        />
+
+      </a>
 
       <nav class="menu">
-        <a class="<?= is_active('pos.php')          ?>" href="pos.php">Punto de Venta</a>
-        <a class="<?= is_active('ventas.php')       ?>" href="ventas.php">Facturación</a>
-        <a class="<?= is_active('estadisticas.php') ?>" href="estadisticas.php">Estadísticas</a>
-        <a class="<?= is_active('corte.php')        ?>" href="corte.php">Corte de Caja</a>
+        <a class="<?= is_active('pos.php')          ?>" href="pos.php">
+          <span class="menu-icon">🛒</span>
+          <span>Punto de Venta</span>
+        </a>
+        <a class="<?= is_active('ventas.php')       ?>" href="ventas.php">
+          <span class="menu-icon">📋</span>
+          <span>Facturación</span>
+        </a>
+        <a class="<?= is_active('estadisticas.php') ?>" href="estadisticas.php">
+          <span class="menu-icon">📊</span>
+          <span>Estadísticas</span>
+        </a>
+        <a class="<?= is_active('corte.php')        ?>" href="corte.php">
+          <span class="menu-icon">💰</span>
+          <span>Corte de Caja</span>
+        </a>
       </nav>
 
       <div class="sidebar-footer">
         <div class="user-box">
-          <div class="lbl">Cajero</div>
-          <div class="val"><?= htmlspecialchars($cajeroN, ENT_QUOTES, 'UTF-8') ?></div>
-          <div class="lbl">Caja</div>
-          <div class="val"><?= htmlspecialchars($cajaL, ENT_QUOTES, 'UTF-8') ?></div>
-        </div>
+  <div class="user-row">
+    <span class="lbl">Cajero</span>
+    <span class="val"><?= htmlspecialchars($cajeroN, ENT_QUOTES, 'UTF-8') ?></span>
+  </div>
+  <div class="user-row">
+    <span class="lbl">Caja</span>
+    <span class="val"><?= htmlspecialchars($cajaL, ENT_QUOTES, 'UTF-8') ?></span>
+  </div>
+  <div class="user-row" style="border-top:1px solid rgba(255,255,255,0.15);padding-top:12px;margin-top:12px">
+    <span class="lbl">Monto actual</span>
+    <span class="val" id="montoActualSidebar" style="color:#10b981;font-size:16px">$0.00</span>
+  </div>
+</div>
 
         <!-- Botón Cerrar turno -->
-        <button id="btnCerrarTurno" class="btn-exit danger" style="margin-bottom:8px">
+        <button id="btnCerrarTurno" class="btn-exit danger">
           Cerrar turno
         </button>
 
@@ -76,7 +103,9 @@ function start_pos_page(string $title = '', ?string $cajeroN = null, ?string $ca
 
     <main class="content">
       <?php if ($title): ?>
-        <header class="page-header"><h1><?= htmlspecialchars($title, ENT_QUOTES, 'UTF-8') ?></h1></header>
+        <header class="page-header">
+          <h1><?= htmlspecialchars($title, ENT_QUOTES, 'UTF-8') ?></h1>
+        </header>
       <?php endif; ?>
   <?php
 }
@@ -87,64 +116,61 @@ function start_pos_page(string $title = '', ?string $cajeroN = null, ?string $ca
  */
 function end_pos_page(): void {
   ?>
+    </main>
+    
     <!-- DIALOGOS GLOBALES -->
 
- <!-- Popup apertura de turno -->
-<!-- Popup apertura de turno -->
-<dialog id="dlgTurno" class="dlg">
-  <form method="dialog" id="frmTurno" class="dlg-body" onsubmit="return false;">
-    <h3>Apertura de turno</h3>
+    <!-- Popup apertura de turno -->
+    <dialog id="dlgTurno" class="dlg">
+      <form method="dialog" id="frmTurno" class="dlg-body" onsubmit="return false;">
+        <h3>Apertura de turno</h3>
 
-    <label>Caja</label>
-    <select id="selCaja" class="input">
-      <option value="Caja 1">Caja 1</option>
-      <option value="Caja 2">Caja 2</option>
-      <option value="Caja 3">Caja 3</option>
-    </select>
+        <label>Caja</label>
+        <select id="selCaja" class="input">
+          <option value="Caja 1">Caja 1</option>
+          <option value="Caja 2">Caja 2</option>
+          <option value="Caja 3">Caja 3</option>
+        </select>
 
-    <label>Cajero</label>
-    <select id="selCajero" class="input">
-      <option value="">(cargando...)</option>
-    </select>
+        <label>Cajero</label>
+        <select id="selCajero" class="input">
+          <option value="">(cargando...)</option>
+        </select>
 
-    <label>Saldo inicial</label>
-    <input id="inpSaldoInicial" type="number" step="0.01" min="0" class="input" placeholder="0.00" />
+        <label>Saldo inicial</label>
+        <input id="inpSaldoInicial" type="number" step="0.01" min="0" class="input" placeholder="0.00" />
 
-    <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:24px">
-      <button type="button" id="btnAbrirTurno" class="btn btn-primary">Confirmar apertura</button>
-    </div>
-  </form>
-</dialog>
+        <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:24px">
+          <button type="button" id="btnAbrirTurno" class="btn btn-primary">Confirmar apertura</button>
+        </div>
+      </form>
+    </dialog>
 
     <!-- Cerrar turno -->
-<!-- Cerrar turno -->
-<dialog id="dlgCerrarTurno" class="dlg">
-  <form method="dialog" id="frmCerrarTurno" class="dlg-body" onsubmit="return false;">
-    <h3>Cerrar turno</h3>
+    <dialog id="dlgCerrarTurno" class="dlg">
+      <form method="dialog" id="frmCerrarTurno" class="dlg-body" onsubmit="return false;">
+        <h3>Cerrar turno</h3>
 
-    <div style="background:var(--bg-2);padding:16px;border-radius:12px;margin-bottom:20px">
-      <div style="display:grid;gap:12px">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <small style="color:var(--ink-muted);text-transform:uppercase;font-size:11px;font-weight:600;letter-spacing:0.5px">Caja</small>
-          <b id="lblCajaClose" style="color:var(--ink);font-size:15px">—</b>
+        <div class="info-box">
+          <div class="info-row">
+            <small class="info-label">Caja</small>
+            <b id="lblCajaClose" class="info-value">—</b>
+          </div>
+          <div class="info-row">
+            <small class="info-label">Saldo sugerido</small>
+            <b id="lblSaldoActual" class="info-value-highlight">$0.00</b>
+          </div>
         </div>
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <small style="color:var(--ink-muted);text-transform:uppercase;font-size:11px;font-weight:600;letter-spacing:0.5px">Saldo sugerido</small>
-          <b id="lblSaldoActual" style="color:var(--brand);font-size:18px;font-weight:800">$0.00</b>
+
+        <label>Contado en caja (saldo final)</label>
+        <input id="inpSaldoFinal" type="number" step="0.01" min="0" class="input" placeholder="0.00" />
+
+        <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:24px">
+          <button type="button" id="btnConfirmClose" class="btn btn-danger">Cerrar turno</button>
         </div>
-      </div>
-    </div>
+      </form>
+    </dialog>
 
-    <label>Contado en caja (saldo final)</label>
-    <input id="inpSaldoFinal" type="number" step="0.01" min="0" class="input" placeholder="0.00" />
-
-    <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:24px">
-      <button type="button" id="btnConfirmClose" class="btn btn-danger">Cerrar turno</button>
-    </div>
-  </form>
-</dialog>
-
-    </main>
     <script src="assets/pos.js"></script>
   </body>
   </html>

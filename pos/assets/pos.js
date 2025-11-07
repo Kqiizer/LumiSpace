@@ -6,8 +6,48 @@ async function api(data) {
 const $  = (sel, ctx=document) => ctx.querySelector(sel);
 const $$ = (sel, ctx=document) => Array.from(ctx.querySelectorAll(sel));
 
-const getCajaLS = () => localStorage.getItem('pos_caja') || 'Caja 1';
-const setCajaLS = (caja) => { localStorage.setItem('pos_caja', caja); document.cookie = `pos_caja=${caja}; path=/;`; };
+// Caja preferida y sesión de turno (misma máquina)
+const getCajaLS = () =>
+  localStorage.getItem('pos_caja') ||
+  (document.cookie.match(/pos_caja=([^;]+)/)?.[1]) ||
+  null;
+
+const setCajaLS = (caja) => {
+  localStorage.setItem('pos_caja', String(caja));
+  document.cookie = `pos_caja=${String(caja)}; path=/;`;
+};
+
+
+// Sesión local del turno (para reanudar tras recarga)
+const getTurnoSession = () => {
+  try { return JSON.parse(localStorage.getItem('pos_turno_session') || 'null'); } catch { return null; }
+};
+const setTurnoSession = (sess) => localStorage.setItem('pos_turno_session', JSON.stringify(sess));
+const clearTurnoSession = () => localStorage.removeItem('pos_turno_session');
+
+// Estado global del monto en caja
+let montoActualCaja = 0;
+
+function actualizarMontoSidebar() {
+  const el = document.getElementById('montoActualSidebar');
+  if (el) el.textContent = '$' + montoActualCaja.toFixed(2);
+}
+
+async function cargarMontoInicial() {
+  const caja_id = getCajaLS();
+  const r = await api({ action: 'turno_actual', caja_id });
+  if (r.ok && r.turno) {
+    montoActualCaja = parseFloat(r.turno.saldo_inicial || 0);
+    
+    // Sumar ventas en efectivo del turno actual
+    const rCorte = await api({ action: 'corte_resumen', caja_id });
+    if (rCorte.ok && rCorte.data) {
+      montoActualCaja = parseFloat(rCorte.data.saldo_actual || montoActualCaja);
+    }
+    
+    actualizarMontoSidebar();
+  }
+}
 
 // ===== Turno: cargar cajeros y prefill de saldo =====
 async function cargarCajeros() {
@@ -29,131 +69,109 @@ async function showAperturaIfNeeded() {
   const dlg = $('#dlgTurno');
   if (!dlg) return;
 
-  const cajaDefault = getCajaLS();
-  
-  // Verificar turno actual
-  let r = await api({action:'turno_actual', caja_id: cajaDefault});
-  
-  // Si ya hay turno, no mostrar popup
-  if (r.ok && r.turno) {
-    console.log('Ya hay turno activo:', r.turno);
-    return;
+  const sess = getTurnoSession();
+
+  // Si hay sesión activa, verificar que el turno siga abierto
+  if (sess?.caja_id && sess?.turno_id) {
+    const r = await api({ action:'turno_actual', caja_id: sess.caja_id });
+    if (r.ok && r.turno
+        && Number(r.turno.id) === Number(sess.turno_id)
+        && String(r.turno.caja_id) === String(sess.caja_id)) {
+
+      setCajaLS(sess.caja_id);
+
+      // bloquear salida/retroceso
+      window.onbeforeunload = (e) => { e.preventDefault(); return '¿Estás seguro de salir? Tienes un turno abierto.'; };
+      history.pushState(null, '', location.href);
+      window.onpopstate = () => {
+        history.pushState(null, '', location.href);
+        alert('No puedes salir mientras tengas un turno abierto. Cierra el turno primero.');
+      };
+      return;
+    } else {
+      clearTurnoSession();
+    }
   }
 
-  console.log('No hay turno, mostrando popup de apertura...');
-
-  // Preparar elementos
-  const selCaja = $('#selCaja');
+  // --- Popup de apertura ---
+  const selCaja   = $('#selCaja');
   const selCajero = $('#selCajero');
-  const btnAbrir = $('#btnAbrirTurno');
-  const inpSaldo = $('#inpSaldoInicial');
-
-  if (!selCaja || !selCajero || !btnAbrir || !inpSaldo) {
-    console.error('Faltan elementos del formulario de apertura');
-    return;
-  }
+  const btnAbrir  = $('#btnAbrirTurno');
+  const inpSaldo  = $('#inpSaldoInicial');
 
   // Cargar cajeros
   const cajeros = await cargarCajeros();
-  if (!cajeros || cajeros.length === 0) {
-    alert('No hay cajeros disponibles. Por favor contacta al administrador.');
-    return;
+  selCajero.innerHTML = cajeros.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
+
+  // Cargar cajas y deshabilitar las en uso
+  const rCajas   = await api({ action: 'cajas_list' });
+  const rActivos = await api({ action: 'turnos_activos' });
+  const cajasEnUso = (rActivos.ok && Array.isArray(rActivos.data)) ? rActivos.data.map(t => String(t.caja_id)) : [];
+
+  if (rCajas.ok && Array.isArray(rCajas.data) && rCajas.data.length) {
+    selCaja.innerHTML = rCajas.data.map(c => {
+      const enUso = cajasEnUso.includes(String(c));
+      return `<option value="${c}" ${enUso ? 'disabled' : ''}>${c} ${enUso ? '(En uso)' : ''}</option>`;
+    }).join('');
+    // Seleccionar la primera libre si existe
+    const optLibre = Array.from(selCaja.options).find(o => !o.disabled);
+    selCaja.value = optLibre ? optLibre.value : '';
+  } else {
+    selCaja.innerHTML = `<option value="">(sin cajas)</option>`;
   }
 
-  selCajero.innerHTML = cajeros.map(c => 
-    `<option value="${c.id}">${c.nombre}</option>`
-  ).join('');
+  // Prefill de saldo inicial
+  selCaja.onchange = async () => {
+    const caja = selCaja.value;
+    if (!caja || selCaja.selectedOptions[0]?.disabled) return;
+    const r = await api({ action: 'turno_last_by_caja', caja_id: caja });
+    inpSaldo.value = (r.ok && r.saldo_final) ? Number(r.saldo_final).toFixed(2) : '0.00';
+  };
+  if (selCaja.value && !selCaja.selectedOptions[0]?.disabled) selCaja.onchange();
 
-  // Cargar cajas desde la BD
-  const rCajas = await api({action:'cajas_list'});
-  if (rCajas.ok && rCajas.data && rCajas.data.length) {
-    selCaja.innerHTML = rCajas.data.map(c => 
-      `<option value="${c}">${c}</option>`
-    ).join('');
-    
-    // Seleccionar la caja guardada si existe
-    if (rCajas.data.includes(cajaDefault)) {
-      selCaja.value = cajaDefault;
-    }
-  }
-
-  // Evento para prefill cuando cambia la caja
-  selCaja.onchange = () => prefillSaldo(selCaja.value);
-  
-  // Prefill inicial
-  await prefillSaldo(selCaja.value);
-
-  // IMPORTANTE: Remover eventos anteriores para evitar duplicados
-  btnAbrir.onclick = null;
-
-  // Mostrar el modal
-  dlg.showModal();
-
-  // Configurar evento de confirmación
+  // Confirmar apertura
   btnAbrir.onclick = async () => {
-    const caja_id = selCaja.value;
-    const cajero_id = parseInt(selCajero.value);
+    const caja_id       = selCaja.value;
+    const cajero_id     = Number(selCajero.value);
     const saldo_inicial = parseFloat(inpSaldo.value || '0');
 
-    if (!caja_id) {
-      alert('Por favor selecciona una caja');
-      return;
-    }
+    if (!caja_id || selCaja.selectedOptions[0]?.disabled) return alert('Esta caja está en uso o no es válida');
+    if (!cajero_id) return alert('Selecciona un cajero');
 
-    if (!cajero_id || isNaN(cajero_id)) {
-      alert('Por favor selecciona un cajero');
-      return;
-    }
+    const r = await api({ action: 'turno_open', caja_id, cajero_id, saldo_inicial });
+    if (!r.ok) return alert(r.error || 'Error al abrir turno');
 
-    console.log('Abriendo turno:', {caja_id, cajero_id, saldo_inicial});
+    // Guardar preferencia y sesión del turno
+    setCajaLS(String(caja_id));
+    setTurnoSession({ caja_id: String(caja_id), turno_id: Number(r.turno_id), ts: Date.now() });
 
-    try {
-      const r = await api({
-        action: 'turno_open',
-        caja_id,
-        cajero_id,
-        saldo_inicial
-      });
-
-      if (!r.ok) {
-        alert(r.error || 'Error al abrir turno');
-        return;
-      }
-
-      console.log('Turno abierto exitosamente:', r);
-      
-      // Guardar caja en localStorage
-      setCajaLS(caja_id);
-      
-      // Cerrar modal
-      dlg.close();
-      
-      // Recargar página para actualizar la interfaz
-      location.reload();
-      
-    } catch (error) {
-      console.error('Error al abrir turno:', error);
-      alert('Error al abrir turno: ' + error.message);
-    }
+    dlg.close();
+    location.reload();
   };
+
+  // Mostrar modal (no se puede cerrar con ESC)
+  dlg.addEventListener('cancel', (e) => e.preventDefault());
+  dlg.showModal();
 }
+
 // ===== Corte de Caja =====
 function money(n){ return `$${Number(n || 0).toFixed(2)}`; }
 
-async function fillCajaSelectForCorte(sel){
-  // Cargar cajas desde la BD
-  const rCajas = await api({action:'cajas_list'});
-  let cajas = ['Caja 1', 'Caja 2', 'Caja 3', 'Caja 4', 'Caja 5', 'Caja 6']; // fallback
-  if (rCajas.ok && rCajas.data && rCajas.data.length) {
-    cajas = rCajas.data;
+async function fillCajaSelectForCorte(sel) {
+  const rCajas = await api({ action:'cajas_list' });
+  if (!rCajas.ok || !Array.isArray(rCajas.data) || !rCajas.data.length) {
+    sel.innerHTML = `<option value="">(sin cajas)</option>`;
+    return;
   }
-  
+  const cajas = rCajas.data;
   sel.innerHTML = cajas.map(c => `<option value="${c}">${c}</option>`).join('');
+
   const preferida = getCajaLS();
-  if (cajas.includes(preferida)) {
-    sel.value = preferida;
-  }
+  if (preferida && cajas.includes(preferida)) sel.value = preferida;
+  else sel.selectedIndex = 0;
 }
+
+
 function renderMovs(movs){
   const tb = $('#tbMovs');
   if (!movs || !movs.length){
@@ -198,95 +216,77 @@ async function loadCorteCaja(){
   $('#kEf').textContent         = money(d.ventas_efectivo);
   $('#kTj').textContent         = money(d.ventas_tarjeta);
   $('#kSaldoAct').textContent   = money(d.saldo_actual);
-  $('#lblWindow').textContent   = `${d.inicio} — ${d.fin}`;
+  $('#lblWindow').textContent = `${d.inicio} — ${d.fin || 'ahora'}`;
 
   renderMovs(d.movimientos || []);
 }
-function setupCorteEvents(){
-  const sel = $('#selCajaCorte');
-  const btn = $('#btnVerCorte');
 
-  if (sel){
-    fillCajaSelectForCorte(sel);
-    sel.addEventListener('change', () => setCajaLS(sel.value));
-  }
-  if (btn){
-    btn.addEventListener('click', loadCorteCaja);
-  }
-}
-
-// Auto-init cuando entras a corte.php
-document.addEventListener('DOMContentLoaded', () => {
-  if (location.pathname.endsWith('/corte.php')){
-    setupCorteEvents();
-    loadCorteCaja();
-  }
-});
-
-// ===== Botón "Cerrar turno" en sidebar =====
 async function setupCerrarTurno() {
   const btn = $('#btnCerrarTurno');
   if (!btn) return;
-  
+
   btn.addEventListener('click', async () => {
     const caja_id = getCajaLS();
-    const d = $('#dlgCerrarTurno');
+    const rTurno = await api({ action:'turno_actual', caja_id });
+    if (!rTurno.ok || !rTurno.turno) return alert('No hay turno activo para cerrar');
+
+    // Sugerencia de saldo actual
+    const rRes = await api({ action:'corte_resumen', caja_id });
+    const saldoAct = Number(rRes?.data?.saldo_actual || 0);
     
-    if (!d) {
-      alert('No se encuentra el diálogo de cierre');
-      return;
-    }
-
     $('#lblCajaClose').textContent = caja_id;
-
-    // Traer turno actual para verificar que existe
-    const rTurno = await api({action:'turno_actual', caja_id});
-    if (!rTurno.ok || !rTurno.turno) {
-      alert('No hay turno activo para cerrar');
-      return;
-    }
-
-    const turno_id = Number(rTurno.turno.id);
-
-    // Traer saldo actual (sugerido)
-    const r = await api({action:'corte_resumen', caja_id});
-    if (!r.ok) {
-      alert(r.error || 'Error al obtener resumen');
-      return;
-    }
-
-    const saldoAct = Number((r.data && r.data.saldo_actual) || 0);
     $('#lblSaldoActual').textContent = `$${saldoAct.toFixed(2)}`;
     $('#inpSaldoFinal').value = saldoAct.toFixed(2);
 
+    const d = $('#dlgCerrarTurno');
+    if (!d) return alert('No se encontró el diálogo de cierre');
     d.showModal();
 
-    // Configurar evento de confirmación
-    const btnConfirm = $('#btnConfirmClose');
-    if (btnConfirm) {
-      btnConfirm.onclick = async () => {
-        const saldo_final = parseFloat($('#inpSaldoFinal').value || '0');
 
-        const rc = await api({
-          action:'turno_close',
-          turno_id,
-          saldo_final
-        });
-
-        if (!rc.ok) {
-          alert(rc.error || 'No se pudo cerrar el turno');
-          return;
-        }
-
-        alert('Turno cerrado exitosamente');
-        localStorage.removeItem('pos_caja');
-        document.cookie = 'pos_caja=; Max-Age=0; path=/;';
-        d.close();
-        location.href = 'pos.php';
-      };
-    }
+    $('#btnConfirmClose').onclick = async () => {
+      const saldo_final = parseFloat($('#inpSaldoFinal').value || '0');
+      
+      if (!confirm('¿Confirmas el cierre del turno? Esta acción no se puede deshacer.')) return;
+      
+      const rc = await api({ 
+        action:'turno_close', 
+        turno_id: Number(rTurno.turno.id), 
+        saldo_final 
+      });
+      
+      if (!rc.ok) return alert(rc.error || 'No se pudo cerrar');
+      
+      alert('Turno cerrado exitosamente');
+      clearTurnoSession();
+      
+      // Liberar restricciones de navegación
+      window.onbeforeunload = null;
+      window.onpopstate = null;
+      
+      d.close();
+      location.href = 'pos.php';
+    };
   });
 }
+// Botón del carrito
+const btnCarrito = $('#btnCarrito');
+if (btnCarrito) {
+  btnCarrito.addEventListener('click', () => {
+    const dlg = $('#dlgCarrito');
+    if (dlg) dlg.showModal();
+  });
+}
+
+const btnCerrarCarrito = $('#btnCerrarCarrito');
+if (btnCerrarCarrito) {
+  btnCerrarCarrito.addEventListener('click', () => {
+    const dlg = $('#dlgCarrito');
+    if (dlg) dlg.close();
+  });
+}
+
+// Cargar monto inicial de la caja
+cargarMontoInicial();
 
 
 // ========= estado del POS =========
@@ -342,49 +342,165 @@ function totals() {
 
 function renderCart() {
   const list = $('#cartList');
+  const badge = $('#badgeCart');
+  
   if (!list) return;
+  
   if (!cart.length) {
-    list.innerHTML = '(sin items)';
-  } else {
-    list.innerHTML = cart.map((it,i)=>`
-      <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;border-bottom:1px solid #eee;padding:6px 0">
-        <div style="flex:1">
-          <div><b>${it.nombre}</b></div>
-          <small>$${it.precio.toFixed(2)}</small>
-        </div>
-        <div style="display:flex;gap:6px;align-items:center">
-          <button class="card btnDec" data-i="${i}">−</button>
-          <span>${it.qty}</span>
-          <button class="card btnInc" data-i="${i}">+</button>
-          <button class="card btnDel" data-i="${i}">x</button>
-        </div>
-      </div>
-    `).join('');
+    list.innerHTML = '<p class="muted" style="text-align:center;padding:40px 20px">(sin items)</p>';
+    if (badge) badge.textContent = '0';
+
+    // totales en cero
+    const t0 = {subtotal:0, iva:0, total:0};
+    $('#cSubtotal') && ($('#cSubtotal').textContent = `$${t0.subtotal.toFixed(2)}`);
+    $('#cIva')      && ($('#cIva').textContent      = `$${t0.iva.toFixed(2)}`);
+    $('#cTotal')    && ($('#cTotal').textContent    = `$${t0.total.toFixed(2)}`);
+    return;
   }
 
-  // acciones qty
-  $$('.btnDec', list).forEach(b=>b.addEventListener('click', ()=>{
+  list.innerHTML = cart.map((it, i) => `
+    <div class="cart-item">
+      <div class="cart-item-info">
+        <div class="cart-item-name">${it.nombre}</div>
+        <div class="cart-item-price">$${it.precio.toFixed(2)}</div>
+      </div>
+      <div class="cart-item-qty">
+        <button data-i="${i}" class="btnDec">−</button>
+        <span>${it.qty}</span>
+        <button data-i="${i}" class="btnInc">+</button>
+      </div>
+      <button data-i="${i}" class="cart-item-remove">×</button>
+    </div>
+  `).join('');
+
+  if (badge) badge.textContent = String(cart.reduce((sum, it) => sum + it.qty, 0));
+
+  // Eventos de cantidad
+  $$('.btnDec', list).forEach(b => b.addEventListener('click', () => {
     const i = Number(b.dataset.i);
     cart[i].qty--;
-    if (cart[i].qty<=0) cart.splice(i,1);
+    if (cart[i].qty <= 0) cart.splice(i, 1);
     renderCart();
   }));
-  $$('.btnInc', list).forEach(b=>b.addEventListener('click', ()=>{
+  
+  $$('.btnInc', list).forEach(b => b.addEventListener('click', () => {
     const i = Number(b.dataset.i);
     cart[i].qty++;
     renderCart();
   }));
-  $$('.btnDel', list).forEach(b=>b.addEventListener('click', ()=>{
+  
+  $$('.cart-item-remove', list).forEach(b => b.addEventListener('click', () => {
     const i = Number(b.dataset.i);
-    cart.splice(i,1);
+    cart.splice(i, 1);
     renderCart();
   }));
 
+  // <<< actualizar totales >>>
   const t = totals();
-  $('#cSubtotal').textContent = `$${t.subtotal.toFixed(2)}`;
-  $('#cIva').textContent      = `$${t.iva.toFixed(2)}`;
-  $('#cTotal').textContent    = `$${t.total.toFixed(2)}`;
+  $('#cSubtotal') && ($('#cSubtotal').textContent = `$${t.subtotal.toFixed(2)}`);
+  $('#cIva')      && ($('#cIva').textContent      = `$${t.iva.toFixed(2)}`);
+  $('#cTotal')    && ($('#cTotal').textContent    = `$${t.total.toFixed(2)}`);
 }
+
+async function pagar() {
+  if (!cart.length) return alert('Carrito vacío');
+
+  try {
+    const metodo  = ($('input[name=metodo]:checked') || {}).value || 'efectivo';
+    const caja_id = getCajaLS();
+    const turno   = await asegurarTurno(caja_id); // si falla, cae al catch
+    const cajero_id = Number(turno?.cajero_id || 1);
+    const t = totals();
+
+    // ---- EFECTIVO ----
+    if (metodo === 'efectivo') {
+      const dlg = $('#dlgEfectivo');
+      if (!dlg) return alert('No se encontró el diálogo de pago en efectivo');
+
+      // Prefill UI
+      $('#lblTotalEfectivo').textContent = '$' + t.total.toFixed(2);
+      $('#inpMontoPagado').value = '';
+      $('#cambioBox').style.display = 'none';
+      $('#btnConfirmarEfectivo').disabled = true;
+
+      // Handler cálculo de cambio
+      const inp = $('#inpMontoPagado');
+      inp.oninput = () => {
+        const pagado = parseFloat(inp.value || 0);
+        const cambio = pagado - t.total;
+        if (cambio >= 0) {
+          $('#cambioBox').style.display = 'block';
+          $('#lblCambio').textContent = '$' + cambio.toFixed(2);
+          $('#btnConfirmarEfectivo').disabled = false;
+        } else {
+          $('#cambioBox').style.display = 'none';
+          $('#btnConfirmarEfectivo').disabled = true;
+        }
+      };
+
+      // Confirmar pago
+      const btnOk = $('#btnConfirmarEfectivo');
+      const btnCancel = $('#btnCancelarEfectivo');
+      btnOk.onclick = async () => {
+        const pagado = parseFloat($('#inpMontoPagado').value || 0);
+        const cambio = pagado - t.total;
+        if (cambio < 0) return alert('El monto pagado es insuficiente');
+
+        // Registrar venta
+        const items = cart.map(it => ({ producto_id: it.id, cantidad: it.qty }));
+        btnOk.disabled = true;
+        try {
+          const r = await api({
+            action: 'venta_crear',
+            caja_id, cajero_id, metodo,
+            items: JSON.stringify(items)
+          });
+          if (!r.ok) return alert(r.error || 'Error al crear venta');
+
+          // Actualizar monto en caja (entra el total efectivamente cobrado)
+          montoActualCaja = montoActualCaja + t.total;
+          actualizarMontoSidebar();
+
+          alert(`Venta #${r.venta_id} registrada.\nTotal: $${t.total.toFixed(2)}\nPagado: $${pagado.toFixed(2)}\nCambio: $${cambio.toFixed(2)}`);
+
+          // Reset UI/estado
+          cart = [];
+          renderCart();
+          cargarProductos();
+          dlg.close();
+          $('#dlgCarrito')?.close();
+        } finally {
+          btnOk.disabled = false;
+        }
+      };
+
+      btnCancel.onclick = () => dlg.close();
+      dlg.showModal();
+      return; // ya no seguimos a tarjeta
+    }
+
+    // ---- TARJETA ----
+    const items = cart.map(it => ({ producto_id: it.id, cantidad: it.qty }));
+    const r = await api({
+      action: 'venta_crear',
+      caja_id, cajero_id, metodo,
+      items: JSON.stringify(items)
+    });
+    if (!r.ok) return alert(r.error || 'Error al crear venta');
+
+    alert(`Venta #${r.venta_id} registrada.\nTotal: $${t.total.toFixed(2)}\nMétodo: Tarjeta`);
+
+    cart = [];
+    renderCart();
+    cargarProductos();
+    $('#dlgCarrito')?.close();
+
+  } catch (e) {
+    alert(e?.message || 'Abre un turno para continuar.');
+  }
+}
+
+
 
 // ========= cargar productos =========
 async function cargarProductos(q='') {
@@ -395,44 +511,21 @@ async function cargarProductos(q='') {
 }
 
 // ========= turnos helpers =========
-async function asegurarTurno(caja_id='Caja 1') {
-  let r = await api({action:'turno_actual', caja_id});
-  if (!r.ok) throw new Error(r.error||'Error turno_actual');
-  if (r.turno) return r.turno;
-
-  // abrir automáticamente si no hay (ajusta cajero_id si hace falta)
-  const cajero_id = 1;      // <-- cámbialo si tu cajero es otro id
-  const saldo_inicial = 0;  // o pide en un prompt
-  r = await api({action:'turno_open', caja_id, cajero_id, saldo_inicial});
-  if (!r.ok) throw new Error(r.error||'No se pudo abrir el turno');
-  // vuelve a consultar
-  r = await api({action:'turno_actual', caja_id});
-  if (!r.ok) throw new Error(r.error||'Error turno_actual');
+async function asegurarTurno(caja_id) {
+  if (!caja_id) {
+    await showAperturaIfNeeded();
+    throw new Error('Selecciona una caja para continuar');
+  }
+  const r = await api({ action: 'turno_actual', caja_id });
+  if (!r.ok) throw new Error(r.error || 'Error turno_actual');
+  if (!r.turno) {
+    await showAperturaIfNeeded();
+    throw new Error('Abre un turno para continuar');
+  }
   return r.turno;
 }
 
-// ========= pagar =========
-async function pagar() {
-  if (!cart.length) return alert('Carrito vacío');
-  const metodo = ($('input[name=metodo]:checked')||{}).value || 'efectivo';
-  const caja_id = 'Caja 1'; // puedes leer de la UI si luego quieres
-  const turno = await asegurarTurno(caja_id);
-  const cajero_id = Number(turno?.cajero_id || 1);
 
-  const items = cart.map(it=>({producto_id: it.id, cantidad: it.qty}));
-  const r = await api({
-    action:'venta_crear',
-    caja_id, cajero_id, metodo,
-    items: JSON.stringify(items)
-  });
-  if (!r.ok) return alert(r.error||'Error al crear venta');
-
-  alert(`Venta #${r.venta_id} registrada.\nTotal: $${Number(r.total).toFixed(2)}`);
-  cart = [];
-  renderCart();
-  // refresca productos para ver stock actualizado
-  cargarProductos($('#gridProductos') ? '' : '');
-}
 
 // ===== INIT GLOBAL =====
 document.addEventListener('DOMContentLoaded', ()=>{
@@ -460,24 +553,19 @@ async function corteFillCajaSelect() {
   const sel = document.getElementById('selCajaCorte');
   if (!sel) return false;
 
-  let cajas = [];
-  try {
-    const r = await api({action:'turnos_activos'});
-    if (r.ok && Array.isArray(r.data) && r.data.length) {
-      cajas = [...new Set(r.data.map(x => x.caja_id))];
-    }
-  } catch (_) {}
-
-  // fallback: cargar desde la BD
-  if (!cajas.length) {
-    const rCajas = await api({action:'cajas_list'});
-    if (rCajas.ok && rCajas.data && rCajas.data.length) {
-      cajas = rCajas.data;
-    } else {
-      cajas = ['Caja 1', 'Caja 2', 'Caja 3']; // fallback absoluto
-    }
+  const rCajas = await api({ action:'cajas_list' });
+  if (!rCajas.ok || !Array.isArray(rCajas.data) || !rCajas.data.length) {
+    sel.innerHTML = `<option value="">(sin cajas)</option>`;
+    return;
   }
+  const cajas = rCajas.data;
+
+  sel.innerHTML = cajas.map(c => `<option value="${c}">${c}</option>`).join('');
+  const preferida = getCajaLS();
+  if (preferida && cajas.includes(preferida)) sel.value = preferida;
+  else sel.selectedIndex = 0;
 }
+
 function cortePintarKPIs(d) {
   const k = (id,v)=>{ const el = document.getElementById(id); if (el) el.textContent = money(v||0); };
   k('kSaldoIni', d?.saldo_inicial);
@@ -655,4 +743,100 @@ async function loadEstadisticas(){
 
 // Hook global
 document.addEventListener('DOMContentLoaded', loadEstadisticas);
+
+// Ir a secciones
+document.addEventListener('keydown', (e) => {
+  if (e.altKey && !e.shiftKey && !e.ctrlKey) {
+    if (e.key === '1') location.href = 'pos.php';
+    if (e.key === '2') location.href = 'ventas.php';
+    if (e.key === '3') location.href = 'estadisticas.php';
+    if (e.key === '4') location.href = 'corte.php';
+  }
+});
+
+// Grid de productos: flechas + enter
+let prodIndex = 0;
+function focusProducto(i) {
+  const cards = $$('#gridProductos .card[data-id]');
+  if (!cards.length) return;
+  prodIndex = (i + cards.length) % cards.length;
+  cards.forEach(c => c.tabIndex = 0);
+  cards[prodIndex].focus({preventScroll:false});
+  cards[prodIndex].scrollIntoView({block:'nearest'});
+}
+document.addEventListener('keydown', (e) => {
+  const inPos = !!$('#gridProductos');
+  if (!inPos) return;
+  const cards = $$('#gridProductos .card[data-id]');
+  if (!cards.length) return;
+
+  const cols = Math.max(1, Math.floor($('#gridProductos').clientWidth / cards[0].clientWidth));
+  if (['ArrowRight','ArrowLeft','ArrowUp','ArrowDown','Enter'].includes(e.key)) e.preventDefault();
+
+  if (e.key==='ArrowRight') focusProducto(prodIndex + 1);
+  if (e.key==='ArrowLeft')  focusProducto(prodIndex - 1);
+  if (e.key==='ArrowDown')  focusProducto(prodIndex + cols);
+  if (e.key==='ArrowUp')    focusProducto(prodIndex - cols);
+  if (e.key==='Enter') {
+    const card = $$('#gridProductos .card[data-id]')[prodIndex];
+    if (card) card.click();
+  }
+});
+
+// Selects/enum: espacio abre, enter confirma (nativo del navegador)
+// (No hace falta código extra: sólo aseguramos que los <select> tengan focus al tabular)
+
+// POS: buscar en tiempo real
+document.addEventListener('DOMContentLoaded', () => {
+  const busc = document.querySelector('input[type=search]');
+  if (busc) {
+    let t; busc.addEventListener('input', () => {
+      clearTimeout(t);
+      t = setTimeout(() => cargarProductos(busc.value.trim()), 250);
+    });
+  }
+});
+
+async function fetchVentaCompleta(venta_id){
+  const r = await api({action:'venta_detalle', venta_id});
+  if (!r.ok) throw new Error(r.error || 'No se pudo cargar la venta');
+  return r;
+}
+
+async function descargarTicket(venta_id){
+  const { jsPDF } = window.jspdf || {};
+  if (!jsPDF) { alert('No se encontró jsPDF'); return; }
+
+  const r = await fetchVentaCompleta(venta_id);
+  const v = r.venta, items = r.items || [];
+
+  const doc = new jsPDF({ unit:'pt', format:'a5' });
+  let y = 40;
+
+  doc.setFontSize(16); doc.text('LumiSpace - Ticket', 40, y); y += 18;
+  doc.setFontSize(11);
+  doc.text(`Folio: #${v.id}`, 40, y); y+=14;
+  doc.text(`Fecha: ${v.fecha}`, 40, y); y+=14;
+  doc.text(`Cajero: ${v.cajero||'-'}`, 40, y); y+=14;
+  doc.text(`Caja: ${v.caja_id||'-'}`, 40, y); y+=20;
+
+  doc.setFont(undefined, 'bold'); doc.text('Producto', 40, y); doc.text('Cant', 260, y); doc.text('Importe', 320, y); doc.setFont(undefined, 'normal'); y+=12;
+  doc.line(40, y, 380, y); y+=10;
+
+  items.forEach(it=>{
+    const imp = (Number(it.precio)*Number(it.cantidad)).toFixed(2);
+    doc.text(String(it.nombre).slice(0,28), 40, y);
+    doc.text(String(it.cantidad), 265, y, {align:'right'});
+    doc.text(`$${imp}`, 380, y, {align:'right'});
+    y+=14;
+  });
+
+  y+=8; doc.line(40, y, 380, y); y+=14;
+  doc.text(`Subtotal: $${Number(v.subtotal).toFixed(2)}`, 260, y, {align:'right'}); y+=14;
+  doc.text(`IVA: $${Number(v.iva).toFixed(2)}`, 260, y, {align:'right'}); y+=14;
+  doc.setFont(undefined, 'bold');
+  doc.text(`TOTAL: $${Number(v.total).toFixed(2)}`, 260, y, {align:'right'});
+
+  doc.save(`ticket_${v.id}.pdf`);
+}
 

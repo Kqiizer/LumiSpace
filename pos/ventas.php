@@ -1,6 +1,7 @@
 <?php
+
 declare(strict_types=1);
-require_once __DIR__.'/_layout.php';
+require_once __DIR__ . '/_layout.php';
 start_pos_page('Facturación (Ventas)', $cajeroNombre, $cajaLabel);
 ?>
 
@@ -51,9 +52,6 @@ start_pos_page('Facturación (Ventas)', $cajeroNombre, $cajaLabel);
       <label style="font-size:12px;color:var(--ink-muted);margin-bottom:4px;display:block">ID Cajero</label>
       <input id="fCajero" class="input" inputmode="numeric" placeholder="Opcional">
     </div>
-    <button id="btnAplicar" type="submit" class="btn btn-primary" style="height:44px;padding:0 24px">
-      Filtrar
-    </button>
   </form>
 </div>
 
@@ -73,7 +71,9 @@ start_pos_page('Facturación (Ventas)', $cajeroNombre, $cajaLabel);
         </tr>
       </thead>
       <tbody id="tbodyVentas">
-        <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--ink-light)">Cargando...</td></tr>
+        <tr>
+          <td colspan="7" style="text-align:center;padding:40px;color:var(--ink-light)">Cargando...</td>
+        </tr>
       </tbody>
     </table>
   </div>
@@ -96,7 +96,7 @@ start_pos_page('Facturación (Ventas)', $cajeroNombre, $cajaLabel);
       <h3 style="margin:0">Detalle de venta</h3>
       <button id="btnCerrarDetalle" class="btn btn-sm" style="border:none;background:var(--bg-3)">✕</button>
     </div>
-    
+
     <div id="ventaHeader" style="background:var(--bg-3);padding:20px;border-radius:var(--radius);margin-bottom:24px;display:grid;grid-template-columns:repeat(2,1fr);gap:16px">
       <!-- Se llena dinámicamente -->
     </div>
@@ -123,109 +123,302 @@ start_pos_page('Facturación (Ventas)', $cajeroNombre, $cajaLabel);
   </div>
 </dialog>
 
+<!-- jsPDF UMD (global: window.jspdf.jsPDF) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+
 <script>
-(function initVentasPage(){
-  const $ = (s,ctx=document)=>ctx.querySelector(s);
-  const $$ = (s,ctx=document)=>Array.from(ctx.querySelectorAll(s));
-  const fmt = n => '$'+Number(n||0).toLocaleString('es-MX', {minimumFractionDigits:2, maximumFractionDigits:2});
+  /* =========== Glue robusto para PDF del ticket =========== */
 
-  const tbody = $('#tbodyVentas');
-  const lblPage = $('#lblPage');
-  const lblInfo = $('#lblInfo');
-  const btnPrev = $('#btnPrev');
-  const btnNext = $('#btnNext');
-
-  const fDesde  = $('#fDesde');
-  const fHasta  = $('#fHasta');
-  const fMetodo = $('#fMetodo');
-  const fCaja   = $('#fCaja');
-  const fCajero = $('#fCajero');
-  const frm     = $('#filtros');
-
-  // Prefill caja desde localStorage
-  try { if (typeof getCajaLS==='function') fCaja.value = getCajaLS(); } catch(e){}
-
-  let state = { page:1, per_page:20, total:0 };
-
-  async function cargar() {
-    const q = {
-      action:'ventas_list',
-      desde:fDesde.value || '',
-      hasta:fHasta.value || '',
-      metodo:fMetodo.value || '',
-      caja:fCaja.value.trim(),
-      cajero:fCajero.value.trim(),
-      page:state.page
-    };
-    
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--ink-light)">Cargando...</td></tr>';
-    
-    const r = await fetch('api.php',{method:'POST',body:new URLSearchParams(q)}).then(x=>x.json());
-    if(!r.ok){ 
-      alert(r.error||'Error'); 
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--danger)">Error al cargar datos</td></tr>';
-      return; 
+  async function ensureJsPDF() {
+    // Espera a que se cargue el script (por si llega con defer)
+    if (window.jspdf?.jsPDF) return true;
+    for (let i = 0; i < 20; i++) {
+      await new Promise(r => setTimeout(r, 50));
+      if (window.jspdf?.jsPDF) return true;
     }
+    alert('No se pudo cargar jsPDF. Revisa el <script> del CDN.');
+    return false;
+  }
 
-    // KPIs
-    $('#kEf').textContent = fmt(r.kpis.efectivo);
-    $('#kTj').textContent = fmt(r.kpis.tarjeta);
-    $('#kEc').textContent = fmt(r.kpis.ecommerce||0);
-    $('#kCount').textContent = r.kpis.ventas;
+  // Llama al endpoint correcto, sea venta_detalle o venta_info
+  async function fetchVentaCompleta(venta_id) {
+    // 1) intento venta_detalle
+    let r = await api({
+      action: 'venta_detalle',
+      venta_id
+    });
+    if (r?.ok) return r;
 
-    // Tabla
-    tbody.innerHTML = '';
-    if (!r.data || !r.data.length) {
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--ink-light)">No se encontraron ventas</td></tr>';
-      lblInfo.textContent = 'Mostrando 0 ventas';
-    } else {
-      r.data.forEach((v,i)=>{
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
+    // 2) intento venta_info
+    r = await api({
+      action: 'venta_info',
+      venta_id
+    });
+    if (r?.ok) return r;
+
+    // 3) algunos APIs devuelven el objeto directo sin ok
+    if (r && (r.venta || r.items)) return r;
+
+    throw new Error(r?.error || 'No se pudo obtener la venta');
+  }
+
+  // Normaliza payloads con llaves diferentes
+  function normalizeVentaPayload(r) {
+    const venta = r.venta || r.data?.venta || r.data || r;
+    const items = r.items || r.data?.items || r.lineas || [];
+    const cajero = venta.cajero || venta.cajero_nombre || venta.usuario || '-';
+    const caja_id = venta.caja_id || venta.caja || '-';
+    return {
+      venta,
+      items,
+      cajero,
+      caja_id
+    };
+  }
+
+  // Render del PDF
+  async function descargarTicket(venta_id) {
+    try {
+      const ok = await ensureJsPDF();
+      if (!ok) return;
+
+      const {
+        jsPDF
+      } = window.jspdf;
+      const r = await fetchVentaCompleta(venta_id);
+      const {
+        venta: v,
+        items,
+        cajero,
+        caja_id
+      } = normalizeVentaPayload(r);
+
+      const doc = new jsPDF({
+        unit: 'pt',
+        format: 'a5'
+      });
+      let y = 40;
+
+      // Encabezado
+      doc.setFontSize(16);
+      doc.text('LumiSpace - Ticket', 40, y);
+      y += 18;
+      doc.setFontSize(11);
+      doc.text(`Folio: #${v.id ?? venta_id}`, 40, y);
+      y += 14;
+      doc.text(`Fecha: ${v.fecha ?? v.created_at ?? '-'}`, 40, y);
+      y += 14;
+      doc.text(`Cajero: ${cajero}`, 40, y);
+      y += 14;
+      doc.text(`Caja: ${caja_id}`, 40, y);
+      y += 20;
+
+      // Tabla simple
+      doc.setFont(undefined, 'bold');
+      doc.text('Producto', 40, y);
+      doc.text('Cant', 260, y);
+      doc.text('Importe', 380, y, {
+        align: 'right'
+      });
+      doc.setFont(undefined, 'normal');
+      y += 12;
+      doc.line(40, y, 380, y);
+      y += 10;
+
+      items.forEach(it => {
+        const nombre = (it.nombre || it.producto || it.sku || '').toString().slice(0, 32);
+        const cant = Number(it.cantidad || it.qty || 1);
+        const precio = Number(it.precio || it.price || it.unit_price || 0);
+        const imp = (precio * cant).toFixed(2);
+        doc.text(nombre, 40, y);
+        doc.text(String(cant), 265, y, {
+          align: 'right'
+        });
+        doc.text(`$${imp}`, 380, y, {
+          align: 'right'
+        });
+        y += 14;
+      });
+
+      y += 8;
+      doc.line(40, y, 380, y);
+      y += 14;
+      const subtotal = Number(v.subtotal ?? v.sub_total ?? v.total_sin_iva ?? v.total ?? 0);
+      const iva = Number(v.iva ?? v.tax ?? 0);
+      const total = Number(v.total ?? (subtotal + iva) ?? 0);
+
+      doc.text(`Subtotal: $${subtotal.toFixed(2)}`, 380, y, {
+        align: 'right'
+      });
+      y += 14;
+      doc.text(`IVA: $${iva.toFixed(2)}`, 380, y, {
+        align: 'right'
+      });
+      y += 14;
+      doc.setFont(undefined, 'bold');
+      doc.text(`TOTAL: $${total.toFixed(2)}`, 380, y, {
+        align: 'right'
+      });
+
+      doc.save(`ticket_${v.id ?? venta_id}.pdf`);
+    } catch (e) {
+      console.error(e);
+      alert('No se pudo generar el PDF del ticket: ' + (e.message || e));
+    }
+  }
+
+  /* Delegación de evento para todos los botones .btn-ticket (aunque la tabla se regenere) */
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.btn-ticket');
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const id = Number(btn.dataset.id || btn.getAttribute('data-id'));
+    if (!id) return alert('Venta inválida');
+    descargarTicket(id);
+  });
+</script>
+
+<script>
+  (function initVentasPage() {
+    const $ = (s, ctx = document) => ctx.querySelector(s);
+    const $$ = (s, ctx = document) => Array.from(ctx.querySelectorAll(s));
+    const fmt = n => '$' + Number(n || 0).toLocaleString('es-MX', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+
+    const tbody = $('#tbodyVentas');
+    const lblPage = $('#lblPage');
+    const lblInfo = $('#lblInfo');
+    const btnPrev = $('#btnPrev');
+    const btnNext = $('#btnNext');
+
+    const fDesde = $('#fDesde');
+    const fHasta = $('#fHasta');
+    const fMetodo = $('#fMetodo');
+    const fCaja = $('#fCaja');
+    const fCajero = $('#fCajero');
+    const frm = $('#filtros');
+
+    // Prefill caja desde localStorage
+    try {
+      if (typeof getCajaLS === 'function') fCaja.value = getCajaLS();
+    } catch (e) {}
+
+    let state = {
+      page: 1,
+      per_page: 20,
+      total: 0
+    };
+
+    async function cargar() {
+      const q = {
+        action: 'ventas_list',
+        desde: fDesde.value || '',
+        hasta: fHasta.value || '',
+        metodo: fMetodo.value || '',
+        caja: fCaja.value.trim(),
+        cajero: fCajero.value.trim(),
+        page: state.page
+      };
+
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--ink-light)">Cargando...</td></tr>';
+
+      const r = await fetch('api.php', {
+        method: 'POST',
+        body: new URLSearchParams(q)
+      }).then(x => x.json());
+      if (!r.ok) {
+        alert(r.error || 'Error');
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--danger)">Error al cargar datos</td></tr>';
+        return;
+      }
+
+      // KPIs
+      $('#kEf').textContent = fmt(r.kpis.efectivo);
+      $('#kTj').textContent = fmt(r.kpis.tarjeta);
+      $('#kEc').textContent = fmt(r.kpis.ecommerce || 0);
+      $('#kCount').textContent = r.kpis.ventas;
+
+      // Tabla
+      tbody.innerHTML = '';
+      if (!r.data || !r.data.length) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--ink-light)">No se encontraron ventas</td></tr>';
+        lblInfo.textContent = 'Mostrando 0 ventas';
+      } else {
+        r.data.forEach((v, i) => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
           <td style="font-weight:600;color:var(--ink-muted)">${(r.page-1)*r.per_page + i + 1}</td>
           <td style="font-size:13px">${v.fecha}</td>
           <td>${v.cajero || '<span style="color:var(--ink-light)">—</span>'}</td>
           <td>${v.caja_id || '<span style="color:var(--ink-light)">—</span>'}</td>
           <td><span style="display:inline-block;padding:4px 12px;background:${v.metodo_principal==='efectivo'?'var(--ok)':'var(--brand)'};color:white;border-radius:20px;font-size:11px;font-weight:600;text-transform:uppercase">${v.metodo_principal}</span></td>
           <td style="text-align:right;font-weight:700;font-size:15px">${fmt(v.total)}</td>
-          <td style="text-align:center"><button class="btn btn-sm" data-ver="${v.id}">Ver detalle</button></td>
+          <td style="text-align:center"><button class="btn btn-sm" data-ver="${v.id}">Ver detalle</button>
+          <button class="btn btn-sm btn-primary btn-ticket" data-id="${v.id}">Descargar ticket</button>
+          </td>
         `;
-        tbody.appendChild(tr);
-      });
-      
-      const inicio = (r.page-1)*r.per_page + 1;
-      const fin = Math.min(r.page*r.per_page, r.total);
-      lblInfo.textContent = `Mostrando ${inicio}-${fin} de ${r.total} ventas`;
+          tbody.appendChild(tr);
+        });
+
+        const inicio = (r.page - 1) * r.per_page + 1;
+        const fin = Math.min(r.page * r.per_page, r.total);
+        lblInfo.textContent = `Mostrando ${inicio}-${fin} de ${r.total} ventas`;
+      }
+
+      // Paginación
+      state.total = r.total;
+      state.page = r.page;
+      state.per_page = r.per_page;
+      const pages = Math.max(1, Math.ceil(state.total / state.per_page));
+      lblPage.textContent = `${state.page} / ${pages}`;
+      btnPrev.disabled = state.page <= 1;
+      btnNext.disabled = state.page >= pages;
     }
 
-    // Paginación
-    state.total = r.total; state.page = r.page; state.per_page = r.per_page;
-    const pages = Math.max(1, Math.ceil(state.total/state.per_page));
-    lblPage.textContent = `${state.page} / ${pages}`;
-    btnPrev.disabled = state.page<=1;
-    btnNext.disabled = state.page>=pages;
-  }
+    // Filtros
+    frm.addEventListener('submit', ev => {
+      ev.preventDefault();
+      state.page = 1;
+      cargar();
+    });
 
-  // Filtros
-  frm.addEventListener('submit', ev=>{ ev.preventDefault(); state.page=1; cargar(); });
+    btnPrev.addEventListener('click', () => {
+      if (state.page > 1) {
+        state.page--;
+        cargar();
+      }
+    });
+    btnNext.addEventListener('click', () => {
+      const pages = Math.max(1, Math.ceil(state.total / state.per_page));
+      if (state.page < pages) {
+        state.page++;
+        cargar();
+      }
+    });
 
-  btnPrev.addEventListener('click', ()=>{ if(state.page>1){ state.page--; cargar(); } });
-  btnNext.addEventListener('click', ()=>{
-    const pages = Math.max(1, Math.ceil(state.total/state.per_page));
-    if(state.page<pages){ state.page++; cargar(); }
-  });
+    // Detalle
+    tbody.addEventListener('click', async (ev) => {
+      const btn = ev.target.closest('[data-ver]');
+      if (!btn) return;
+      const venta_id = btn.getAttribute('data-ver');
+      const r = await fetch('api.php', {
+        method: 'POST',
+        body: new URLSearchParams({
+          action: 'venta_detalle',
+          venta_id
+        })
+      }).then(x => x.json());
+      if (!r.ok) {
+        alert(r.error || 'Error');
+        return;
+      }
 
-  // Detalle
-  tbody.addEventListener('click', async (ev)=>{
-    const btn = ev.target.closest('[data-ver]');
-    if(!btn) return;
-    const venta_id = btn.getAttribute('data-ver');
-    const r = await fetch('api.php',{method:'POST',body:new URLSearchParams({action:'venta_detalle',venta_id})}).then(x=>x.json());
-    if(!r.ok){ alert(r.error||'Error'); return; }
-
-    const v = r.venta;
-    const d = $('#dlgVenta');
-    $('#ventaHeader').innerHTML = `
+      const v = r.venta;
+      const d = $('#dlgVenta');
+      $('#ventaHeader').innerHTML = `
       <div><span style="font-size:11px;color:var(--ink-muted);text-transform:uppercase;display:block;margin-bottom:4px">Folio</span><b style="font-size:16px">#${v.id}</b></div>
       <div><span style="font-size:11px;color:var(--ink-muted);text-transform:uppercase;display:block;margin-bottom:4px">Fecha</span><b style="font-size:14px">${v.fecha}</b></div>
       <div><span style="font-size:11px;color:var(--ink-muted);text-transform:uppercase;display:block;margin-bottom:4px">Cajero</span><b style="font-size:14px">${v.cajero || '—'}</b></div>
@@ -233,26 +426,26 @@ start_pos_page('Facturación (Ventas)', $cajeroNombre, $cajaLabel);
       <div><span style="font-size:11px;color:var(--ink-muted);text-transform:uppercase;display:block;margin-bottom:4px">Método</span><b style="font-size:14px">${v.metodo_principal}</b></div>
       <div><span style="font-size:11px;color:var(--ink-muted);text-transform:uppercase;display:block;margin-bottom:4px">Total</span><b style="font-size:18px;color:var(--brand)">${fmt(v.total)}</b></div>
     `;
-    const tb = $('#ventaItems');
-    tb.innerHTML = '';
-    (r.items||[]).forEach(it=>{
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
+      const tb = $('#ventaItems');
+      tb.innerHTML = '';
+      (r.items || []).forEach(it => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
         <td><b>${it.nombre}</b></td>
         <td style="text-align:right">${fmt(it.precio)}</td>
         <td style="text-align:right;font-weight:600">${it.cantidad}</td>
         <td style="text-align:right;font-weight:700;color:var(--brand)">${fmt(it.total_linea)}</td>
       `;
-      tb.appendChild(tr);
+        tb.appendChild(tr);
+      });
+      d.showModal();
     });
-    d.showModal();
-  });
-  
-  $('#btnCerrarDetalle').addEventListener('click', ()=> $('#dlgVenta').close());
 
-  // Carga inicial
-  cargar();
-})();
+    $('#btnCerrarDetalle').addEventListener('click', () => $('#dlgVenta').close());
+
+    // Carga inicial
+    cargar();
+  })();
 </script>
 
 <?php end_pos_page(); ?>
