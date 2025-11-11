@@ -670,5 +670,6 @@ function getCategoryImage($imagen, $BASE) {
     console.log('✅ Catálogo cargado');
   })();
   </script>
+  <script src="<?= $BASE ?>js/translator.js" defer></script>
 </body>
 </html>

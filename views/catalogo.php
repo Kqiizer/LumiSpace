@@ -1067,5 +1067,6 @@ function prod_img_url($raw, $BASE) {
     console.log(`📦 ${allCards.length} productos disponibles`);
   })();
   </script>
+  <script src="<?= $BASE ?>js/translator.js" defer></script>
 </body>
 </html>

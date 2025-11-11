@@ -216,7 +216,7 @@ async function loadCorteCaja(){
   $('#kEf').textContent         = money(d.ventas_efectivo);
   $('#kTj').textContent         = money(d.ventas_tarjeta);
   $('#kSaldoAct').textContent   = money(d.saldo_actual);
-  $('#lblWindow').textContent = `${d.inicio} — ${d.fin || 'ahora'}`;
+  $('#lblWindow').textContent = `${d.inicio} — ${d.fin || 'ahora'}`;+
 
   renderMovs(d.movimientos || []);
 }
