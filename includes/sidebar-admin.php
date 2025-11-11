@@ -189,7 +189,7 @@ function isGroupActive(array $pages, string $current): string {
       </div>
     </div>
 
-    <a href="<?= BASE_URL ?>../logout.php" class="logout-btn">
+    <a href="<?= BASE_URL ?>logout.php"class="logout-btn">
       <i class="fas fa-sign-out-alt"></i>
       <span>Cerrar Sesión</span>
     </a>
