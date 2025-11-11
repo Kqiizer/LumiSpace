@@ -1,4 +1,3 @@
-/* Reset y Variables */
 * {
     margin: 0;
     padding: 0;
@@ -179,21 +178,6 @@ body {
     color: var(--color-primary);
 }
 
-/* Language Select */
-.language-select {
-    appearance: none;
-    background: transparent;
-    border: none;
-    color: var(--color-text-secondary);
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    padding: 4px 0;
-    font-family: inherit;
-    outline: none;
-    transition: var(--transition);
-}
-
 /* Logout Section */
 .logout-section {
     padding: 32px 20px 20px;
@@ -324,43 +308,6 @@ body {
 
 .follow-btn:hover {
     background: var(--color-primary);
-}
-
-/* Account Item */
-.account-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 15px;
-    margin-bottom: 10px;
-    border: 1px solid rgba(139, 115, 85, 0.1);
-    border-radius: 8px;
-    cursor: pointer;
-    transition: var(--transition);
-}
-
-.account-item:hover {
-    background: rgba(250, 248, 246, 0.5);
-}
-
-.account-avatar {
-    width: 40px;
-    height: 40px;
-    background: #e0e0e0;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.account-email {
-    flex: 1;
-    font-size: 14px;
-}
-
-.account-check {
-    color: #4CAF50;
-    font-size: 20px;
 }
 
 /* Address Item */
@@ -547,62 +494,6 @@ body {
 .btn-danger:hover {
     background: #c82333;
     transform: translateY(-2px);
-}
-
-/* Toggle Switch */
-.toggle-switch {
-    position: relative;
-    width: 52px;
-    height: 28px;
-    background: #ccc;
-    border-radius: 14px;
-    cursor: pointer;
-    transition: var(--transition);
-}
-
-.toggle-switch.active {
-    background: var(--color-primary);
-}
-
-.toggle-switch::after {
-    content: '';
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    width: 24px;
-    height: 24px;
-    background: white;
-    border-radius: 50%;
-    transition: var(--transition);
-}
-
-.toggle-switch.active::after {
-    left: 26px;
-}
-
-/* Notification Item */
-.notification-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 15px;
-    border: 1px solid rgba(139, 115, 85, 0.1);
-    border-radius: var(--radius-md);
-    margin-bottom: 12px;
-}
-
-.notification-label {
-    flex: 1;
-}
-
-.notification-title {
-    font-weight: 600;
-    margin-bottom: 4px;
-}
-
-.notification-desc {
-    font-size: 12px;
-    color: var(--color-text-secondary);
 }
 
 /* Success Message */
