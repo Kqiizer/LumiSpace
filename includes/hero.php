@@ -82,19 +82,24 @@ try {
   <div class="container">
     <div class="hero-content">
       <p class="hero-brand">LumiSpace</p>
-      <h1 class="hero-title">Ilumina tu espacio. Inspira tu estilo</h1>
+      <h1 class="hero-title">
+  <span class="t" data-i18n="hero.title" data-i18n-es="Ilumina tu espacio. Inspira tu estilo">Ilumina tu espacio. Inspira tu estilo</span>
+</h1>
       <p class="hero-subtitle">
-        En Lumispace creemos que la luz no solo transforma ambientes, transforma emociones.
-        Diseñamos lámparas, gadgets y soluciones inteligentes que combinan tecnología, elegancia y funcionalidad.
-      </p>
+  <span class="t" data-i18n="hero.subtitle" data-i18n-es="En Lumispace creemos que la luz no solo transforma ambientes, transforma emociones. Diseñamos lámparas, gadgets y soluciones inteligentes que combinan tecnología, elegancia y funcionalidad.">
+    En Lumispace creemos que la luz no solo transforma ambientes, transforma emociones. Diseñamos lámparas, gadgets y soluciones inteligentes que combinan tecnología, elegancia y funcionalidad.
+  </span>
+</p>
+
 
       <div class="hero-buttons">
         <a href="<?= htmlspecialchars($BASE . 'index.php') ?>" class="btn-primary" aria-label="Comprar productos">
-          Compra Ahora <i class="fas fa-arrow-right" aria-hidden="true"></i>
-        </a>
+  <span class="t" data-i18n="hero.cta_buy" data-i18n-es="Compra Ahora">Compra Ahora</span>
+  <i class="fas fa-arrow-right" aria-hidden="true"></i>
+</a>
         <a href="<?= htmlspecialchars($BASE . 'index.php') ?>" class="btn-secondary" aria-label="Ver más productos">
-          Ver Más
-        </a>
+  <span class="t" data-i18n="hero.cta_more" data-i18n-es="Ver Más">Ver Más</span>
+</a>
       </div>
     </div>
 

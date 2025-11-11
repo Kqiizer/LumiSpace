@@ -1128,5 +1128,10 @@ buyBtn?.addEventListener('click', async ()=>{
   await addToCart(qty, true); // redirige dentro
 });
 
+    console.log('✅ Catálogo dinámico cargado');
+    console.log(`📦 ${allCards.length} productos disponibles`);
+  })();
+  </script>
+  <script src="<?= $BASE ?>js/translator.js" defer></script>
 </body>
 </html>

@@ -544,6 +544,7 @@
     </section>
 
     <script src="/js/about-script.js"></script>
+    <script src="<?= $BASE ?>js/translator.js" defer></script>
 </body>
 
 </html>
