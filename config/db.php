@@ -31,9 +31,9 @@ function getDBConnection(): mysqli {
     // Configuración de la base de datos
     $config = [
         'host'     => 'localhost',
-        'user'     => 'root',
-        'password' => '',
-        'database' => 'lumispace',
+        'user'     => 'u496299715_LumiSpace',
+        'password' => 'LumiSpace1',
+        'database' => 'u496299715_LumiSpace',
         'charset'  => 'utf8mb4',
         'timezone' => '-06:00' // Ajusta según tu zona horaria
     ];

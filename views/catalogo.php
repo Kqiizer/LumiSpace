@@ -89,11 +89,11 @@ function img_url($path, $BASE, $folder = 'productos') {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <!-- Stylesheets -->
-    <link rel="stylesheet" href="<?= $BASE ?>css/styles/reset.css">
-    <link rel="stylesheet" href="<?= $BASE ?>css/styles/header.css">
-    <link rel="stylesheet" href="<?= $BASE ?>css/styles/footer.css">
-    <link rel="stylesheet" href="<?= $BASE ?>css/styles/responsive.css">
-    
+    <link rel="stylesheet" href="<?= $BASE ?>../css/styles/reset.css">
+    <link rel="stylesheet" href="<?= $BASE ?>../css/styles/header.css">
+    <link rel="stylesheet" href="<?= $BASE ?>../css/styles/footer.css">
+    <link rel="stylesheet" href="<?= $BASE ?>../css/styles/responsive.css">
+    <link rel="stylesheet" href="<?= $BASE ?>../css/styles/sidebar.css">
     <style>
         /* ==========================================
            VARIABLES Y CONFIGURACIÓN BASE
@@ -897,7 +897,7 @@ function img_url($path, $BASE, $folder = 'productos') {
         </button>
 
         <!-- Header -->
-        <?php include __DIR__ . "/../includes/header.php"; ?>
+        <?php include __DIR__ . "../../includes/header.php"; ?>
 
         <!-- Hero Section -->
         <section class="catalog-hero">
@@ -1128,10 +1128,5 @@ buyBtn?.addEventListener('click', async ()=>{
   await addToCart(qty, true); // redirige dentro
 });
 
-    console.log('✅ Catálogo dinámico cargado');
-    console.log(`📦 ${allCards.length} productos disponibles`);
-  })();
-  </script>
-  <script src="<?= $BASE ?>js/translator.js" defer></script>
 </body>
 </html>
