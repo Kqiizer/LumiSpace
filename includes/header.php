@@ -40,8 +40,8 @@ if (!empty($_SESSION['usuario_id'])) {
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
   <!-- ✅ Estilos globales -->
-  <link rel="stylesheet" href="<?= $BASE ?>../css/styles/header.css">
-  <link rel="stylesheet" href="<?= $BASE ?>../css/styles/sidebar.css">
+  <link rel="stylesheet" href="<?= $BASE ?>css/styles/header.css">
+  <link rel="stylesheet" href="<?= $BASE ?>css/styles/sidebar.css">
 </head>
 
 <body data-base="<?= htmlspecialchars($BASE) ?>">
@@ -240,19 +240,19 @@ window.addEventListener('load', () => {
   <div class="container">
 
     <!-- Logo -->
-    <a href="<?= $BASE ?>../../index.php" class="logo">
+    <a href="<?= $BASE ?>index.php" class="logo">
       <div class="logo-icon"><i class="fas fa-lightbulb"></i></div>
       <span>LumiSpace</span>
     </a>
 
     <!-- 🔹 Menú de escritorio -->
     <ul class="nav-menu">
-      <li><a href="<?= $BASE ?>../../index.php" class="<?= $currentPage === '../../index.php' ? 'active' : '' ?>">Inicio</a></li>
-      <li><a href="<?= $BASE ?>../views/categorias.php" class="<?= $currentPage === 'categorias.php' ? 'active' : '' ?>">Categorías</a></li>
+      <li><a href="<?= $BASE ?>index.php" class="<?= $currentPage === 'index.php' ? 'active' : '' ?>">Inicio</a></li>
+      <li><a href="<?= $BASE ?>views/categorias.php" class="<?= $currentPage === 'categorias.php' ? 'active' : '' ?>">Categorías</a></li>
       <li><a href="<?= $BASE ?>views/marcas.php" class="<?= $currentPage === 'marcas.php' ? 'active' : '' ?>">Marcas</a></li>
-      <li><a href="<?= $BASE ?>../views/catalogo.php" class="<?= $currentPage === 'catalogo.php' ? 'active' : '' ?>">Catálogo</a></li>
-      <li><a href="<?= $BASE ?>../views/blog.php" class="<?= $currentPage === 'blog.php' ? 'active' : '' ?>">Blog</a></li>
-      <li><a href="<?= $BASE ?>../views/contacto.php" class="<?= $currentPage === 'contacto.php' ? 'active' : '' ?>">Contacto</a></li>
+      <li><a href="<?= $BASE ?>views/catalogo.php" class="<?= $currentPage === 'catalogo.php' ? 'active' : '' ?>">Catálogo</a></li>
+      <li><a href="<?= $BASE ?>views/blog.php" class="<?= $currentPage === 'blog.php' ? 'active' : '' ?>">Blog</a></li>
+      <li><a href="<?= $BASE ?>views/contacto.php" class="<?= $currentPage === 'contacto.php' ? 'active' : '' ?>">Contacto</a></li>
 
     </ul>
 
@@ -289,13 +289,17 @@ window.addEventListener('load', () => {
 <aside class="sidebar" id="sidebar">
   <button id="theme-toggle" class="btn">🌙 Modo Oscuro</button>
 
-  <a href="<?= $BASE ?>index.php" class="btn <?= $currentPage === 'index.php' ? 'active' : '' ?>">🏠 Inicio</a>
-  <a href="<?= $BASE ?>views/categorias.php" class="btn <?= $currentPage === 'categorias.php' ? 'active' : '' ?>">📂 Categorías</a>
-  <a href="<?= $BASE ?>views/marcas.php" class="btn <?= $currentPage === 'marcas.php' ? 'active' : '' ?>">🏷 Marcas</a>
-  <a href="<?= $BASE ?>views/catalogo.php" class="btn <?= $currentPage === 'catalogo.php' ? 'active' : '' ?>">🛍 Catálogo</a>
-  <a href="<?= $BASE ?>views/blog.php" class="btn <?= $currentPage === 'blog.php' ? 'active' : '' ?>">📰 Blog</a>
-  <a href="<?= $BASE ?>views/contacto.php" class="btn <?= $currentPage === 'contacto.php' ? 'active' : '' ?>">📞 Contacto</a>
-      <li><a href="<?= $BASE ?>index/configuracion.html" class="<?= $currentPage === 'configuracion.html' ? 'active' : '' ?>">Ajustes</a></li>
+<a href="<?= $BASE ?>index.php"                class="btn <?= $currentPage === 'index.php' ? 'active' : '' ?>">🏠 <span class="t" data-i18n="nav.home"       data-i18n-es="Inicio">Inicio</span></a>
+<a href="<?= $BASE ?>views/categorias.php"     class="btn <?= $currentPage === 'categorias.php' ? 'active' : '' ?>">📂 <span class="t" data-i18n="nav.categories" data-i18n-es="Categorías">Categorías</span></a>
+<a href="<?= $BASE ?>views/marcas.php"         class="btn <?= $currentPage === 'marcas.php' ? 'active' : '' ?>">🏷 <span class="t" data-i18n="nav.brands"     data-i18n-es="Marcas">Marcas</span></a>
+<a href="<?= $BASE ?>views/catalogo.php"       class="btn <?= $currentPage === 'catalogo.php' ? 'active' : '' ?>">🛍 <span class="t" data-i18n="nav.catalog"    data-i18n-es="Catálogo">Catálogo</span></a>
+<a href="<?= $BASE ?>views/blog.php"           class="btn <?= $currentPage === 'blog.php' ? 'active' : '' ?>">📰 <span class="t" data-i18n="nav.blog"       data-i18n-es="Blog">Blog</span></a>
+<a href="<?= $BASE ?>views/contacto.php"       class="btn <?= $currentPage === 'contacto.php' ? 'active' : '' ?>">📞 <span class="t" data-i18n="nav.contact"    data-i18n-es="Contacto">Contacto</span></a>
+<a href="<?= $BASE ?>index/configuracion.html" class="btn <?= $currentPage === 'configuracion.html' ? 'active' : '' ?>">⚙️ <span class="t" data-i18n="nav.settings"   data-i18n-es="Ajustes">Ajustes</span></a>
+  <!-- Botón traductor debajo de Ajustes -->
+<button id="lang-toggle" class="btn" data-i18n="sidebar.lang" data-i18n-es="English">English</button>
+
+
 
   <hr>
 
@@ -310,5 +314,6 @@ window.addEventListener('load', () => {
 
 <!-- ✅ Script (controla menú, overlay y animaciones) -->
 <script src="<?= $BASE ?>js/header.js" defer></script>
+<script src="<?= $BASE ?>js/translator.js" defer></script>
 </body>
 </html>
