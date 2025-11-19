@@ -31,9 +31,9 @@ function getDBConnection(): mysqli {
     // Configuración de la base de datos
     $config = [
         'host'     => 'localhost',
-        'user'     => 'u496299715_LumiSpace',
-        'password' => 'LumiSpace1',
-        'database' => 'u496299715_LumiSpace',
+        'user'     => 'root',
+        'password' => '',
+        'database' => 'lumispace',
         'charset'  => 'utf8mb4',
         'timezone' => '-06:00' // Ajusta según tu zona horaria
     ];
@@ -55,7 +55,7 @@ function getDBConnection(): mysqli {
         
         // Configurar charset
         if (!$conn->set_charset($config['charset'])) {
-            error_log("⚠️ Error al establecer charset: " . $conn->error);
+            error_log("⚠ Error al establecer charset: " . $conn->error);
         }
         
         // Configurar zona horaria
@@ -88,7 +88,7 @@ function getDBConnection(): mysqli {
 function tableExists(mysqli $conn, string $table): bool {
     // Sanitizar nombre de tabla
     if (!preg_match('/^[a-zA-Z0-9_]+$/', $table)) {
-        error_log("⚠️ Nombre de tabla inválido: $table");
+        error_log("⚠ Nombre de tabla inválido: $table");
         return false;
     }
     
@@ -104,7 +104,7 @@ function tableExists(mysqli $conn, string $table): bool {
     ");
     
     if (!$result) {
-        error_log("⚠️ Error al verificar tabla: " . $conn->error);
+        error_log("⚠ Error al verificar tabla: " . $conn->error);
         return false;
     }
     
@@ -124,7 +124,7 @@ function columnExists(mysqli $conn, string $table, string $column): bool {
     // Sanitizar nombres
     if (!preg_match('/^[a-zA-Z0-9_]+$/', $table) || 
         !preg_match('/^[a-zA-Z0-9_]+$/', $column)) {
-        error_log("⚠️ Nombre inválido - Tabla: $table, Columna: $column");
+        error_log("⚠ Nombre inválido - Tabla: $table, Columna: $column");
         return false;
     }
     
@@ -141,7 +141,7 @@ function columnExists(mysqli $conn, string $table, string $column): bool {
     ");
     
     if (!$result) {
-        error_log("⚠️ Error al verificar columna: " . $conn->error);
+        error_log("⚠ Error al verificar columna: " . $conn->error);
         return false;
     }
     
