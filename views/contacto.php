@@ -1028,6 +1028,7 @@ function img_url($path, $BASE, $folder = 'productos') {
                 <?php endforeach; ?>
             </div>
 
+<<<<<<< HEAD
             <!-- Estado Vacío -->
             <div class="empty-state" id="emptyState" style="display:none;">
                 <i class="fas fa-search"></i>
@@ -1127,7 +1128,5 @@ buyBtn?.addEventListener('click', async ()=>{
   buyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
   await addToCart(qty, true); // redirige dentro
 });
-
 </body>
 </html>
-    /* ---------- ando viendo jajaj ---------- */
