@@ -5,9 +5,8 @@ require_once __DIR__ . '/../config/functions.php';
 /* ============================================================
    🔹 BASE dinámica: detecta el nivel de carpeta automáticamente
    ============================================================ */
-$scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME']));
-$depth = substr_count($scriptDir, '/');
-$BASE = ($depth > 1) ? str_repeat('../', $depth - 1) : './';
+$root = rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'] ?? '/')), '/');
+$BASE = ($root === '' || $root === '/') ? '/' : $root . '/';
 
 /* Página actual */
 $currentPage = basename($_SERVER['PHP_SELF']);
@@ -249,7 +248,6 @@ window.addEventListener('load', () => {
     <ul class="nav-menu">
       <li><a href="<?= $BASE ?>index.php" class="<?= $currentPage === 'index.php' ? 'active' : '' ?>">Inicio</a></li>
       <li><a href="<?= $BASE ?>views/categorias.php" class="<?= $currentPage === 'categorias.php' ? 'active' : '' ?>">Categorías</a></li>
-      <li><a href="<?= $BASE ?>views/marcas.php" class="<?= $currentPage === 'marcas.php' ? 'active' : '' ?>">Marcas</a></li>
       <li><a href="<?= $BASE ?>views/catalogo.php" class="<?= $currentPage === 'catalogo.php' ? 'active' : '' ?>">Catálogo</a></li>
       <li><a href="<?= $BASE ?>views/blog.php" class="<?= $currentPage === 'blog.php' ? 'active' : '' ?>">Blog</a></li>
       <li><a href="<?= $BASE ?>views/contacto.php" class="<?= $currentPage === 'contacto.php' ? 'active' : '' ?>">Contacto</a></li>
@@ -291,7 +289,6 @@ window.addEventListener('load', () => {
 
 <a href="<?= $BASE ?>index.php"                class="btn <?= $currentPage === 'index.php' ? 'active' : '' ?>">🏠 <span class="t" data-i18n="nav.home"       data-i18n-es="Inicio">Inicio</span></a>
 <a href="<?= $BASE ?>views/categorias.php"     class="btn <?= $currentPage === 'categorias.php' ? 'active' : '' ?>">📂 <span class="t" data-i18n="nav.categories" data-i18n-es="Categorías">Categorías</span></a>
-<a href="<?= $BASE ?>views/marcas.php"         class="btn <?= $currentPage === 'marcas.php' ? 'active' : '' ?>">🏷 <span class="t" data-i18n="nav.brands"     data-i18n-es="Marcas">Marcas</span></a>
 <a href="<?= $BASE ?>views/catalogo.php"       class="btn <?= $currentPage === 'catalogo.php' ? 'active' : '' ?>">🛍 <span class="t" data-i18n="nav.catalog"    data-i18n-es="Catálogo">Catálogo</span></a>
 <a href="<?= $BASE ?>views/blog.php"           class="btn <?= $currentPage === 'blog.php' ? 'active' : '' ?>">📰 <span class="t" data-i18n="nav.blog"       data-i18n-es="Blog">Blog</span></a>
 <a href="<?= $BASE ?>views/contacto.php"       class="btn <?= $currentPage === 'contacto.php' ? 'active' : '' ?>">📞 <span class="t" data-i18n="nav.contact"    data-i18n-es="Contacto">Contacto</span></a>

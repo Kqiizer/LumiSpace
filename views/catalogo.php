@@ -29,11 +29,11 @@ $stats = [
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <!-- Stylesheets -->
-    <link rel="stylesheet" href="<?= $BASE ?>../css/styles/reset.css">
-    <link rel="stylesheet" href="<?= $BASE ?>../css/styles/header.css">
-    <link rel="stylesheet" href="<?= $BASE ?>../css/styles/footer.css">
-    <link rel="stylesheet" href="<?= $BASE ?>../css/styles/responsive.css">
-    <link rel="stylesheet" href="<?= $BASE ?>../css/styles/sidebar.css">
+    <link rel="stylesheet" href="<?= $BASE ?>css/styles/reset.css">
+    <link rel="stylesheet" href="<?= $BASE ?>css/styles/header.css">
+    <link rel="stylesheet" href="<?= $BASE ?>css/styles/footer.css">
+    <link rel="stylesheet" href="<?= $BASE ?>css/styles/responsive.css">
+    <link rel="stylesheet" href="<?= $BASE ?>css/styles/sidebar.css">
     <style>
         /* ==========================================
            VARIABLES Y CONFIGURACIÓN BASE
@@ -864,46 +864,6 @@ $stats = [
                 </div>
             </div>
         </section>
-
-        <!-- Barra de Filtros y Búsqueda -->
-        <div class="filters-bar">
-            <div class="filters-container">
-                <!-- Búsqueda -->
-                <div class="search-bar">
-                    <div class="search-input-wrapper">
-                        <input type="text" 
-                               class="search-input" 
-                               id="searchInput" 
-                               placeholder="Buscar productos por nombre...">
-                        <i class="fas fa-search search-icon"></i>
-                    </div>
-                    <div class="search-actions">
-                        <button class="btn-icon" id="btnClearFilters" title="Limpiar filtros">
-                            <i class="fas fa-times"></i>
-                            <span>Limpiar</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Filtros de Categorías -->
-                <div class="category-filters">
-                    <div class="filters-scroll">
-                        <button class="filter-chip active" data-category="">
-                            Todos
-                            <span class="chip-count">(<?= count($todos_productos) ?>)</span>
-                        </button>
-                        <?php foreach ($categorias_db as $cat): 
-                            $count = $productos_por_categoria[$cat['id']] ?? 0;
-                            if ($count > 0): ?>
-                            <button class="filter-chip" data-category="<?= $cat['id'] ?>">
-                                <?= htmlspecialchars($cat['nombre']) ?>
-                                <span class="chip-count">(<?= $count ?>)</span>
-                            </button>
-                        <?php endif; endforeach; ?>
-                    </div>
-                </div>
-            </div>
-        </div>
 
     <section class="catalog-layout">
         <aside class="filters-panel">
