@@ -1,11 +1,10 @@
+// 🔹 BASE CORREGIDA
 <?php
 if (session_status() === PHP_SESSION_NONE) session_start();
 
-// 🔹 Definir BASE_URL (ajústala según tu entorno)
-if (!defined('BASE_URL')) {
-    define('BASE_URL', '/LumiSpace/');
-    $BASE = rtrim(BASE_URL, '/') . '/';
-}
+// 🔹 BASE DEFINIDA CORRECTAMENTE (NO CAMBIA SEGÚN LA CARPETA)
+$projectFolder = '/'; 
+$BASE = rtrim($projectFolder, '/') . '/';
 
 // Detecta página activa automáticamente
 $currentPage = basename($_SERVER['PHP_SELF']);
@@ -16,6 +15,7 @@ function isGroupActive(array $pages, string $current): string {
   return in_array($current, $pages) ? 'show group-active' : '';
 }
 ?>
+
 
 <!-- ⚡ FONT AWESOME - CDN -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
