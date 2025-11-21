@@ -4,6 +4,7 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 // 🔹 Definir BASE_URL (ajústala según tu entorno)
 if (!defined('BASE_URL')) {
     define('BASE_URL', '/LumiSpace/');
+    $BASE = rtrim(BASE_URL, '/') . '/';
 }
 
 // Detecta página activa automáticamente
@@ -49,7 +50,7 @@ function isGroupActive(array $pages, string $current): string {
 
     <!-- Dashboard -->
     <a class="menu-item <?= activeClass('dashboard-admin.php', $currentPage) ?>" 
-       href="<?= BASE_URL ?>views/dashboard-admin.php">
+       href="<?= $BASE ?>views/dashboard-admin.php">
       <i class="fas fa-home"></i>
       <span>Dashboard</span>
     </a>
@@ -63,17 +64,17 @@ function isGroupActive(array $pages, string $current): string {
       </button>
       <div class="submenu <?= isGroupActive(['usuarios.php','usuario-agregar.php','usuario-editar.php','usuarios-roles.php'], $currentPage) ?>">
         <a class="submenu-item <?= activeClass('usuarios.php', $currentPage) ?>" 
-           href="<?= BASE_URL ?>admin/usuarios/usuarios.php">
+           href="<?= $BASE ?>admin/usuarios/usuarios.php">
           <i class="fas fa-list"></i>
           <span>Lista de Empleados</span>
         </a>
         <a class="submenu-item <?= activeClass('usuario-agregar.php', $currentPage) ?>" 
-           href="<?= BASE_URL ?>admin/usuarios/usuario-agregar.php">
+           href="<?= $BASE ?>admin/usuarios/usuario-agregar.php">
           <i class="fas fa-user-plus"></i>
           <span>Agregar Empleado</span>
         </a>
         <a class="submenu-item <?= activeClass('roles.php', $currentPage) ?>" 
-           href="<?= BASE_URL ?>admin/roles/roles.php">
+           href="<?= $BASE ?>admin/roles/roles.php">
           <i class="fas fa-user-tag"></i>
           <span>Gestión de Roles</span>
         </a>
@@ -89,22 +90,22 @@ function isGroupActive(array $pages, string $current): string {
       </button>
       <div class="submenu <?= isGroupActive(['productos.php','inventario.php','proveedores.php','categorias.php'], $currentPage) ?>">
         <a class="submenu-item <?= activeClass('productos.php', $currentPage) ?>" 
-           href="<?= BASE_URL ?>views/catalogo/productos.php">
+           href="<?= $BASE ?>views/catalogo/productos.php">
           <i class="fas fa-cube"></i>
           <span>Productos</span>
         </a>
         <a class="submenu-item <?= activeClass('inventario.php', $currentPage) ?>" 
-           href="<?= BASE_URL ?>views/inventario/inventario.php">
+           href="<?= $BASE ?>views/inventario/inventario.php">
           <i class="fas fa-warehouse"></i>
           <span>Inventario</span>
         </a>
         <a class="submenu-item <?= activeClass('proveedores.php', $currentPage) ?>" 
-           href="<?= BASE_URL ?>views/proveedores/proveedores.php">
+           href="<?= $BASE ?>views/proveedores/proveedores.php">
           <i class="fas fa-truck-loading"></i>
           <span>Proveedores</span>
         </a>
         <a class="submenu-item <?= activeClass('categorias.php', $currentPage) ?>" 
-           href="<?= BASE_URL ?>views/categorias/categorias.php">
+           href="<?= $BASE ?>views/categorias/categorias.php">
           <i class="fas fa-tags"></i>
           <span>Categorías</span>
         </a>
@@ -120,17 +121,17 @@ function isGroupActive(array $pages, string $current): string {
       </button>
       <div class="submenu <?= isGroupActive(['ventas.php','punto-venta.php','ordenes.php'], $currentPage) ?>">
         <a class="submenu-item <?= activeClass('punto-venta.php', $currentPage) ?>" 
-           href="<?= BASE_URL ?>views/ventas/punto-venta.php">
+           href="<?= $BASE ?>views/ventas/punto-venta.php">
           <i class="fas fa-shopping-cart"></i>
           <span>Punto de Venta</span>
         </a>
         <a class="submenu-item <?= activeClass('ventas.php', $currentPage) ?>" 
-           href="<?= BASE_URL ?>views/ventas/ventas.php">
+           href="<?= $BASE ?>views/ventas/ventas.php">
           <i class="fas fa-receipt"></i>
           <span>Historial de Ventas</span>
         </a>
         <a class="submenu-item <?= activeClass('ordenes.php', $currentPage) ?>" 
-           href="<?= BASE_URL ?>views/ventas/ordenes.php">
+           href="<?= $BASE ?>views/ventas/ordenes.php">
           <i class="fas fa-clipboard-list"></i>
           <span>Órdenes Online</span>
         </a>
@@ -146,17 +147,17 @@ function isGroupActive(array $pages, string $current): string {
       </button>
       <div class="submenu <?= isGroupActive(['reportes.php','reportes-ventas.php','reportes-inventario.php'], $currentPage) ?>">
         <a class="submenu-item <?= activeClass('reportes.php', $currentPage) ?>" 
-           href="<?= BASE_URL ?>views/reportes/reportes.php">
+           href="<?= $BASE ?>views/reportes/reportes.php">
           <i class="fas fa-file-chart-line"></i>
           <span>Reportes Generales</span>
         </a>
         <a class="submenu-item <?= activeClass('reportes-ventas.php', $currentPage) ?>" 
-           href="<?= BASE_URL ?>views/reportes/reportes-ventas.php">
+           href="<?= $BASE ?>views/reportes/reportes-ventas.php">
           <i class="fas fa-chart-bar"></i>
           <span>Análisis de Ventas</span>
         </a>
         <a class="submenu-item <?= activeClass('reportes-inventario.php', $currentPage) ?>" 
-           href="<?= BASE_URL ?>views/reportes/reportes-inventario.php">
+           href="<?= $BASE ?>views/reportes/reportes-inventario.php">
           <i class="fas fa-boxes"></i>
           <span>Stock y Movimientos</span>
         </a>
@@ -165,7 +166,7 @@ function isGroupActive(array $pages, string $current): string {
 
     <!-- Configuración -->
     <a class="menu-item <?= activeClass('configuracion.php', $currentPage) ?>" 
-       href="<?= BASE_URL ?>views/configuracion.php">
+       href="<?= $BASE ?>views/configuracion.php">
       <i class="fas fa-cog"></i>
       <span>Configuración</span>
     </a>
@@ -189,7 +190,7 @@ function isGroupActive(array $pages, string $current): string {
       </div>
     </div>
 
-    <a href="<?= BASE_URL ?>logout.php"class="logout-btn">
+    <a href="<?= $BASE ?>logout.php"class="logout-btn">
       <i class="fas fa-sign-out-alt"></i>
       <span>Cerrar Sesión</span>
     </a>
