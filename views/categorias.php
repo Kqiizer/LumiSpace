@@ -66,11 +66,11 @@ function getCategoryImage($imagen, $BASE) {
   <title>Catálogo - LumiSpace</title>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
   
-  <link rel="stylesheet" href="<?= $BASE ?>css/styles/reset.css">
-  <link rel="stylesheet" href="<?= $BASE ?>css/styles/header.css">
-  <link rel="stylesheet" href="<?= $BASE ?>css/styles/sidebar.css">
-  <link rel="stylesheet" href="<?= $BASE ?>css/styles/footer.css">
-  <link rel="stylesheet" href="<?= $BASE ?>css/styles/responsive.css">
+  <link rel="stylesheet" href="<?= $BASE ?>../css/styles/reset.css">
+  <link rel="stylesheet" href="<?= $BASE ?>../css/styles/header.css">
+  <link rel="stylesheet" href="<?= $BASE ?>../css/styles/sidebar.css">
+  <link rel="stylesheet" href="<?= $BASE ?>../css/styles/footer.css">
+  <link rel="stylesheet" href="<?= $BASE ?>../css/styles/responsive.css">
 
   <style>
     * {

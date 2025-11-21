@@ -1,10 +1,65 @@
+<?php
+declare(strict_types=1);
+
+require_once __DIR__ . '/../config/functions.php';
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+$baseUrl = rtrim(BASE_URL, '/') . '/';
+$favoritesUrl = $baseUrl . 'index/favoritos.php';
+$usuarioId = (int)($_SESSION['usuario_id'] ?? 0);
+
+if ($usuarioId <= 0) {
+    header('Location: ' . $baseUrl . 'views/login.php?next=' . urlencode($favoritesUrl));
+    exit();
+}
+
+$favoritosData = getFavoritos($usuarioId);
+$exploreRaw = getProductosPublicos(8);
+
+$mapProduct = static function (array $product) {
+    $price = isset($product['precio']) ? (float)$product['precio'] : (float)($product['price'] ?? 0);
+    $originalPrice = null;
+    if (array_key_exists('precio_original', $product) && $product['precio_original'] !== null) {
+        $originalPrice = (float)$product['precio_original'];
+    } elseif (isset($product['originalPrice'])) {
+        $originalPrice = (float)$product['originalPrice'];
+    }
+    $discount = isset($product['descuento']) ? (float)$product['descuento'] : (float)($product['discount'] ?? 0);
+    if (!$discount && $originalPrice && $originalPrice > $price) {
+        $discount = round((($originalPrice - $price) / $originalPrice) * 100);
+    }
+    $stock = isset($product['stock']) ? (int)$product['stock'] : (int)($product['stock_real'] ?? 0);
+    $image = publicImageUrl($product['imagen'] ?? $product['image'] ?? '');
+
+    return [
+        'id' => (int)$product['id'],
+        'name' => $product['nombre'] ?? $product['name'] ?? 'Producto sin nombre',
+        'category' => $product['categoria'] ?? $product['category'] ?? 'Otros',
+        'price' => $price,
+        'originalPrice' => $originalPrice,
+        'discount' => $discount,
+        'image' => $image,
+        'stock' => $stock,
+        'rating' => isset($product['rating']) ? (float)$product['rating'] : 4.8,
+        'reviews' => isset($product['reviews']) ? (int)$product['reviews'] : 0,
+        'description' => $product['descripcion'] ?? $product['description'] ?? '',
+        'added_at' => $product['agregado_en'] ?? $product['added_at'] ?? null,
+    ];
+};
+
+$favoritesForJS = array_map($mapProduct, $favoritosData);
+$exploreForJS = array_map($mapProduct, $exploreRaw);
+?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mis Favoritos - Luminarias</title>
-    <link rel="stylesheet" href="../css/styles/favoritos.css">
+    <link rel="stylesheet" href="<?= htmlspecialchars($baseUrl . 'css/styles/favoritos.css', ENT_QUOTES, 'UTF-8'); ?>">
 </head>
 <body>
     
@@ -15,27 +70,6 @@
         <span id="notificationMessage"></span>
     </div>
 
-    
-    <div id="shareModal" class="modal hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Compartir Favoritos</h3>
-                <button class="modal-close" onclick="closeShareModal()">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                </button>
-            </div>
-            <div class="modal-body">
-                <button class="share-btn share-btn-primary">Copiar enlace</button>
-                <button class="share-btn share-btn-secondary">Compartir por WhatsApp</button>
-                <button class="share-btn share-btn-tertiary">Enviar por correo</button>
-            </div>
-        </div>
-    </div>
-
-    
     <header class="header">
         <div class="container">
             <div class="header-content">
@@ -56,16 +90,6 @@
                     </p>
                 </div>
                 <div class="header-right">
-                    <button class="header-btn" onclick="openShareModal()">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="18" cy="5" r="3"></circle>
-                            <circle cx="6" cy="12" r="3"></circle>
-                            <circle cx="18" cy="19" r="3"></circle>
-                            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
-                            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
-                        </svg>
-                        Compartir
-                    </button>
                     <button class="header-btn" id="cartBtn">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="9" cy="21" r="1"></circle>
@@ -157,6 +181,14 @@
         </div>
     </div>
 
-    <script src="../js/favoritos.js"></script>
+    <script>
+        window.BASE_URL = "<?= htmlspecialchars($baseUrl, ENT_QUOTES, 'UTF-8'); ?>";
+        window.USER_LOGGED = true;
+        window.FAVORITES_ENDPOINT = "<?= htmlspecialchars($baseUrl . 'api/wishlist/toggle.php', ENT_QUOTES, 'UTF-8'); ?>";
+        window.FAVORITES_DATA = <?= json_encode($favoritesForJS, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+        window.EXPLORE_DATA = <?= json_encode($exploreForJS, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+        window.LOGIN_URL = "<?= htmlspecialchars($baseUrl . 'views/login.php?next=' . urlencode($favoritesUrl), ENT_QUOTES, 'UTF-8'); ?>";
+    </script>
+    <script src="<?= htmlspecialchars($baseUrl . 'js/favoritos.js', ENT_QUOTES, 'UTF-8'); ?>"></script>
 </body>
 </html>
