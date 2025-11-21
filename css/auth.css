@@ -1,0 +1,1020 @@
+/**
+ * ============================================
+ * SISTEMA DE AUTENTICACIÓN - LUMISPACE
+ * ============================================
+ * Archivo: login.css
+ * Descripción: Estilos para página de login con modo claro/oscuro
+ * Características: Animaciones, efectos de partículas, diseño responsivo
+ * ============================================
+ */
+
+/* ==========================================
+   VARIABLES CSS PARA FÁCIL PERSONALIZACIÓN
+   ========================================== */
+:root {
+  --font-main: 'Roboto', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-heading: 'Roboto', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  /* Colores principales - Modo claro */
+  --primary-color: #7a6c50;
+  --primary-dark: #5e543e;
+  --primary-darker: #3d3526;
+  --text-primary: #2c2c2c;
+  --text-secondary: #666;
+  --text-muted: #888;
+  --border-color: #bbb;
+  --border-light: #ddd;
+  --border-lighter: #ccc;
+
+  /* Colores de estado */
+  --error-color: #e67e22;
+  --error-bg: rgba(230, 126, 34, 0.1);
+  --success-color: #2ecc71;
+  --success-bg: rgba(46, 204, 113, 0.1);
+  --warning-color: #f39c12;
+  --info-color: #3498db;
+  --google-color: #ea4335;
+  --facebook-color: #1877f2;
+
+  /* Backgrounds */
+  --bg-overlay: rgba(255, 255, 255, 0.8);
+  --bg-button: rgba(255, 255, 255, 0.4);
+  --bg-white: #fff;
+  --bg-hover: #f5f5f5;
+
+  /* Sombras */
+  --shadow-base: 0 15px 35px rgba(0, 0, 0, 0.25);
+  --shadow-hover: 0 20px 55px rgba(0, 0, 0, 0.35);
+  --shadow-button: 0 6px 20px rgba(0, 0, 0, 0.35);
+  --shadow-input: 0 6px 15px -4px rgba(122, 108, 80, 0.6);
+
+  /* Transiciones */
+  --transition-fast: 0.3s ease;
+  --transition-medium: 0.4s ease;
+  --transition-slow: 0.7s ease;
+
+  /* Espaciado */
+  --spacing-xs: 10px;
+  --spacing-sm: 15px;
+  --spacing-md: 20px;
+  --spacing-lg: 25px;
+  --spacing-xl: 50px;
+
+  /* Bordes */
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 20px;
+
+  /* Tamaños de fuente */
+  --font-xs: 13px;
+  --font-sm: 14px;
+  --font-md: 15px;
+  --font-lg: 30px;
+}
+
+/* ==========================================
+   RESET Y CONFIGURACIÓN BASE
+   ========================================== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+*::before,
+*::after {
+  box-sizing: inherit;
+}
+
+/* ==========================================
+   ESTILOS GENERALES DEL BODY
+   ========================================== */
+body {
+  margin: 0;
+  font-family: var(--font-main);
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-md);
+  overflow: hidden;
+  position: relative;
+
+  /* Fondo degradado super animado - Modo claro */
+  background: linear-gradient(-45deg,
+      #f3efec,
+      #eddfd2,
+      #e8d5c4,
+      #f5e6d3,
+      #d4c5b9,
+      #c2a98f,
+      #e9ddd0,
+      #f0e5d8,
+      #e6d4c0,
+      #f8f2eb,
+      #dbc8b5,
+      #f1e3d3);
+  background-size: 300% 300%;
+  animation: gradientFlow 10s ease-in-out infinite;
+}
+
+/* Animación del fondo degradado - Super dinámica */
+@keyframes gradientFlow {
+  0% {
+    background-position: 0% 50%;
+    filter: hue-rotate(0deg) brightness(1);
+  }
+
+  15% {
+    background-position: 100% 20%;
+    filter: hue-rotate(5deg) brightness(1.05);
+  }
+
+  30% {
+    background-position: 20% 100%;
+    filter: hue-rotate(0deg) brightness(1);
+  }
+
+  45% {
+    background-position: 100% 80%;
+    filter: hue-rotate(-5deg) brightness(1.02);
+  }
+
+  60% {
+    background-position: 50% 0%;
+    filter: hue-rotate(0deg) brightness(1);
+  }
+
+  75% {
+    background-position: 0% 100%;
+    filter: hue-rotate(3deg) brightness(1.03);
+  }
+
+  90% {
+    background-position: 80% 50%;
+    filter: hue-rotate(0deg) brightness(1);
+  }
+
+  100% {
+    background-position: 0% 50%;
+    filter: hue-rotate(0deg) brightness(1);
+  }
+}
+
+/* ==========================================
+   EFECTO DE PARTÍCULAS FLOTANTES - SUPER MEJORADO
+   ========================================== */
+body::before,
+body::after {
+  content: "";
+  position: absolute;
+  width: 200%;
+  height: 200%;
+  top: -50%;
+  left: -50%;
+  background: radial-gradient(circle,
+      rgba(255, 255, 255, 0.25) 1%,
+      transparent 30%) repeat;
+  background-size: 150px 150px;
+  animation: floatParticles 40s ease-in-out infinite;
+  z-index: 0;
+  pointer-events: none;
+}
+
+body::after {
+  background: radial-gradient(circle,
+      rgba(194, 169, 143, 0.2) 2%,
+      transparent 35%) repeat;
+  background-size: 200px 200px;
+  animation: floatParticlesReverse 50s ease-in-out infinite;
+}
+
+/* Capa adicional de partículas */
+.auth-wrapper::before {
+  content: "";
+  position: fixed;
+  width: 300%;
+  height: 300%;
+  top: -100%;
+  left: -100%;
+  background: radial-gradient(circle,
+      rgba(122, 108, 80, 0.12) 1px,
+      transparent 30%) repeat;
+  background-size: 100px 100px;
+  animation: floatParticlesSlow 60s ease-in-out infinite;
+  z-index: -1;
+  pointer-events: none;
+}
+
+@keyframes floatParticles {
+  0% {
+    transform: translateY(0) translateX(0) rotate(0deg) scale(1);
+  }
+
+  15% {
+    transform: translateY(-8%) translateX(8%) rotate(54deg) scale(1.05);
+  }
+
+  30% {
+    transform: translateY(-15%) translateX(-5%) rotate(108deg) scale(0.95);
+  }
+
+  45% {
+    transform: translateY(-8%) translateX(12%) rotate(162deg) scale(1.08);
+  }
+
+  60% {
+    transform: translateY(-20%) translateX(-8%) rotate(216deg) scale(0.92);
+  }
+
+  75% {
+    transform: translateY(-10%) translateX(5%) rotate(270deg) scale(1.03);
+  }
+
+  90% {
+    transform: translateY(-5%) translateX(-10%) rotate(324deg) scale(0.98);
+  }
+
+  100% {
+    transform: translateY(0) translateX(0) rotate(360deg) scale(1);
+  }
+}
+
+@keyframes floatParticlesReverse {
+  0% {
+    transform: translateY(0) translateX(0) rotate(0deg) scale(1);
+  }
+
+  12% {
+    transform: translateY(10%) translateX(-8%) rotate(-43deg) scale(1.06);
+  }
+
+  25% {
+    transform: translateY(20%) translateX(10%) rotate(-86deg) scale(0.94);
+  }
+
+  37% {
+    transform: translateY(15%) translateX(-12%) rotate(-129deg) scale(1.04);
+  }
+
+  50% {
+    transform: translateY(25%) translateX(8%) rotate(-180deg) scale(0.96);
+  }
+
+  62% {
+    transform: translateY(18%) translateX(-6%) rotate(-223deg) scale(1.02);
+  }
+
+  75% {
+    transform: translateY(12%) translateX(15%) rotate(-266deg) scale(0.98);
+  }
+
+  87% {
+    transform: translateY(8%) translateX(-10%) rotate(-309deg) scale(1.05);
+  }
+
+  100% {
+    transform: translateY(0) translateX(0) rotate(-360deg) scale(1);
+  }
+}
+
+@keyframes floatParticlesSlow {
+  0% {
+    transform: translateY(0) translateX(0) rotate(0deg) scale(1);
+  }
+
+  20% {
+    transform: translateY(-15%) translateX(10%) rotate(72deg) scale(1.1);
+  }
+
+  40% {
+    transform: translateY(-25%) translateX(-15%) rotate(144deg) scale(0.9);
+  }
+
+  60% {
+    transform: translateY(-20%) translateX(20%) rotate(216deg) scale(1.05);
+  }
+
+  80% {
+    transform: translateY(-10%) translateX(-10%) rotate(288deg) scale(0.95);
+  }
+
+  100% {
+    transform: translateY(0) translateX(0) rotate(360deg) scale(1);
+  }
+}
+
+/* ==========================================
+   CONTENEDOR PRINCIPAL DE AUTENTICACIÓN
+   ========================================== */
+.auth-wrapper {
+  display: flex;
+  background: var(--bg-overlay);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  max-width: 880px;
+  width: 100%;
+  box-shadow: var(--shadow-base);
+  animation: fadeIn 0.8s ease;
+  transition: transform var(--transition-medium),
+    box-shadow var(--transition-medium);
+  z-index: 1;
+  position: relative;
+}
+
+.auth-wrapper:hover {
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: var(--shadow-hover);
+}
+
+/* ==========================================
+   COLUMNA IZQUIERDA - IMAGEN
+   ========================================== */
+.auth-image {
+  flex: 1.2;
+  background: url("../images/pos-login.jpg") no-repeat center center/cover;
+  min-height: 500px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Overlay sutil sobre la imagen */
+.auth-image::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg,
+      rgba(0, 0, 0, 0.25) 0%,
+      rgba(0, 0, 0, 0) 100%);
+  transition: opacity var(--transition-fast);
+}
+
+.auth-image:hover::after {
+  opacity: 0.8;
+}
+
+/* ==========================================
+   COLUMNA DERECHA - FORMULARIO
+   ========================================== */
+.auth-form {
+  flex: 1;
+  padding: var(--spacing-xl) 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  animation: slideIn 1s ease;
+  background: var(--bg-white);
+}
+
+/* Título principal */
+.auth-form h2 {
+  font-size: var(--font-lg);
+  margin-bottom: var(--spacing-xs);
+  color: var(--text-primary);
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+}
+
+/* Subtítulo */
+.auth-form .subtitle {
+  font-size: var(--font-sm);
+  margin-bottom: var(--spacing-lg);
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.auth-form .subtitle a {
+  color: var(--primary-color);
+  font-weight: 500;
+  text-decoration: none;
+  transition: all var(--transition-fast);
+  border-bottom: 1px solid transparent;
+}
+
+.auth-form .subtitle a:hover {
+  color: var(--primary-dark);
+  border-bottom-color: var(--primary-dark);
+}
+
+/* ==========================================
+   GRUPOS DE INPUTS
+   ========================================== */
+.input-group {
+  position: relative;
+  margin-bottom: 22px;
+}
+
+.input-group input {
+  width: 100%;
+  padding: 12px 14px;
+  padding-right: 40px;
+  border: none;
+  border-bottom: 2px solid var(--border-color);
+  font-size: var(--font-md);
+  background: transparent;
+  transition: all var(--transition-fast);
+  color: var(--text-primary);
+  font-family: inherit;
+}
+
+.input-group input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+.input-group input:focus {
+  border-color: var(--primary-color);
+  outline: none;
+  box-shadow: var(--shadow-input);
+  animation: pulseInput 1s ease infinite alternate;
+}
+
+@keyframes pulseInput {
+  from {
+    box-shadow: 0 6px 15px -4px rgba(122, 108, 80, 0.4);
+  }
+
+  to {
+    box-shadow: 0 6px 20px -4px rgba(122, 108, 80, 0.8);
+  }
+}
+
+/* Icono dentro del input */
+.input-group .icon {
+  position: absolute;
+  right: var(--spacing-xs);
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: var(--font-md);
+  color: #aaa;
+  pointer-events: none;
+  transition: color var(--transition-fast);
+}
+
+.input-group input:focus~.icon {
+  color: var(--primary-color);
+}
+
+/* Estado de validación */
+.input-group input:valid {
+  border-bottom-color: var(--success-color);
+}
+
+.input-group input:invalid:not(:placeholder-shown) {
+  border-bottom-color: var(--error-color);
+}
+
+/* ==========================================
+   BOTÓN PRINCIPAL DE LOGIN
+   ========================================== */
+.btn-login {
+  width: 100%;
+  padding: 14px;
+  margin-top: var(--spacing-xs);
+  border: none;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+  color: var(--bg-white);
+  font-weight: bold;
+  font-size: var(--font-md);
+  cursor: pointer;
+  transition: all var(--transition-medium);
+  letter-spacing: 0.5px;
+  position: relative;
+  overflow: hidden;
+  text-transform: uppercase;
+  font-family: inherit;
+}
+
+/* Efecto de brillo en el botón */
+.btn-login::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -75%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg,
+      transparent,
+      rgba(255, 255, 255, 0.5),
+      transparent);
+  transform: skewX(-25deg);
+  transition: left var(--transition-slow);
+}
+
+.btn-login:hover::before {
+  left: 125%;
+}
+
+.btn-login:hover {
+  background: linear-gradient(135deg,
+      var(--primary-dark),
+      var(--primary-darker));
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: var(--shadow-button);
+}
+
+.btn-login:active {
+  transform: scale(0.98);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
+}
+
+.btn-login:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ==========================================
+   MENSAJES DE ERROR Y ÉXITO
+   ========================================== */
+.message-container {
+  margin-bottom: var(--spacing-sm);
+  min-height: 20px;
+}
+
+.error,
+.success {
+  padding: var(--spacing-xs);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-xs);
+  text-align: center;
+  font-weight: 600;
+  animation: messageSlide 0.4s ease;
+}
+
+@keyframes messageSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.error {
+  color: var(--error-color);
+  background: var(--error-bg);
+  border-left: 3px solid var(--error-color);
+}
+
+.success {
+  color: var(--success-color);
+  background: var(--success-bg);
+  border-left: 3px solid var(--success-color);
+}
+
+/* ==========================================
+   DIVISOR "O"
+   ========================================== */
+.divider {
+  text-align: center;
+  margin: var(--spacing-lg) 0;
+  position: relative;
+}
+
+.divider span {
+  background: var(--bg-white);
+  padding: 0 var(--spacing-xs);
+  color: var(--text-muted);
+  font-size: var(--font-sm);
+  position: relative;
+  z-index: 1;
+  font-weight: 500;
+}
+
+.divider::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: var(--border-light);
+  z-index: 0;
+}
+
+/* ==========================================
+   BOTONES DE LOGIN SOCIAL
+   ========================================== */
+.social-login {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.social-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+  width: 100%;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-lighter);
+  font-size: var(--font-sm);
+  cursor: pointer;
+  background: var(--bg-white);
+  color: #333;
+  text-decoration: none;
+  transition: all var(--transition-fast);
+  font-weight: 500;
+  font-family: inherit;
+}
+
+.social-btn:hover {
+  background: var(--bg-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.social-btn:active {
+  transform: translateY(0);
+}
+
+/* Iconos de redes sociales */
+.social-btn i,
+.social-btn img {
+  width: 18px;
+  height: 18px;
+}
+
+/* Estilos específicos por red social */
+.social-btn.google {
+  border-color: var(--google-color);
+  color: var(--google-color);
+}
+
+.social-btn.google:hover {
+  background: rgba(219, 74, 57, 0.05);
+  border-color: var(--google-color);
+}
+
+.social-btn.facebook {
+  border-color: var(--facebook-color);
+  color: var(--facebook-color);
+}
+
+.social-btn.facebook:hover {
+  background: rgba(59, 89, 152, 0.05);
+  border-color: var(--facebook-color);
+}
+
+/* ==========================================
+   ENLACES ADICIONALES (Olvidé mi contraseña)
+   ========================================== */
+.auth-form .forgot-password {
+  text-align: right;
+  margin-top: var(--spacing-xs);
+  font-size: var(--font-xs);
+}
+
+.auth-form .forgot-password a {
+  color: var(--primary-color);
+  text-decoration: none;
+  font-weight: 500;
+  transition: all var(--transition-fast);
+}
+
+.auth-form .forgot-password a:hover {
+  color: var(--primary-dark);
+  text-decoration: underline;
+}
+
+/* ==========================================
+   CHECKBOX "RECORDARME"
+   ========================================== */
+.remember-me {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: var(--spacing-sm) 0;
+  font-size: var(--font-sm);
+}
+
+.remember-me input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--primary-color);
+}
+
+.remember-me label {
+  cursor: pointer;
+  color: var(--text-secondary);
+  user-select: none;
+}
+
+/* ==========================================
+   ANIMACIONES DE ENTRADA
+   ========================================== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ==========================================
+   LOADER / SPINNER (opcional)
+   ========================================== */
+.loader {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: var(--bg-white);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ==========================================
+   MODO OSCURO AUTOMÁTICO
+   ========================================== */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text-primary: #f1f1f1;
+    --text-secondary: #bbb;
+    --text-muted: #999;
+    --border-color: #555;
+    --border-light: #444;
+    --bg-overlay: rgba(30, 30, 35, 0.9);
+    --bg-white: #2a2a2f;
+    --bg-hover: #3a3a40;
+    --bg-button: rgba(255, 255, 255, 0.2);
+    --primary-color: #d4af7f;
+    --shadow-input: 0 6px 15px -4px rgba(212, 175, 127, 0.7);
+    --error-color: #ff9f43;
+    --error-bg: rgba(255, 159, 67, 0.15);
+    --success-color: #5cd85a;
+    --success-bg: rgba(92, 216, 90, 0.15);
+  }
+
+  body {
+    background: linear-gradient(-45deg,
+        #1a1a1f,
+        #2d2d35,
+        #3a3a45,
+        #252530,
+        #4a4a55,
+        #5e543e,
+        #3d3d48,
+        #2a2a35,
+        #35353f,
+        #1f1f28,
+        #484855,
+        #3f3f4a);
+    background-size: 300% 300%;
+    animation: gradientDarkFlow 12s ease-in-out infinite;
+    color: var(--text-primary);
+  }
+
+  @keyframes gradientDarkFlow {
+    0% {
+      background-position: 0% 50%;
+      filter: hue-rotate(0deg) brightness(1);
+    }
+
+    15% {
+      background-position: 100% 30%;
+      filter: hue-rotate(8deg) brightness(1.08);
+    }
+
+    30% {
+      background-position: 30% 100%;
+      filter: hue-rotate(0deg) brightness(1);
+    }
+
+    45% {
+      background-position: 100% 70%;
+      filter: hue-rotate(-8deg) brightness(1.05);
+    }
+
+    60% {
+      background-position: 40% 0%;
+      filter: hue-rotate(0deg) brightness(1);
+    }
+
+    75% {
+      background-position: 0% 100%;
+      filter: hue-rotate(5deg) brightness(1.06);
+    }
+
+    90% {
+      background-position: 70% 40%;
+      filter: hue-rotate(0deg) brightness(1);
+    }
+
+    100% {
+      background-position: 0% 50%;
+      filter: hue-rotate(0deg) brightness(1);
+    }
+  }
+
+  /* Ajustes de partículas en modo oscuro - más visibles */
+  body::before {
+    background: radial-gradient(circle,
+        rgba(255, 255, 255, 0.08) 2%,
+        transparent 35%) repeat;
+    background-size: 150px 150px;
+  }
+
+  body::after {
+    background: radial-gradient(circle,
+        rgba(212, 175, 127, 0.12) 2%,
+        transparent 40%) repeat;
+    background-size: 200px 200px;
+  }
+
+  /* Overlay de imagen más oscuro con gradiente mejorado */
+  .auth-image::after {
+    background: linear-gradient(180deg,
+        rgba(0, 0, 0, 0.6) 0%,
+        rgba(0, 0, 0, 0.3) 100%);
+  }
+
+  /* Ajustes de formulario */
+  .auth-form {
+    background: #2a2a2f;
+  }
+
+  /* Ajustes de inputs */
+  .input-group input {
+    color: #eee;
+  }
+
+  /* Botones sociales */
+  .social-btn {
+    background: var(--bg-white);
+    color: var(--text-primary);
+    border-color: #444;
+  }
+
+  .social-btn:hover {
+    background: var(--bg-hover);
+    border-color: #555;
+  }
+
+  /* Wrapper con borde sutil */
+  .auth-wrapper {
+    border: 1px solid rgba(212, 175, 127, 0.15);
+  }
+}
+
+/* ==========================================
+   DISEÑO RESPONSIVO
+   ========================================== */
+
+/* Tablets */
+@media (max-width: 850px) {
+  .auth-wrapper {
+    flex-direction: column;
+    max-width: 420px;
+  }
+
+  .auth-image {
+    display: none;
+  }
+
+  .auth-form {
+    padding: 35px 25px;
+  }
+
+  .auth-form h2 {
+    font-size: 26px;
+  }
+}
+
+/* Móviles */
+@media (max-width: 480px) {
+  body {
+    padding: var(--spacing-xs);
+  }
+
+  .auth-form {
+    padding: var(--spacing-lg) var(--spacing-md);
+  }
+
+  .auth-form h2 {
+    font-size: 24px;
+  }
+
+  .btn-login {
+    padding: 12px;
+    font-size: var(--font-sm);
+  }
+
+  .social-btn {
+    padding: 10px;
+    font-size: var(--font-xs);
+  }
+}
+
+/* Modo landscape en móviles */
+@media (max-height: 600px) and (orientation: landscape) {
+  body {
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .auth-wrapper {
+    margin: var(--spacing-md) 0;
+  }
+
+  .auth-form {
+    padding: var(--spacing-md);
+  }
+}
+
+/* ==========================================
+   ACCESIBILIDAD
+   ========================================== */
+
+/* Focus visible para navegación con teclado */
+*:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+/* Reducir animaciones si el usuario lo prefiere */
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ==========================================
+   UTILIDADES
+   ========================================== */
+.text-center {
+  text-align: center;
+}
+
+.mt-small {
+  margin-top: var(--spacing-sm);
+}
+
+.mt-medium {
+  margin-top: var(--spacing-md);
+}
+
+.hidden {
+  display: none;
+}
+
+.visible {
+  display: block;
+}
+
+/* ==========================================
+   PRINT STYLES
+   ========================================== */
+@media print {
+
+  body::before,
+  body::after {
+    display: none;
+  }
+
+  .auth-wrapper {
+    box-shadow: none;
+    border: 1px solid #ddd;
+  }
+
+  .auth-image {
+    display: none;
+  }
+}

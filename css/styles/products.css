@@ -1,0 +1,119 @@
+/* ==== PRODUCTS SECTION ==== */
+.products {
+  padding: 80px 0;
+  background: linear-gradient(135deg, #f5f2ef 0%, #ede7e0 100%);
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+.products .container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* GRID de categorías */
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 40px;
+}
+
+/* Tarjeta de categoría */
+.product-category {
+  background: white;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(139, 115, 85, 0.1);
+  transition: transform 0.3s, background 0.3s ease;
+}
+
+.product-category:hover {
+  transform: translateY(-5px);
+}
+
+/* Encabezado */
+.category-header {
+  padding: 25px;
+  text-align: center;
+}
+
+.item-count {
+  color: #d4c4a8;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+
+.category-title {
+  font-size: 28px;
+  font-weight: bold;
+  color: #8b7355;
+  margin-bottom: 15px;
+}
+
+.category-description {
+  color: #a0896b;
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
+/* Lista de items */
+.category-list {
+  list-style: none;
+  text-align: left;
+  padding: 0 20px 20px;
+}
+
+.category-list li {
+  color: #8b7355;
+  padding: 5px 0;
+  font-size: 14px;
+}
+
+/* Imagen decorativa */
+.category-image {
+  height: 200px;
+  background: linear-gradient(45deg, #e8ddd4, #d4c4a8);
+  position: relative;
+  margin: 20px;
+  border-radius: 15px;
+}
+
+.category-image::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 60%;
+  height: 70%;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 10px;
+}
+
+/* ==== 🌙 DARK MODE ==== */
+body.dark .products {
+  background: linear-gradient(135deg, #1e1e1e 0%, #2a2a2a 100%);
+}
+
+body.dark .product-category {
+  background: #2b2b2b;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+}
+
+body.dark .item-count {
+  color: #c5b48a;
+}
+
+body.dark .category-title {
+  color: #f0f0f0;
+}
+
+body.dark .category-description,
+body.dark .category-list li {
+  color: #d9c9a7;
+}
+
+body.dark .category-image {
+  background: linear-gradient(45deg, #3a3a3a, #5a4a35);
+}

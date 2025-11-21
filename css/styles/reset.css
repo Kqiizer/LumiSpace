@@ -1,0 +1,483 @@
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --font-main: 'Roboto', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-heading: 'Roboto', 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+/* ==========================================
+   BASE DE DOCUMENTO
+   ========================================== */
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  height: 100%;
+  width: 100%;
+  font-family: var(--font-main);
+  background-color: #faf8f6;
+  color: #8b7355;
+  line-height: 1.6;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  overflow-x: hidden;
+}
+
+/* ==========================================
+   IMÁGENES Y MULTIMEDIA
+   ========================================== */
+img,
+picture,
+video,
+canvas,
+svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  vertical-align: middle;
+}
+
+/* Prevenir que las imágenes se distorsionen */
+img {
+  object-fit: cover;
+}
+
+/* ==========================================
+   TIPOGRAFÍA
+   ========================================== */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  line-height: 1.2;
+  margin-bottom: 0.5em;
+  color: inherit;
+}
+
+h1 {
+  font-size: 2.5rem;
+}
+
+h2 {
+  font-size: 2rem;
+}
+
+h3 {
+  font-size: 1.75rem;
+}
+
+h4 {
+  font-size: 1.5rem;
+}
+
+h5 {
+  font-size: 1.25rem;
+}
+
+h6 {
+  font-size: 1rem;
+}
+
+p {
+  margin: 0 0 1em 0;
+}
+
+strong,
+b {
+  font-weight: 700;
+}
+
+em,
+i {
+  font-style: italic;
+}
+
+small {
+  font-size: 0.875em;
+}
+
+/* ==========================================
+   LISTAS
+   ========================================== */
+ul,
+ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Listas con estilo cuando se necesiten */
+.styled-list {
+  list-style: disc;
+  padding-left: 1.5em;
+}
+
+.styled-list ol {
+  list-style: decimal;
+}
+
+/* ==========================================
+   ENLACES
+   ========================================== */
+a {
+  text-decoration: none;
+  color: inherit;
+  transition: color 0.3s ease, opacity 0.3s ease;
+  cursor: pointer;
+}
+
+a:hover {
+  opacity: 0.8;
+}
+
+a:focus-visible {
+  outline: 2px solid #a1683a;
+  outline-offset: 2px;
+}
+
+/* ==========================================
+   FORMULARIOS
+   ========================================== */
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  border: none;
+  outline: none;
+  background: transparent;
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+button {
+  cursor: pointer;
+  user-select: none;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 2px solid #a1683a;
+  outline-offset: 2px;
+}
+
+/* Remover estilos por defecto de inputs */
+input[type="search"]::-webkit-search-decoration,
+input[type="search"]::-webkit-search-cancel-button,
+input[type="search"]::-webkit-search-results-button,
+input[type="search"]::-webkit-search-results-decoration {
+  display: none;
+}
+
+/* Remover spinner de inputs numéricos */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* Textarea no redimensionable por defecto */
+textarea {
+  resize: vertical;
+}
+
+/* ==========================================
+   TABLAS
+   ========================================== */
+table {
+  border-collapse: collapse;
+  border-spacing: 0;
+  width: 100%;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+th,
+td {
+  padding: 0.75rem;
+  text-align: left;
+}
+
+/* ==========================================
+   ELEMENTOS INTERACTIVOS
+   ========================================== */
+summary {
+  cursor: pointer;
+  user-select: none;
+}
+
+details summary::-webkit-details-marker {
+  display: none;
+}
+
+/* ==========================================
+   CONTENEDORES PRINCIPALES
+   ========================================== */
+.page-wrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.main-content {
+  flex: 1;
+}
+
+.container {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 15px;
+}
+
+/* ==========================================
+   UTILIDADES GENERALES
+   ========================================== */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+.no-scroll {
+  overflow: hidden;
+}
+
+/* ==========================================
+   SCROLLBAR PERSONALIZADO
+   ========================================== */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #a1683a;
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #8f5e4b;
+}
+
+/* ==========================================
+   SELECCIÓN DE TEXTO
+   ========================================== */
+::selection {
+  background-color: #a1683a;
+  color: #ffffff;
+}
+
+::-moz-selection {
+  background-color: #a1683a;
+  color: #ffffff;
+}
+
+/* ==========================================
+   🌙 MODO OSCURO COMPLETO
+   ========================================== */
+body.dark {
+  background-color: #1e1e1e;
+  color: #f0f0f0;
+}
+
+/* Títulos en modo oscuro */
+body.dark h1,
+body.dark h2,
+body.dark h3,
+body.dark h4,
+body.dark h5,
+body.dark h6 {
+  color: #f0f0f0;
+}
+
+/* Enlaces en modo oscuro */
+body.dark a {
+  color: #f0f0f0;
+}
+
+body.dark a:focus-visible {
+  outline-color: #d4af7f;
+}
+
+/* Formularios en modo oscuro */
+body.dark input,
+body.dark select,
+body.dark textarea {
+  background: #2b2b2b;
+  color: #f0f0f0;
+  border: 1px solid #404040;
+  border-radius: 4px;
+}
+
+body.dark input::placeholder,
+body.dark textarea::placeholder {
+  color: #888888;
+  opacity: 1;
+}
+
+body.dark input:focus,
+body.dark select:focus,
+body.dark textarea:focus {
+  outline-color: #d4af7f;
+  border-color: #d4af7f;
+}
+
+body.dark button {
+  background: #2b2b2b;
+  color: #f0f0f0;
+  border-radius: 4px;
+}
+
+/* Tablas en modo oscuro */
+body.dark table {
+  background: #2b2b2b;
+  color: #f0f0f0;
+}
+
+body.dark th {
+  background: #333333;
+  color: #f0f0f0;
+  border-bottom: 2px solid #404040;
+}
+
+body.dark td {
+  border-bottom: 1px solid #404040;
+}
+
+body.dark tr:hover {
+  background: #333333;
+}
+
+/* Scrollbar en modo oscuro */
+body.dark ::-webkit-scrollbar-track {
+  background: #2b2b2b;
+}
+
+body.dark ::-webkit-scrollbar-thumb {
+  background: #d4af7f;
+}
+
+body.dark ::-webkit-scrollbar-thumb:hover {
+  background: #c2a98f;
+}
+
+/* Selección de texto en modo oscuro */
+body.dark ::selection {
+  background-color: #d4af7f;
+  color: #1e1e1e;
+}
+
+body.dark ::-moz-selection {
+  background-color: #d4af7f;
+  color: #1e1e1e;
+}
+
+/* ==========================================
+   ANIMACIONES Y TRANSICIONES
+   ========================================== */
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ==========================================
+   IMPRESIÓN
+   ========================================== */
+@media print {
+  body {
+    background: white;
+    color: black;
+  }
+
+  a[href]:after {
+    content: " (" attr(href) ")";
+  }
+
+  img {
+    max-width: 100%;
+    page-break-inside: avoid;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    page-break-after: avoid;
+  }
+}
+
+/* ==========================================
+   RESPONSIVE HELPERS
+   ========================================== */
+@media (max-width: 768px) {
+  html {
+    font-size: 14px;
+  }
+
+  h1 {
+    font-size: 2rem;
+  }
+
+  h2 {
+    font-size: 1.75rem;
+  }
+
+  h3 {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  html {
+    font-size: 13px;
+  }
+
+  h1 {
+    font-size: 1.75rem;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+  }
+}
