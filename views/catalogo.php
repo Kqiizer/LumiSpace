@@ -71,10 +71,18 @@ $stats = [
 // ==========================================
 function img_url($path, $BASE, $folder = 'productos') {
     $path = trim((string)$path);
-    if ($path === '') return $BASE . "images/default.png";
-    if (preg_match('#^https?://#i', $path)) return $path;
-    return $BASE . "images/{$folder}/" . ltrim($path, '/');
+
+    if ($path === '') 
+        return $BASE . "images/default.png";
+
+    // Si es URL absoluta
+    if (preg_match('#^https?://#i', $path)) 
+        return $path;
+
+    // 🔥 Ruta fija y correcta aunque estés dentro de /views/
+    return $BASE . "images/{$folder}/" . basename($path);
 }
+
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -89,11 +97,11 @@ function img_url($path, $BASE, $folder = 'productos') {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <!-- Stylesheets -->
-    <link rel="stylesheet" href="<?= $BASE ?>../css/styles/reset.css">
-    <link rel="stylesheet" href="<?= $BASE ?>../css/styles/header.css">
-    <link rel="stylesheet" href="<?= $BASE ?>../css/styles/footer.css">
-    <link rel="stylesheet" href="<?= $BASE ?>../css/styles/responsive.css">
-    <link rel="stylesheet" href="<?= $BASE ?>../css/styles/sidebar.css">
+    <link rel="stylesheet" href="<?= $BASE ?>css/styles/reset.css">
+    <link rel="stylesheet" href="<?= $BASE ?>css/styles/header.css">
+    <link rel="stylesheet" href="<?= $BASE ?>css/styles/footer.css">
+    <link rel="stylesheet" href="<?= $BASE ?>css/styles/sidebar.css">
+    <link rel="stylesheet" href="<?= $BASE ?>css/styles/responsive.css">
     <style>
         /* ==========================================
            VARIABLES Y CONFIGURACIÓN BASE
@@ -897,7 +905,8 @@ function img_url($path, $BASE, $folder = 'productos') {
         </button>
 
         <!-- Header -->
-        <?php include __DIR__ . "../../includes/header.php"; ?>
+       <?php include __DIR__ . "/../includes/header.php"; ?>
+
 
         <!-- Hero Section -->
         <section class="catalog-hero">
@@ -927,206 +936,195 @@ function img_url($path, $BASE, $folder = 'productos') {
 
         <!-- Barra de Filtros y Búsqueda -->
         <div class="filters-bar">
-            <div class="filters-container">
-                <!-- Búsqueda -->
-                <div class="search-bar">
-                    <div class="search-input-wrapper">
-                        <input type="text" 
-                               class="search-input" 
-                               id="searchInput" 
-                               placeholder="Buscar productos por nombre...">
-                        <i class="fas fa-search search-icon"></i>
-                    </div>
-                    <div class="search-actions">
-                        <button class="btn-icon" id="btnClearFilters" title="Limpiar filtros">
-                            <i class="fas fa-times"></i>
-                            <span>Limpiar</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Filtros de Categorías -->
-                <div class="category-filters">
-                    <div class="filters-scroll">
-                        <button class="filter-chip active" data-category="">
-                            Todos
-                            <span class="chip-count">(<?= count($todos_productos) ?>)</span>
-                        </button>
-                        <?php foreach ($categorias_db as $cat): 
-                            $count = $productos_por_categoria[$cat['id']] ?? 0;
-                            if ($count > 0): ?>
-                            <button class="filter-chip" data-category="<?= $cat['id'] ?>">
-                                <?= htmlspecialchars($cat['nombre']) ?>
-                                <span class="chip-count">(<?= $count ?>)</span>
-                            </button>
-                        <?php endif; endforeach; ?>
-                    </div>
-                </div>
+    <div class="filters-container">
+        
+        <!-- Búsqueda -->
+        <div class="search-bar">
+            <div class="search-input-wrapper">
+                <input type="text" 
+                       class="search-input" 
+                       id="searchInput" 
+                       placeholder="Buscar productos por nombre...">
+                <i class="fas fa-search search-icon"></i>
+            </div>
+            <div class="search-actions">
+                <button class="btn-icon" id="btnClearFilters" title="Limpiar filtros">
+                    <i class="fas fa-times"></i>
+                    <span>Limpiar</span>
+                </button>
             </div>
         </div>
 
-        <!-- Productos -->
-        <section class="products-section">
-            <div class="products-header">
-                <div class="products-count">
-                    Mostrando <strong id="visibleCount"><?= count($todos_productos) ?></strong> de <strong><?= count($todos_productos) ?></strong> productos
-                </div>
+        <!-- Filtros de Categorías -->
+        <div class="category-filters">
+            <div class="filters-scroll">
+
+                <!-- Botón TODOS -->
+                <button class="filter-chip active" data-category="">
+                    Todos
+                    <span class="chip-count">(<?= count($todos_productos) ?>)</span>
+                </button>
+
+                <!-- Botones de categorías -->
+                <?php foreach ($categorias_db as $cat): 
+                    $count = isset($productos_por_categoria[$cat['id']]['productos'])
+                            ? count($productos_por_categoria[$cat['id']]['productos'])
+                            : 0;
+
+                    if ($count > 0): ?>
+                        <button class="filter-chip" data-category="<?= $cat['id'] ?>">
+                            <?= htmlspecialchars($cat['nombre']) ?>
+                            <span class="chip-count">(<?= $count ?>)</span>
+                        </button>
+                <?php endif; endforeach; ?>
             </div>
+        </div>
+    </div>
+</div>
 
-            <div class="products-grid" id="productsGrid" data-base="<?= htmlspecialchars($BASE) ?>">
-                <?php foreach ($todos_productos as $p): 
-                    $img = img_url($p['imagen'], $BASE);
-                    $precio = (float)$p['precio'];
-                    $precioOriginal = (float)($p['precio_original'] ?? 0);
-                    $desc = $precioOriginal > $precio ? round(100 - ($precio * 100 / $precioOriginal)) : 0;
-                    $fav = !empty($favoritosSet[$p['id']]);
-                ?>
-                <div class="product-card" 
-                     data-id="<?= $p['id'] ?>" 
-                     data-category="<?= $p['categoria_id'] ?>" 
-                     data-nombre="<?= htmlspecialchars($p['nombre'], ENT_QUOTES) ?>">
-                    
-                    <div class="product-image-wrapper">
-                        <div class="product-image" style="background-image:url('<?= $img ?>')"></div>
-                        
-                        <?php if ($desc): ?>
-                        <div class="product-badge">-<?= $desc ?>%</div>
-                        <?php endif; ?>
-                        
-                        <div class="product-actions">
-                            <button class="action-btn js-wish <?= $fav ? 'active' : '' ?>" 
-                                    title="<?= $fav ? 'Quitar de favoritos' : 'Agregar a favoritos' ?>">
-                                <i class="fas fa-heart"></i>
-                            </button>
-                            <a class="action-btn" 
-                               href="<?= $BASE ?>views/productos-detal.php?id=<?= $p['id'] ?>" 
-                               title="Ver detalles del producto">
-                                <i class="fas fa-eye"></i>
-                            </a>
-                            <button class="action-btn js-cart" 
-                                    title="Agregar al carrito">
-                                <i class="fas fa-shopping-cart"></i>
-                            </button>
-                        </div>
-                    </div>
+<!-- Productos -->
+<section class="products-section">
 
-                    <div class="product-info">
-                        <div class="product-category-tag">
-                            <?= htmlspecialchars($p['categoria']) ?>
-                        </div>
-                        <div class="product-name">
-                            <?= htmlspecialchars($p['nombre']) ?>
-                        </div>
-                        <div class="product-price-wrapper">
-                            <span class="product-price">$<?= number_format($precio, 2) ?></span>
-                            <?php if ($desc): ?>
-                            <span class="original-price">$<?= number_format($precioOriginal, 2) ?></span>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                </div>
-                <?php endforeach; ?>
-            </div>
-
-            <!-- Estado Vacío -->
-            <div class="empty-state" id="emptyState" style="display:none;">
-                <i class="fas fa-search"></i>
-                <h3>No se encontraron productos</h3>
-                <p>Intenta con otros filtros o términos de búsqueda</p>
-            </div>
-        </section>
-
-        <!-- Footer -->
-        <?php include __DIR__ . "/../includes/footer.php"; ?>
+    <div class="products-header">
+        <div class="products-count">
+            Mostrando <strong id="visibleCount"><?= count($todos_productos) ?></strong> de 
+            <strong><?= count($todos_productos) ?></strong> productos
+        </div>
     </div>
 
-    /* ---------- Carrito (sincronizado con header y flotante) ---------- */
-const addBtn = document.getElementById('addToCartBtn');
-const buyBtn = document.getElementById('buyNowBtn');
-const getQty = () => Math.max(1, parseInt(qtyInput?.value || '1', 10));
+    <div class="products-grid" id="productsGrid" data-base="<?= htmlspecialchars($BASE) ?>">
+        <?php foreach ($todos_productos as $p): 
+            $img = img_url($p['imagen'], $BASE);
+            $precio = (float)$p['precio'];
+            $precioOriginal = (float)($p['precio_original'] ?? 0);
+            $desc = $precioOriginal > $precio ? round(100 - ($precio * 100 / $precioOriginal)) : 0;
+            $fav = !empty($favoritosSet[$p['id']]);
+        ?>
+        <div class="product-card"
+             data-id="<?= $p['id'] ?>"
+             data-category="<?= $p['categoria_id'] ?>"
+             data-nombre="<?= htmlspecialchars($p['nombre'], ENT_QUOTES) ?>">
 
-const CART_KEY = 'lumispace_cart';
-function getCart(){ return JSON.parse(localStorage.getItem(CART_KEY) || '[]'); }
-function saveCart(c){ localStorage.setItem(CART_KEY, JSON.stringify(c)); }
-function syncCartUI(){ if (typeof syncCarts === 'function') syncCarts(); }
+            <div class="product-image-wrapper">
+                <div class="product-image" style="background-image:url('<?= $img ?>')"></div>
 
-async function postJSON(url, data){
-  try {
-    const res = await fetch(url, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(data)
+                <?php if ($desc): ?>
+                    <div class="product-badge">-<?= $desc ?>%</div>
+                <?php endif; ?>
+
+                <div class="product-actions">
+                    <button class="action-btn js-wish <?= $fav ? 'active' : '' ?>"
+                            title="<?= $fav ? 'Quitar de favoritos' : 'Agregar a favoritos' ?>">
+                        <i class="fas fa-heart"></i>
+                    </button>
+
+                    <a class="action-btn"
+                       href="<?= $BASE ?>views/productos-detal.php?id=<?= $p['id'] ?>"
+                       title="Ver detalles del producto">
+                        <i class="fas fa-eye"></i>
+                    </a>
+
+                    <button class="action-btn js-cart" title="Agregar al carrito">
+                        <i class="fas fa-shopping-cart"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="product-info">
+                <div class="product-category-tag">
+                    <?= htmlspecialchars($p['categoria']) ?>
+                </div>
+
+                <div class="product-name">
+                    <?= htmlspecialchars($p['nombre']) ?>
+                </div>
+
+                <div class="product-price-wrapper">
+                    <span class="product-price">$<?= number_format($precio, 2) ?></span>
+
+                    <?php if ($desc): ?>
+                        <span class="original-price">$<?= number_format($precioOriginal, 2) ?></span>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+        <?php endforeach; ?>
+    </div>
+
+    <div class="empty-state" id="emptyState" style="display:none;">
+        <i class="fas fa-search"></i>
+        <h3>No se encontraron productos</h3>
+        <p>Intenta con otros filtros o términos de búsqueda</p>
+    </div>
+
+</section>
+
+
+<!-- =================================================================== -->
+<!--  🔥 JAVASCRIPT INTEGRADO - FILTROS 100% FUNCIONALES -->
+<!-- =================================================================== -->
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+
+    const products = document.querySelectorAll(".product-card");
+    const chips = document.querySelectorAll(".filter-chip");
+    const searchInput = document.getElementById("searchInput");
+    const emptyState = document.getElementById("emptyState");
+    const visibleCount = document.getElementById("visibleCount");
+    const btnClear = document.getElementById("btnClearFilters");
+
+    function aplicarFiltros() {
+        const texto = searchInput.value.toLowerCase();
+        const chipActivo = document.querySelector(".filter-chip.active");
+        const categoria = chipActivo ? chipActivo.dataset.category : "";
+
+        let visibles = 0;
+
+        products.forEach(p => {
+            const nombre = p.dataset.nombre.toLowerCase();
+            const cat = p.dataset.category;
+
+            const coincideTexto = nombre.includes(texto);
+            const coincideCategoria = categoria === "" || categoria === cat;
+
+            if (coincideTexto && coincideCategoria) {
+                p.style.display = "block";
+                visibles++;
+            } else {
+                p.style.display = "none";
+            }
+        });
+
+        visibleCount.textContent = visibles;
+        emptyState.style.display = visibles === 0 ? "block" : "none";
+    }
+
+    chips.forEach(chip => {
+        chip.addEventListener("click", () => {
+            chips.forEach(c => c.classList.remove("active"));
+            chip.classList.add("active");
+            aplicarFiltros();
+        });
     });
-    const json = await res.json().catch(()=>null);
-    return {ok: res.ok, json, status: res.status};
-  } catch(e){
-    return {ok:false, error:String(e)};
-  }
-}
 
-async function addToCart(qty, thenGo=false){
-  const payload = { producto_id: pid, cantidad: qty };
-  const r = await postJSON(BASE+'api/cart/add.php', payload);
+    searchInput.addEventListener("keyup", aplicarFiltros);
 
-  if (r.ok && r.json?.ok) {
-    // ✅ Agregar al localStorage para reflejarlo visualmente
-    const cart = getCart();
-    const prod = r.json.producto || {
-      id: pid,
-      nombre: document.querySelector('.product-info h1')?.textContent?.trim() || 'Producto',
-      precio: parseFloat(document.querySelector('.product-info .price')?.textContent?.replace(/[^0-9.]/g,'')||0),
-      imagen: document.getElementById('mainImage')?.src || '',
-      cantidad: qty
-    };
+    btnClear.addEventListener("click", () => {
+        searchInput.value = "";
+        chips.forEach(c => c.classList.remove("active"));
+        chips[0].classList.add("active");
+        aplicarFiltros();
+    });
 
-    const existing = cart.find(p => p.id === prod.id);
-    if (existing) existing.cantidad += qty;
-    else cart.push(prod);
-    saveCart(cart);
-
-    syncCartUI(); // 🔁 Actualiza header y flotante
-
-    if (thenGo) location.href = BASE + 'includes/carrito.php';
-    return true;
-  }
-
-  // ❌ fallback si API falla
-  toast(r.json?.msg || 'Error al agregar al carrito', 'error');
-  return false;
-}
-
-addBtn?.addEventListener('click', async ()=>{
-  if (!pid) return;
-  const qty = getQty();
-  addBtn.disabled = true;
-  const original = addBtn.innerHTML;
-  addBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Agregando...';
-  const ok = await addToCart(qty, false);
-  if (ok) {
-    addBtn.innerHTML = '<i class="fas fa-check"></i> ¡Agregado!';
-    toast('🛒 Producto agregado al carrito', 'success');
-    setTimeout(()=>{ addBtn.innerHTML = original; addBtn.disabled = false; }, 1000);
-  } else {
-    addBtn.innerHTML = original;
-    addBtn.disabled = false;
-  }
 });
+</script>
 
-buyBtn?.addEventListener('click', async ()=>{
-  if (!pid) return;
-  const qty = getQty();
 
-  // Si no hay usuario, redirigir al login
-  if (!USER) {
-    const nextAfter = `${BASE}includes/carrito.php?add=${encodeURIComponent(pid)}&qty=${encodeURIComponent(qty)}`;
-    location.href = `${BASE}views/login.php?next=${encodeURIComponent(nextAfter)}`;
-    return;
-  }
+        <!-- Footer -->
+      <?php include __DIR__ . "/../includes/footer.php"; ?>
 
-  buyBtn.disabled = true;
-  buyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
-  await addToCart(qty, true); // redirige dentro
-});
+    </div>
 
 </body>
 </html>
