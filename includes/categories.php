@@ -53,19 +53,12 @@ function getCategoryImage($imagen, $BASE) {
   if (empty($imagen)) {
     return $BASE . 'images/categorias/default.jpg';
   }
-  
-  // Si es URL completa
+
   if (preg_match('#^https?://#i', $imagen)) {
     return $imagen;
   }
-  
-  // Si empieza con /
-  if (strpos($imagen, '/') === 0) {
-    return $BASE . ltrim($imagen, '/');
-  }
-  
-  // Ruta relativa
-  return $BASE . 'images/categorias/' . $imagen;
+
+  return $BASE . 'images/categorias/' . basename($imagen);
 }
 
 /**
@@ -841,7 +834,7 @@ function getSubcategorias($subcats_data) {
     
     // Agregar pequeño delay para mejor UX
     setTimeout(() => {
-      window.location.href = `${BASE_URL}views/categoria.php?id=${categoryId}`;
+      window.location.href = BASE_URL + "views/categoria.php?id=" + categoryId;
     }, 200);
   }
   
