@@ -1,54 +1,3 @@
-// Traducciones
-const translations = {
-    es: {
-        settings: "Ajustes",
-        address_book: "Mi Libreta de Direcciones",
-        payment_options: "Mis Opciones de Pago",
-        manage_account: "Gestionar Mi Cuenta",
-        language: "Idioma",
-        currency: "Moneda",
-        notifications: "Notificaciones",
-        clear_cache: "Borrar caché",
-        privacy_policy: "Política de Privacidad",
-        terms_conditions: "Términos y Condiciones",
-        contact_us: "Contáctanos",
-        about_us: "Acerca de LumiSpace",
-        switch_accounts: "Cambiar cuentas",
-        logout: "Desconectarse",
-        add_new: "Agregar Nuevo",
-        save: "Guardar",
-        cancel: "Cancelar",
-        delete: "Eliminar",
-        edit: "Editar",
-        yes: "SÍ",
-        no: "NO"
-    },
-    en: {
-        settings: "Settings",
-        address_book: "My Address Book",
-        payment_options: "My Payment Options",
-        manage_account: "Manage My Account",
-        language: "Language",
-        currency: "Currency",
-        notifications: "Notifications",
-        clear_cache: "Clear cache",
-        privacy_policy: "Privacy Policy",
-        terms_conditions: "Terms and Conditions",
-        contact_us: "Contact Us",
-        about_us: "About LumiSpace",
-        switch_accounts: "Switch accounts",
-        logout: "Log Out",
-        add_new: "Add New",
-        save: "Save",
-        cancel: "Cancel",
-        delete: "Delete",
-        edit: "Edit",
-        yes: "YES",
-        no: "NO"
-    }
-};
-
-let currentLanguage = 'es';
 let userSettings = {
     addresses: [],
     paymentMethods: [],
@@ -56,60 +5,32 @@ let userSettings = {
         email: 'usuario@lumispace.com',
         phone: '',
         name: 'Usuario LumiSpace'
-    },
-    notifications: {
-        email: true,
-        push: true,
-        sms: false,
-        promotions: true
     }
 };
 
 // Inicialización
 document.addEventListener('DOMContentLoaded', function() {
     initializeApp();
-    calculateCacheSize();
 });
 
 function initializeApp() {
     // Cargar configuraciones guardadas
-    const savedLanguage = localStorage.getItem('lumispace_language');
     const savedSettings = localStorage.getItem('lumispace_settings');
-    
-    if (savedLanguage) {
-        currentLanguage = savedLanguage;
-        document.getElementById('languageSelect').value = savedLanguage;
-    }
     
     if (savedSettings) {
         userSettings = JSON.parse(savedSettings);
     }
     
-    applyTranslations(currentLanguage);
+    // Cargar moneda guardada
+    const savedCurrency = localStorage.getItem('lumispace_currency');
+    if (savedCurrency) {
+        document.getElementById('currencyValue').textContent = savedCurrency;
+    }
 }
 
 // Guardar configuraciones
 function saveSettings() {
     localStorage.setItem('lumispace_settings', JSON.stringify(userSettings));
-}
-
-// Cambio de idioma
-function changeLanguage(languageCode) {
-    if (!translations[languageCode]) return;
-    currentLanguage = languageCode;
-    localStorage.setItem('lumispace_language', languageCode);
-    applyTranslations(languageCode);
-    showSuccessMessage('Idioma cambiado exitosamente');
-}
-
-function applyTranslations(languageCode) {
-    const elements = document.querySelectorAll('[data-translate]');
-    elements.forEach(element => {
-        const key = element.getAttribute('data-translate');
-        if (translations[languageCode] && translations[languageCode][key]) {
-            element.textContent = translations[languageCode][key];
-        }
-    });
 }
 
 // Navegación
@@ -119,13 +40,10 @@ function navigate(section) {
         'payment': showPaymentMethods,
         'manage': showManageAccount,
         'currency': showCurrencySelector,
-        'notifications': showNotifications,
-        'cache': showClearCache,
         'privacy': showPrivacyPolicy,
         'terms': showTermsConditions,
         'contact-us': showContactUs,
-        'about': showAbout,
-        'switch': showSwitchAccounts
+        'about': showAbout
     };
     
     if (pages[section]) {
@@ -133,9 +51,8 @@ function navigate(section) {
     }
 }
 
-// ========== DIRECCIONES ==========
+//Direcciones
 function showAddresses() {
-    const t = translations[currentLanguage];
     const addresses = userSettings.addresses;
     
     let addressesHTML = '';
@@ -161,10 +78,10 @@ function showAddresses() {
                 <div class="address-phone">📞 ${addr.phone}</div>
                 <div class="action-buttons">
                     <button class="btn-secondary" onclick="editAddress(${index})">
-                        ${t.edit || 'Editar'}
+                        Editar
                     </button>
                     <button class="btn-danger" onclick="deleteAddress(${index})">
-                        ${t.delete || 'Eliminar'}
+                        Eliminar
                     </button>
                 </div>
             </div>
@@ -175,15 +92,14 @@ function showAddresses() {
         <div class="modal-body">
             ${addressesHTML}
             <button class="btn-primary" onclick="addNewAddress()">
-                + ${t.add_new || 'Agregar Nueva Dirección'}
+                + Agregar Nueva Dirección
             </button>
         </div>
     `;
-    showModal(t.address_book, content);
+    showModal('Mi Libreta de Direcciones', content);
 }
 
 function addNewAddress() {
-    const t = translations[currentLanguage];
     const content = `
         <div class="modal-body">
             <form onsubmit="saveNewAddress(event)">
@@ -215,9 +131,9 @@ function addNewAddress() {
                     <label class="form-label">País</label>
                     <input type="text" class="form-input" id="addrCountry" value="México" required>
                 </div>
-                <button type="submit" class="btn-primary">${t.save || 'Guardar'}</button>
+                <button type="submit" class="btn-primary">Guardar</button>
                 <button type="button" class="btn-secondary" onclick="showAddresses()">
-                    ${t.cancel || 'Cancelar'}
+                    Cancelar
                 </button>
             </form>
         </div>
@@ -246,7 +162,6 @@ function saveNewAddress(event) {
 
 function editAddress(index) {
     const addr = userSettings.addresses[index];
-    const t = translations[currentLanguage];
     const content = `
         <div class="modal-body">
             <form onsubmit="updateAddress(event, ${index})">
@@ -278,9 +193,9 @@ function editAddress(index) {
                     <label class="form-label">País</label>
                     <input type="text" class="form-input" id="addrCountry" value="${addr.country}" required>
                 </div>
-                <button type="submit" class="btn-primary">${t.save || 'Guardar'}</button>
+                <button type="submit" class="btn-primary">Guardar</button>
                 <button type="button" class="btn-secondary" onclick="showAddresses()">
-                    ${t.cancel || 'Cancelar'}
+                    Cancelar
                 </button>
             </form>
         </div>
@@ -315,9 +230,8 @@ function deleteAddress(index) {
     }
 }
 
-// ========== MÉTODOS DE PAGO ==========
+//Metodos de pago
 function showPaymentMethods() {
-    const t = translations[currentLanguage];
     const methods = userSettings.paymentMethods;
     
     let methodsHTML = '';
@@ -340,10 +254,10 @@ function showPaymentMethods() {
                 </div>
                 <div class="action-buttons">
                     <button class="btn-secondary" onclick="editPayment(${index})">
-                        ${t.edit || 'Editar'}
+                        Editar
                     </button>
                     <button class="btn-danger" onclick="deletePayment(${index})">
-                        ${t.delete || 'Eliminar'}
+                        Eliminar
                     </button>
                 </div>
             </div>
@@ -354,15 +268,14 @@ function showPaymentMethods() {
         <div class="modal-body">
             ${methodsHTML}
             <button class="btn-primary" onclick="addNewPayment()">
-                + ${t.add_new || 'Agregar Método de Pago'}
+                + Agregar Método de Pago
             </button>
         </div>
     `;
-    showModal(t.payment_options, content);
+    showModal('Mis Opciones de Pago', content);
 }
 
 function addNewPayment() {
-    const t = translations[currentLanguage];
     const content = `
         <div class="modal-body">
             <form onsubmit="saveNewPayment(event)">
@@ -394,9 +307,9 @@ function addNewPayment() {
                     <label class="form-label">Nombre en la tarjeta</label>
                     <input type="text" class="form-input" id="cardName" required>
                 </div>
-                <button type="submit" class="btn-primary">${t.save || 'Guardar'}</button>
+                <button type="submit" class="btn-primary">Guardar</button>
                 <button type="button" class="btn-secondary" onclick="showPaymentMethods()">
-                    ${t.cancel || 'Cancelar'}
+                    Cancelar
                 </button>
             </form>
         </div>
@@ -421,7 +334,6 @@ function saveNewPayment(event) {
 }
 
 function editPayment(index) {
-    // Implementación similar a editAddress
     showSuccessMessage('Función de edición disponible próximamente');
 }
 
@@ -434,9 +346,8 @@ function deletePayment(index) {
     }
 }
 
-// ========== GESTIONAR CUENTA ==========
+//Gestionar Cuenta
 function showManageAccount() {
-    const t = translations[currentLanguage];
     const account = userSettings.account;
     
     const content = `
@@ -457,7 +368,7 @@ function showManageAccount() {
                     <input type="tel" class="form-input" id="accountPhone" 
                            value="${account.phone}" placeholder="Añadir número">
                 </div>
-                <button type="submit" class="btn-primary">${t.save || 'Guardar Cambios'}</button>
+                <button type="submit" class="btn-primary">Guardar Cambios</button>
             </form>
             
             <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
@@ -471,7 +382,7 @@ function showManageAccount() {
             </div>
         </div>
     `;
-    showModal(t.manage_account, content);
+    showModal('Gestionar Mi Cuenta', content);
 }
 
 function updateAccount(event) {
@@ -494,20 +405,16 @@ function deleteAccount() {
     if (confirm('¿Estás seguro de que deseas eliminar tu cuenta? Esta acción no se puede deshacer.')) {
         alert('Tu cuenta ha sido eliminada');
         localStorage.clear();
-        // window.location.href = '/';
+      
     }
 }
 
-
+// Moneda
 function showCurrencySelector() {
-    const t = translations[currentLanguage];
     const currencies = [
         {code: 'MXN', symbol: '$', name: 'Peso Mexicano'},
         {code: 'USD', symbol: '$', name: 'Dólar Estadounidense'},
-        {code: 'EUR', symbol: '€', name: 'Euro'},
-        {code: 'GBP', symbol: '£', name: 'Libra Esterlina'},
-        {code: 'CAD', symbol: '$', name: 'Dólar Canadiense'},
-        {code: 'BRL', symbol: 'R$', name: 'Real Brasileño'}
+        {code: 'CAD', symbol: '$', name: 'Dólar Canadiense'}
     ];
     
     const currentCurrency = localStorage.getItem('lumispace_currency') || 'MXN';
@@ -529,7 +436,7 @@ function showCurrencySelector() {
             `).join('')}
         </div>
     `;
-    showModal(t.currency, content);
+    showModal('Moneda', content);
 }
 
 function selectCurrency(code) {
@@ -539,125 +446,11 @@ function selectCurrency(code) {
     closeModal();
 }
 
-
-function showNotifications() {
-    const t = translations[currentLanguage];
-    const notif = userSettings.notifications;
-    
-    const content = `
-        <div class="modal-body">
-            <div class="notification-item">
-                <div class="notification-label">
-                    <div class="notification-title">Email</div>
-                    <div class="notification-desc">Recibir notificaciones por correo</div>
-                </div>
-                <div class="toggle-switch ${notif.email ? 'active' : ''}" 
-                     onclick="toggleNotification('email')"></div>
-            </div>
-            
-            <div class="notification-item">
-                <div class="notification-label">
-                    <div class="notification-title">Push</div>
-                    <div class="notification-desc">Notificaciones en el navegador</div>
-                </div>
-                <div class="toggle-switch ${notif.push ? 'active' : ''}" 
-                     onclick="toggleNotification('push')"></div>
-            </div>
-            
-            <div class="notification-item">
-                <div class="notification-label">
-                    <div class="notification-title">SMS</div>
-                    <div class="notification-desc">Mensajes de texto</div>
-                </div>
-                <div class="toggle-switch ${notif.sms ? 'active' : ''}" 
-                     onclick="toggleNotification('sms')"></div>
-            </div>
-            
-            <div class="notification-item">
-                <div class="notification-label">
-                    <div class="notification-title">Promociones</div>
-                    <div class="notification-desc">Ofertas y descuentos especiales</div>
-                </div>
-                <div class="toggle-switch ${notif.promotions ? 'active' : ''}" 
-                     onclick="toggleNotification('promotions')"></div>
-            </div>
-        </div>
-    `;
-    showModal(t.notifications, content);
-}
-
-function toggleNotification(type) {
-    userSettings.notifications[type] = !userSettings.notifications[type];
-    saveSettings();
-    showNotifications();
-}
-
-
-function calculateCacheSize() {
-    // Simular tamaño de caché basado en localStorage
-    let totalSize = 0;
-    for (let key in localStorage) {
-        if (localStorage.hasOwnProperty(key)) {
-            totalSize += localStorage[key].length + key.length;
-        }
-    }
-    const sizeMB = (totalSize / (1024 * 1024)).toFixed(2);
-    const cacheElement = document.getElementById('cacheSize');
-    if (cacheElement) {
-        cacheElement.textContent = sizeMB + ' MB';
-    }
-}
-
-function showClearCache() {
-    const t = translations[currentLanguage];
-    const cacheSize = document.getElementById('cacheSize').textContent;
-    
-    const content = `
-        <div class="modal-body" style="text-align: center; padding: 40px 20px;">
-            <div style="font-size: 60px; margin-bottom: 20px;">🗑️</div>
-            <h3 style="font-size: 18px; margin-bottom: 15px;">Borrar Caché</h3>
-            <p style="color: #666; line-height: 1.6; margin-bottom: 20px;">
-                Se liberarán aproximadamente <strong>${cacheSize}</strong> de espacio.
-                Esto eliminará imágenes temporales y datos en caché.
-            </p>
-            <button class="btn-primary" onclick="clearCache()">
-                Borrar Caché
-            </button>
-            <button class="btn-secondary" onclick="closeModal()">
-                ${t.cancel || 'Cancelar'}
-            </button>
-        </div>
-    `;
-    showModal('Borrar Caché', content);
-}
-
-function clearCache() {
-    // Mantener configuraciones importantes
-    const importantData = {
-        language: localStorage.getItem('lumispace_language'),
-        settings: localStorage.getItem('lumispace_settings'),
-        currency: localStorage.getItem('lumispace_currency')
-    };
-    
-    // Limpiar todo
-    localStorage.clear();
-    
-    // Restaurar configuraciones importantes
-    if (importantData.language) localStorage.setItem('lumispace_language', importantData.language);
-    if (importantData.settings) localStorage.setItem('lumispace_settings', importantData.settings);
-    if (importantData.currency) localStorage.setItem('lumispace_currency', importantData.currency);
-    
-    showSuccessMessage('Caché borrado exitosamente');
-    calculateCacheSize();
-    closeModal();
-}
-
-
 function showPrivacyPolicy() {
     const content = `
         <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
             <div style="background: #f5f5f5; padding: 15px; border-radius: 12px; margin-bottom: 20px;">
-                <strong>Fecha de entrada en vigor: 22 de octubre de 2025</strong>
+                <strong>Fecha de entrada en vigor: 25 de Diciembre de 2025</strong>
             </div>
             
             <h3 style="font-size: 16px; margin-bottom: 15px;">Política de Privacidad de LumiSpace</h3>
@@ -703,19 +496,18 @@ function showPrivacyPolicy() {
             </p>
             
             <p style="font-size: 13px; color: #666; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
-                Para más información, contáctanos en: privacy@lumispace.com
+                Para más información, contáctanos en: lumispace0@gmail.com
             </p>
         </div>
     `;
     showModal('Política de Privacidad', content);
 }
 
-
 function showTermsConditions() {
     const content = `
         <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
             <div style="background: #f5f5f5; padding: 15px; border-radius: 12px; margin-bottom: 20px;">
-                <strong>FECHA DE VIGENCIA: 22 de octubre de 2025</strong>
+                <strong>FECHA DE VIGENCIA: 25 de Diciembre de 2025</strong>
             </div>
             
             <h3 style="font-size: 16px; margin-bottom: 15px;">Términos y Condiciones de Uso - LumiSpace</h3>
@@ -768,36 +560,33 @@ function showTermsConditions() {
             </p>
             
             <p style="font-size: 13px; color: #666; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
-                Para consultas sobre estos términos: legal@lumispace.com
+                Para consultas sobre estos términos: lumispace0@gmail.com
             </p>
         </div>
     `;
     showModal('Términos y Condiciones', content);
 }
 
-
+//Contacto
 function showContactUs() {
     const socials = [
         {
             name: 'Instagram',
             handle: 'lumi_space0',
             url: 'https://www.instagram.com/lumi_space0',
-
             desc: 'Síguenos para novedades y ofertas'
         },
         {
             name: 'X (Twitter)',
             handle: 'LumiSapce_',
             url: 'https://twitter.com/LumiSapce_',
-            
             desc: 'Actualizaciones en tiempo real'
         },
         {
             name: 'YouTube',
             handle: 'lumispace0',
             url: 'https://youtube.com/@lumispace0',
-            
-            desc: 'Tutoriales y reviews de productos'
+            desc: 'Reviews de productos'
         }
     ];
     
@@ -811,7 +600,7 @@ function showContactUs() {
             ${socials.map(social => `
                 <div class="social-card">
                     <div class="social-header">
-                        <div class="social-icon" style="background: ${social.icon};"></div>
+                        <div class="social-icon" style="background: #333;"></div>
                         <div>
                             <strong style="font-size: 16px;">${social.name}</strong>
                             <div style="font-size: 12px; color: #666;">@${social.handle}</div>
@@ -840,16 +629,13 @@ function showContactUs() {
     showModal('Conéctate con LumiSpace', content);
 }
 
-
 function showAbout() {
     const content = `
- <div class="modal-body">
-    <div style="text-align: center; margin-bottom: 30px;">
-        <h2 style="font-size: 24px; margin-bottom: 10px;">LumiSpace</h2>
-        <p style="color: #666; font-size: 14px;">Versión 2.0.0</p>
-    </div>
-</div>
-
+        <div class="modal-body">
+            <div style="text-align: center; margin-bottom: 30px;">
+                <h2 style="font-size: 24px; margin-bottom: 10px;">LumiSpace</h2>
+                <p style="color: #666; font-size: 14px;">Versión 2.0.0</p>
+            </div>
             
             <div style="background: linear-gradient(135deg, var(--color-light), var(--color-secondary)); 
                         padding: 25px; border-radius: 16px; margin-bottom: 25px; color: white;">
@@ -881,90 +667,6 @@ function showAbout() {
     `;
     showModal('Acerca de LumiSpace', content);
 }
-
-
-function showSwitchAccounts() {
-    const t = translations[currentLanguage];
-    const savedAccounts = JSON.parse(localStorage.getItem('lumispace_accounts') || '[]');
-    
-
-    if (savedAccounts.length === 0) {
-        savedAccounts.push({
-            email: userSettings.account.email,
-            name: userSettings.account.name,
-            active: true
-        });
-        localStorage.setItem('lumispace_accounts', JSON.stringify(savedAccounts));
-    }
-    
-    const content = `
-        <div class="modal-body">
-            <p style="color: #666; font-size: 14px; margin-bottom: 20px;">
-                Puedes cambiar entre las siguientes cuentas que has utilizado para iniciar sesión.
-            </p>
-            
-            ${savedAccounts.map((account, index) => `
-                <div class="account-item" onclick="switchToAccount(${index})">
-                    <div class="account-avatar">
-                        <svg width="24" height="24" fill="#999">
-                            <circle cx="12" cy="8" r="4"/>
-                            <path d="M4 20c0-4 3-6 8-6s8 2 8 6"/>
-                        </svg>
-                    </div>
-                    <div style="flex: 1;">
-                        <div style="font-weight: 600; font-size: 14px;">${account.name}</div>
-                        <div style="font-size: 12px; color: #666;">${account.email}</div>
-                    </div>
-                    ${account.active ? '<span class="account-check">✓</span>' : 
-                      '<svg class="chevron" width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2"/></svg>'}
-                </div>
-            `).join('')}
-            
-            <button class="btn-secondary" onclick="addNewAccount()">
-                + Añadir Cuenta
-            </button>
-        </div>
-    `;
-    showModal(t.switch_accounts, content);
-}
-
-function switchToAccount(index) {
-    const savedAccounts = JSON.parse(localStorage.getItem('lumispace_accounts') || '[]');
-    savedAccounts.forEach((acc, i) => {
-        acc.active = (i === index);
-    });
-    localStorage.setItem('lumispace_accounts', JSON.stringify(savedAccounts));
-    
-    
-    userSettings.account.email = savedAccounts[index].email;
-    userSettings.account.name = savedAccounts[index].name;
-    saveSettings();
-    
-    showSuccessMessage('Cuenta cambiada exitosamente');
-    closeModal();
-}
-
-function addNewAccount() {
-    const email = prompt('Ingresa el correo electrónico de la nueva cuenta:');
-    if (email && email.includes('@')) {
-        const name = prompt('Ingresa el nombre completo:');
-        if (name) {
-            const savedAccounts = JSON.parse(localStorage.getItem('lumispace_accounts') || '[]');
-            savedAccounts.push({
-                email: email,
-                name: name,
-                active: false
-            });
-            localStorage.setItem('lumispace_accounts', JSON.stringify(savedAccounts));
-            showSuccessMessage('Cuenta añadida exitosamente');
-            showSwitchAccounts();
-        }
-    } else if (email) {
-        alert('Por favor ingresa un correo válido');
-    }
-}
-
-
 function showModal(title, content) {
     const modal = document.getElementById('modalContainer');
     modal.innerHTML = `
@@ -1027,21 +729,11 @@ function goBack() {
 }
 
 function logout() {
-    const t = translations[currentLanguage];
-    const confirmMessage = t.logout === 'Log Out' ? 
-        'Are you sure you want to log out?' : 
-        '¿Estás seguro de que deseas cerrar sesión?';
-    
-    if (confirm(confirmMessage)) {
-       
-        const savedLanguage = localStorage.getItem('lumispace_language');
-        const savedSettings = localStorage.getItem('lumispace_settings');
-        
+    if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
         showSuccessMessage('Sesión cerrada exitosamente');
         
         setTimeout(() => {
-            //  redirigir a la página de login
-            // window.location.href = '/login';
+            window.location.href = '/LumiSpace/views/login.php';
             alert('Redirigiendo a página de inicio de sesión...');
         }, 1000);
     }
