@@ -8,7 +8,7 @@ $iniciales = strtoupper(substr($usuarioNombre, 0, 2));
 
 // 🔹 Asegúrate de definir BASE_URL globalmente en config.php
 if (!defined('BASE_URL')) {
-    define('BASE_URL', '/LumiSpace/');
+    define('BASE_URL', '/');
     $BASE = rtrim(BASE_URL, '/') . '/';
 
 }
