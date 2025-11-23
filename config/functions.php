@@ -1973,3 +1973,114 @@ function getFavoritos(?int $usuario_id): array
     $res = $stmt->get_result();
     return $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
 }
+
+/* ============================================================
+   📝 BLOG FUNCTIONS
+   ============================================================ */
+
+/**
+ * Obtener posts del blog paginados
+ */
+function getBlogPosts(int $limit = 10, int $offset = 0, string $estado = 'publicado'): array
+{
+    $conn = getDBConnection();
+    $sql = "SELECT b.*, u.nombre as autor_nombre 
+            FROM blog_posts b 
+            LEFT JOIN usuarios u ON b.autor_id = u.id 
+            WHERE b.estado = ? 
+            ORDER BY b.fecha_creacion DESC 
+            LIMIT ? OFFSET ?";
+
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("sii", $estado, $limit, $offset);
+    $stmt->execute();
+    return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+}
+
+/**
+ * Obtener un post por su slug
+ */
+function getBlogPostBySlug(string $slug): ?array
+{
+    $conn = getDBConnection();
+    $sql = "SELECT b.*, u.nombre as autor_nombre 
+            FROM blog_posts b 
+            LEFT JOIN usuarios u ON b.autor_id = u.id 
+            WHERE b.slug = ? LIMIT 1";
+
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("s", $slug);
+    $stmt->execute();
+    return $stmt->get_result()->fetch_assoc();
+}
+
+/**
+ * Crear un nuevo post
+ */
+function createBlogPost(array $data): bool
+{
+    $conn = getDBConnection();
+    $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $data['titulo'])));
+
+    // Ensure slug is unique
+    $originalSlug = $slug;
+    $count = 1;
+    while (getBlogPostBySlug($slug)) {
+        $slug = $originalSlug . '-' . $count;
+        $count++;
+    }
+
+    $sql = "INSERT INTO blog_posts (titulo, slug, contenido, imagen_portada, autor_id, estado) 
+            VALUES (?, ?, ?, ?, ?, ?)";
+
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param(
+        "ssssis",
+        $data['titulo'],
+        $slug,
+        $data['contenido'],
+        $data['imagen_portada'],
+        $data['autor_id'],
+        $data['estado']
+    );
+
+    return $stmt->execute();
+}
+
+/**
+ * Actualizar un post existente
+ */
+function updateBlogPost(int $id, array $data): bool
+{
+    $conn = getDBConnection();
+    // Only update slug if title changed, or keep it? usually better to keep slug stable or allow manual update.
+    // For simplicity, we'll regenerate slug if title changes, but ideally we should check.
+    // Let's keep slug stable for now unless explicitly requested.
+
+    $sql = "UPDATE blog_posts 
+            SET titulo = ?, contenido = ?, imagen_portada = ?, estado = ? 
+            WHERE id = ?";
+
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param(
+        "ssssi",
+        $data['titulo'],
+        $data['contenido'],
+        $data['imagen_portada'],
+        $data['estado'],
+        $id
+    );
+
+    return $stmt->execute();
+}
+
+/**
+ * Eliminar un post
+ */
+function deleteBlogPost(int $id): bool
+{
+    $conn = getDBConnection();
+    $stmt = $conn->prepare("DELETE FROM blog_posts WHERE id = ?");
+    $stmt->bind_param("i", $id);
+    return $stmt->execute();
+}
