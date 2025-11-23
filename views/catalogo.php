@@ -912,7 +912,7 @@ function img_url($path, $BASE, $folder = 'productos') {
                     Catálogo Completo
                 </h1>
                 <p>Explora nuestra selección de <?= $stats['productos'] ?> productos en <?= $stats['categorias'] ?> categorías diferentes.</p>
-
+                
                 <div class="hero-stats">
                     <div class="hero-stat">
                         <span class="hero-stat-number"><?= $stats['productos'] ?></span>

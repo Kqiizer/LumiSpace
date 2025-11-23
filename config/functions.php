@@ -1729,20 +1729,7 @@ function getCategorias(): array {
     
     $sql = "SELECT id, nombre, descripcion{$image_col} FROM categorias ORDER BY nombre ASC";
     $res = $conn->query($sql);
-    $categorias = $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
-    
-    // Asegurar que todas las categorías tengan la clave 'imagen' o 'featured_image' incluso si es null
-    foreach ($categorias as &$cat) {
-        if ($has_featured && !isset($cat['featured_image'])) {
-            $cat['featured_image'] = null;
-        }
-        if ($has_imagen && !isset($cat['imagen'])) {
-            $cat['imagen'] = null;
-        }
-    }
-    unset($cat);
-    
-    return $categorias;
+    return $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
 }
 
 
