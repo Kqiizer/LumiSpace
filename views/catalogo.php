@@ -1,19 +1,69 @@
 <?php
-declare(strict_types=1);
+/**
+ * ============================================
+ * CATÁLOGO DE PRODUCTOS - LUMISPACE
+ * ============================================
+ * Archivo: catalogo.php
+ * Descripción: Catálogo completo de productos con filtros y búsqueda
+ * ============================================
+ */
 
+// ==========================================
+// INICIALIZACIÓN
+// ==========================================
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-require_once __DIR__ . '/../config/functions.php';
+require_once __DIR__ . "/../config/functions.php";
 
-$BASE = defined('BASE_URL') ? rtrim(BASE_URL, '/') . '/' : './';
+// Configuración base
+$BASE = defined('BASE_URL') ? rtrim(BASE_URL, '/') . '/' : '/';
+$usuario_id = $_SESSION['usuario_id'] ?? 0;
 $conn = getDBConnection();
-$categorias = getCategorias();
+
+// ==========================================
+// OBTENER CATEGORÍAS Y PRODUCTOS
+// ==========================================
+$categorias_db = getCategorias();
+
+$sql = "SELECT p.*, c.nombre AS categoria
+        FROM productos p
+        LEFT JOIN categorias c ON p.categoria_id = c.id
+        WHERE p.activo = 1
+        ORDER BY p.id DESC";
+$res = $conn->query($sql);
+$todos_productos = $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
+
+// Contar productos por categoría
+$productos_por_categoria = [];
+foreach ($todos_productos as $p) {
+    $cat_id = (int)($p['categoria_id'] ?? 0);
+    $productos_por_categoria[$cat_id] = ($productos_por_categoria[$cat_id] ?? 0) + 1;
+}
+
+// ==========================================
+// OBTENER FAVORITOS DEL USUARIO
+// ==========================================
+$favoritosSet = [];
+if ($usuario_id && $conn->query("SHOW TABLES LIKE 'favoritos'")->num_rows > 0) {
+    $stmt = $conn->prepare("SELECT producto_id FROM favoritos WHERE usuario_id=?");
+    $stmt->bind_param("i", $usuario_id);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    while ($row = $res->fetch_assoc()) {
+        $favoritosSet[(int)$row['producto_id']] = true;
+    }
+    $stmt->close();
+}
+
+// ==========================================
+// ESTADÍSTICAS DEL SISTEMA
+// ==========================================
 $stats = [
-    'productos'  => (int)($conn->query("SELECT COUNT(*) AS total FROM productos WHERE activo = 1")->fetch_assoc()['total'] ?? 0),
-    'categorias' => count($categorias),
-    'clientes'   => (int)($conn->query("SELECT COUNT(*) AS total FROM usuarios WHERE rol!='admin'")->fetch_assoc()['total'] ?? 0),
+    'productos' => count($todos_productos),
+    'categorias' => count($categorias_db),
+    'clientes' => (int)($conn->query("SELECT COUNT(*) as total FROM usuarios WHERE rol!='admin'")->fetch_assoc()['total'] ?? 0),
 ];
 
 // ==========================================
@@ -21,10 +71,18 @@ $stats = [
 // ==========================================
 function img_url($path, $BASE, $folder = 'productos') {
     $path = trim((string)$path);
-    if ($path === '') return $BASE . "images/default.png";
-    if (preg_match('#^https?://#i', $path)) return $path;
-    return $BASE . "images/{$folder}/" . ltrim($path, '/');
+
+    if ($path === '') 
+        return $BASE . "images/default.png";
+
+    // Si es URL absoluta
+    if (preg_match('#^https?://#i', $path)) 
+        return $path;
+
+    // 🔥 Ruta fija y correcta aunque estés dentro de /views/
+    return $BASE . "images/{$folder}/" . basename($path);
 }
+
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -49,23 +107,23 @@ function img_url($path, $BASE, $folder = 'productos') {
            VARIABLES Y CONFIGURACIÓN BASE
            ========================================== */
         :root {
-            --primary-color: #a1683a;
-            --primary-dark: #8f5e4b;
-            --primary-light: #c2a98f;
-            --secondary-color: #ff6b6b;
-            --success-color: #51cf66;
-            --warning-color: #ffd43b;
-            --text-primary: #333;
-            --text-secondary: #666;
-            --text-muted: #999;
-            --bg-primary: #fafafa;
+            --primary-color: #6D5A42;
+            --primary-dark: #A0896B;
+            --primary-light: #d6c7b2;
+            --secondary-color: #c4ae95;
+            --success-color: #6ea37c;
+            --warning-color: #d9aa6a;
+            --text-primary: #32281c;
+            --text-secondary: #6b5b49;
+            --text-muted: #9a8b7a;
+            --bg-primary: #f9f4ed;
             --bg-white: #ffffff;
-            --bg-secondary: #f7f7f7;
-            --bg-image: #f0f0f0;
-            --border-color: #e0e0e0;
-            --shadow-sm: 0 2px 8px rgba(0,0,0,.1);
-            --shadow-md: 0 4px 12px rgba(0,0,0,.12);
-            --shadow-lg: 0 8px 18px rgba(0,0,0,.15);
+            --bg-secondary: #f2e7d9;
+            --bg-image: #e9dfd1;
+            --border-color: rgba(109, 90, 66, 0.25);
+            --shadow-sm: 0 2px 8px rgba(34, 23, 8, 0.08);
+            --shadow-md: 0 4px 14px rgba(34, 23, 8, 0.12);
+            --shadow-lg: 0 10px 26px rgba(34, 23, 8, 0.16);
             --radius-sm: 8px;
             --radius-md: 12px;
             --radius-lg: 16px;
@@ -76,21 +134,21 @@ function img_url($path, $BASE, $folder = 'productos') {
            MODO OSCURO - Compatible con reset.css
            ========================================== */
         body.dark {
-            --primary-color: #d4af7f;
-            --primary-dark: #c2a98f;
-            --primary-light: #8f7a5d;
-            --secondary-color: #ff8787;
-            --success-color: #69db7c;
-            --warning-color: #ffe066;
-            --text-primary: #f0f0f0;
-            --text-secondary: #b8b8b8;
-            --text-muted: #888888;
-            --bg-primary: #1e1e1e;
-            --bg-white: #2a2a2a;
-            --bg-secondary: #2b2b2b;
-            --bg-image: #2e2e2e;
-            --border-color: #404040;
-            --shadow-sm: 0 2px 8px rgba(0,0,0,.4);
+            --primary-color: #bea583;
+            --primary-dark: #d7c6ac;
+            --primary-light: #8d775d;
+            --secondary-color: #b89978;
+            --success-color: #80c091;
+            --warning-color: #edc082;
+            --text-primary: #f6f1e8;
+            --text-secondary: #d8ccbd;
+            --text-muted: #a69988;
+            --bg-primary: #1b1712;
+            --bg-white: #262018;
+            --bg-secondary: #2d261e;
+            --bg-image: #332a20;
+            --border-color: rgba(255,255,255,0.15);
+            --shadow-sm: 0 2px 8px rgba(0,0,0,.45);
             --shadow-md: 0 4px 12px rgba(0,0,0,.5);
             --shadow-lg: 0 8px 18px rgba(0,0,0,.6);
         }
@@ -189,42 +247,38 @@ function img_url($path, $BASE, $folder = 'productos') {
             padding: 80px 20px 60px;
             position: relative;
             overflow: hidden;
+            border-bottom-left-radius: 40px;
+            border-bottom-right-radius: 40px;
+            box-shadow: 0 18px 40px rgba(34, 23, 8, 0.2);
         }
 
         .catalog-hero::before {
             content: '';
             position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
-                        radial-gradient(circle at 80% 80%, rgba(255,255,255,0.08) 0%, transparent 50%);
-            pointer-events: none;
-        }
-
-        /* Modo oscuro - hero con menor opacidad */
-        body.dark .catalog-hero::before {
-            background: radial-gradient(circle at 20% 50%, rgba(255,255,255,0.05) 0%, transparent 50%),
-                        radial-gradient(circle at 80% 80%, rgba(255,255,255,0.03) 0%, transparent 50%);
+            inset: 0;
+            background: radial-gradient(circle at 20% 20%, rgba(255,255,255,0.18), transparent 55%);
+            opacity: 0.6;
         }
 
         .catalog-hero-content {
             position: relative;
             z-index: 1;
+            max-width: 820px;
+            margin: 0 auto;
         }
 
         .catalog-hero h1 {
-            font-size: 3rem;
-            font-weight: 700;
-            margin-bottom: 12px;
-            letter-spacing: -1px;
+            font-size: clamp(2.4rem, 4vw, 3.5rem);
+            font-weight: 800;
+            margin-bottom: 16px;
+            letter-spacing: -0.6px;
         }
 
         .catalog-hero p {
-            font-size: 1.2rem;
-            opacity: 0.95;
-            margin-bottom: 30px;
+            font-size: 1.1rem;
+            opacity: 0.92;
+            margin-bottom: 32px;
+            color: rgba(255,255,255,0.9);
         }
 
         .hero-stats {
@@ -577,109 +631,6 @@ function img_url($path, $BASE, $folder = 'productos') {
             color: white;
         }
 
-        .catalog-wishlist-btn {
-            border: 1px solid var(--primary-color);
-            background: transparent;
-            color: var(--primary-color);
-            padding: 8px 16px;
-            border-radius: var(--radius-sm);
-            font-weight: 600;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            transition: var(--transition);
-        }
-
-        .catalog-wishlist-btn i {
-            font-size: 1rem;
-        }
-
-        .catalog-wishlist-btn:hover:not([disabled]) {
-            background: var(--primary-color);
-            color: #fff;
-        }
-
-        .catalog-wishlist-btn.active {
-            background: var(--primary-color);
-            color: #fff;
-        }
-
-        .catalog-wishlist-btn[disabled] {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        .product-cta {
-            margin-top: 18px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-        }
-
-        .product-detail-btn {
-            background: var(--primary-color);
-            color: #fff;
-            padding: 10px 18px;
-            border-radius: var(--radius-sm);
-            font-weight: 600;
-            text-decoration: none;
-            transition: var(--transition);
-        }
-
-        .product-detail-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(161, 104, 58, 0.25);
-        }
-
-        .catalog-toast {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: var(--bg-white);
-            color: var(--text-primary);
-            border-radius: var(--radius-md);
-            box-shadow: var(--shadow-lg);
-            padding: 12px 16px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            border-left: 4px solid var(--primary-color);
-            animation: toastIn 0.3s ease;
-            z-index: 2000;
-        }
-
-        body.dark .catalog-toast {
-            background: var(--bg-white);
-            color: var(--text-primary);
-        }
-
-        .catalog-toast.hide {
-            animation: toastOut 0.3s ease forwards;
-        }
-
-        .catalog-toast.success {
-            border-left-color: #28a745;
-        }
-
-        .catalog-toast.error {
-            border-left-color: #dc3545;
-        }
-
-        .catalog-toast.warning {
-            border-left-color: #ffc107;
-        }
-
-        @keyframes toastIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        @keyframes toastOut {
-            to { opacity: 0; transform: translateY(-10px); }
-        }
-
         .product-info {
             padding: 20px;
             flex: 1;
@@ -950,7 +901,8 @@ function img_url($path, $BASE, $folder = 'productos') {
         </button>
 
         <!-- Header -->
-        <?php include __DIR__ . "/../includes/header.php"; ?>
+       <?php include __DIR__ . "/../includes/header.php"; ?>
+
 
         <!-- Hero Section -->
         <section class="catalog-hero">
@@ -959,7 +911,7 @@ function img_url($path, $BASE, $folder = 'productos') {
                     <i class="fas fa-store"></i>
                     Catálogo Completo
                 </h1>
-                <p>Explora nuestra selección de <?= $stats['productos'] ?> productos en <?= $stats['categorias'] ?> categorías diferentes</p>
+                <p>Explora nuestra selección de <?= $stats['productos'] ?> productos en <?= $stats['categorias'] ?> categorías diferentes.</p>
                 
                 <div class="hero-stats">
                     <div class="hero-stat">
@@ -980,62 +932,62 @@ function img_url($path, $BASE, $folder = 'productos') {
 
         <!-- Barra de Filtros y Búsqueda -->
         <div class="filters-bar">
-            <div class="filters-container">
-                
-                <!-- Búsqueda -->
-                <div class="search-bar">
-                    <div class="search-input-wrapper">
-                        <input type="text" 
-                               class="search-input" 
-                               id="searchInput" 
-                               placeholder="Buscar productos por nombre...">
-                        <i class="fas fa-search search-icon"></i>
-                    </div>
-                    <div class="search-actions">
-                        <button class="btn-icon" id="btnClearFilters" title="Limpiar filtros">
-                            <i class="fas fa-times"></i>
-                            <span>Limpiar</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Filtros de Categorías -->
-                <div class="category-filters">
-                    <div class="filters-scroll">
-
-                        <!-- Botón TODOS -->
-                        <button class="filter-chip active" data-category="">
-                            Todos
-                            <span class="chip-count">(<?= count($todos_productos) ?>)</span>
-                        </button>
-
-                        <!-- Botones de categorías -->
-                        <?php foreach ($categorias_db as $cat): 
-                            $count = $productos_por_categoria[$cat['id']] ?? 0;
-
-                            if ($count > 0): ?>
-                                <button class="filter-chip" data-category="<?= $cat['id'] ?>">
-                                    <?= htmlspecialchars($cat['nombre']) ?>
-                                    <span class="chip-count">(<?= $count ?>)</span>
-                                </button>
-                        <?php endif; endforeach; ?>
-                    </div>
-                </div>
+    <div class="filters-container">
+        
+        <!-- Búsqueda -->
+        <div class="search-bar">
+            <div class="search-input-wrapper">
+                <input type="text" 
+                       class="search-input" 
+                       id="searchInput" 
+                       placeholder="Buscar productos por nombre...">
+                <i class="fas fa-search search-icon"></i>
+            </div>
+            <div class="search-actions">
+                <button class="btn-icon" id="btnClearFilters" title="Limpiar filtros">
+                    <i class="fas fa-times"></i>
+                    <span>Limpiar</span>
+                </button>
             </div>
         </div>
 
-        <!-- Productos -->
-        <section class="products-section">
+        <!-- Filtros de Categorías -->
+        <div class="category-filters">
+            <div class="filters-scroll">
 
-            <div class="products-header">
-                <div class="products-count">
-                    Mostrando <strong id="visibleCount"><?= count($todos_productos) ?></strong> de 
-                    <strong><?= count($todos_productos) ?></strong> productos
-                </div>
+                <!-- Botón TODOS -->
+                <button class="filter-chip active" data-category="">
+                    Todos
+                    <span class="chip-count">(<?= count($todos_productos) ?>)</span>
+                </button>
+
+                <!-- Botones de categorías -->
+                <?php foreach ($categorias_db as $cat): 
+                    $count = $productos_por_categoria[$cat['id']] ?? 0;
+
+                    if ($count > 0): ?>
+                        <button class="filter-chip" data-category="<?= $cat['id'] ?>">
+                            <?= htmlspecialchars($cat['nombre']) ?>
+                            <span class="chip-count">(<?= $count ?>)</span>
+                        </button>
+                <?php endif; endforeach; ?>
             </div>
+        </div>
+    </div>
+</div>
 
-            <div class="products-grid" id="productsGrid" data-base="<?= htmlspecialchars($BASE) ?>">
-                <?php foreach ($todos_productos as $p): 
+<!-- Productos -->
+<section class="products-section">
+
+    <div class="products-header">
+        <div class="products-count">
+            Mostrando <strong id="visibleCount"><?= count($todos_productos) ?></strong> de 
+            <strong><?= count($todos_productos) ?></strong> productos
+        </div>
+    </div>
+
+    <div class="products-grid" id="productsGrid" data-base="<?= htmlspecialchars($BASE) ?>">
+        <?php foreach ($todos_productos as $p): 
             $img = img_url($p['imagen'], $BASE);
             $precio = (float)$p['precio'];
             $precioOriginal = (float)($p['precio_original'] ?? 0);
@@ -1165,6 +1117,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         <!-- Footer -->
         <?php include __DIR__ . "/../includes/footer.php"; ?>
+
     </div>
 
     <script>
@@ -1173,4 +1126,3 @@ document.addEventListener("DOMContentLoaded", () => {
     <script src="<?= $BASE ?>js/catalogo.js"></script>
 </body>
 </html>
-

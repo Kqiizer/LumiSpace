@@ -48,10 +48,9 @@ if ($categorias_db && is_array($categorias_db)) {
 
 /**
  * Obtiene la URL de la imagen de categoría
- * Maneja rutas completas, relativas y nombres de archivo
+ * Maneja diferentes formatos de rutas de imágenes
  */
 function getCategoryImage($imagen, $BASE) {
-  // Si está vacía, devolver imagen por defecto
   if (empty($imagen) || trim($imagen) === '') {
     return $BASE . 'images/categorias/default.jpg';
   }
@@ -750,7 +749,9 @@ function getSubcategorias($subcats_data) {
               <div class="products-badge <?= $total_productos === 0 ? 'empty' : '' ?>">
                 <?= $total_productos === 0 ? 'Sin productos' : number_format($total_productos) . ' producto' . ($total_productos !== 1 ? 's' : '') ?>
               </div>
-              <div class="category-image lazy-bg skeleton" data-bg="<?= htmlspecialchars($imagen, ENT_QUOTES, 'UTF-8') ?>"></div>
+              <div class="category-image lazy-bg skeleton" 
+                   data-bg="<?= htmlspecialchars($imagen, ENT_QUOTES, 'UTF-8') ?>"
+                   style="background-image: url('<?= htmlspecialchars($imagen, ENT_QUOTES, 'UTF-8') ?>');"></div>
             </div>
 
             <div class="category-header">
