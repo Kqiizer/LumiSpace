@@ -67,21 +67,9 @@ $stats = [
 ];
 
 $heroPendents = [
-    [
-        'size' => '22cm x 10cm',
-        'price' => '$44.99',
-        'image' => $BASE . 'imagenes/lamparas/deco2.jpg',
-    ],
-    [
-        'size' => '18cm x 8cm',
-        'price' => '$34.99',
-        'image' => $BASE . 'imagenes/lamparas/deco3.jpg',
-    ],
-    [
-        'size' => '20cm x 9cm',
-        'price' => '$29.99',
-        'image' => $BASE . 'imagenes/lamparas/deco4.jpg',
-    ],
+    $BASE . 'imagenes/lamparas/deco2.jpg',
+    $BASE . 'imagenes/lamparas/deco3.jpg',
+    $BASE . 'imagenes/lamparas/deco4.jpg',
 ];
 
 // ==========================================
@@ -259,55 +247,28 @@ function img_url($path, $BASE, $folder = 'productos') {
            HERO SECTION
            ========================================== */
         .catalog-hero {
-            background: linear-gradient(120deg, #6D5A42 0%, #A0896B 60%, #f4ede2 100%);
+            background: linear-gradient(135deg, #6D5A42 0%, #A0896B 100%);
             color: #fff;
             text-align: center;
-            padding: 80px 20px 60px;
+            padding: 70px 20px 50px;
+            border-bottom-left-radius: 36px;
+            border-bottom-right-radius: 36px;
+            box-shadow: 0 18px 40px rgba(34, 23, 8, 0.25);
             position: relative;
             overflow: hidden;
-            isolation: isolate;
-            border-bottom-left-radius: 48px;
-            border-bottom-right-radius: 48px;
-            box-shadow: 0 25px 60px rgba(34, 23, 8, 0.25);
-        }
-
-        .catalog-hero::before,
-        .catalog-hero::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            pointer-events: none;
         }
 
         .catalog-hero::before {
-            background:
-                radial-gradient(circle at 20% 30%, rgba(255,255,255,0.25) 0%, transparent 55%),
-                radial-gradient(circle at 80% 70%, rgba(255,255,255,0.18) 0%, transparent 45%);
-            mix-blend-mode: screen;
-            opacity: 0.7;
-        }
-
-        .catalog-hero::after {
-            background:
-                linear-gradient(120deg, rgba(255,255,255,0.15), transparent 55%),
-                repeating-linear-gradient(45deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 2px, transparent 2px, transparent 6px);
-            opacity: 0.6;
-        }
-
-        body.dark .catalog-hero::before {
-            background:
-                radial-gradient(circle at 20% 30%, rgba(255,255,255,0.12) 0%, transparent 55%),
-                radial-gradient(circle at 80% 70%, rgba(255,255,255,0.08) 0%, transparent 45%);
-        }
-
-        body.dark .catalog-hero::after {
-            opacity: 0.25;
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 20% 30%, rgba(255,255,255,0.25), transparent 55%);
+            opacity: 0.5;
         }
 
         .catalog-hero-content {
             position: relative;
-            z-index: 1;
-            max-width: 840px;
+            max-width: 760px;
             margin: 0 auto;
         }
 
@@ -325,72 +286,24 @@ function img_url($path, $BASE, $folder = 'productos') {
             color: rgba(255,255,255,0.9);
         }
 
-        .hero-word {
-            position: absolute;
-            inset: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: clamp(5rem, 18vw, 11rem);
-            font-weight: 800;
-            letter-spacing: -0.05em;
-            color: rgba(255,255,255,0.15);
-            text-transform: lowercase;
-            pointer-events: none;
-            z-index: 0;
-        }
-
         .pendants-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 22px;
-            margin-top: 5px;
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            margin-top: 24px;
+            flex-wrap: wrap;
         }
 
         .pendant-card {
-            position: relative;
-            padding: 55px 10px 10px;
-            border-radius: 0;
-            background: transparent;
             text-align: center;
-        }
-
-        .pendant-line {
-            position: absolute;
-            top: -120px;
-            left: 50%;
-            width: 2px;
-            height: 120px;
-            background: rgba(255,255,255,0.35);
-            transform: translateX(-50%);
         }
 
         .pendant-image {
             width: 130px;
-            height: 190px;
+            height: 130px;
             object-fit: contain;
             display: block;
-            margin: 0 auto 12px;
-            filter: drop-shadow(0 18px 30px rgba(0,0,0,0.25));
-        }
-
-        .pendant-price {
-            margin-top: 4px;
-            font-size: 1.05rem;
-            font-weight: 600;
-            color: #fff;
-        }
-
-        @media (max-width: 768px) {
-            .catalog-hero {
-                border-radius: 0 0 36px 36px;
-                padding-bottom: 40px;
-            }
-
-            .pendant-line {
-                height: 80px;
-                top: -80px;
-            }
+            margin: 0 auto 8px;
         }
 
         .hero-stats {
@@ -1024,14 +937,12 @@ function img_url($path, $BASE, $folder = 'productos') {
                 <p>Explora piezas colgantes con acabados nórdicos, colores suaves y materiales premium pensados para armonizar cualquier espacio.</p>
 
                 <div class="pendants-grid">
-                    <?php foreach ($heroPendents as $pendant): ?>
+                    <?php foreach ($heroPendents as $imagePath): ?>
                         <article class="pendant-card">
-                            <span class="pendant-line"></span>
                             <img class="pendant-image"
-                                 src="<?= htmlspecialchars($pendant['image'], ENT_QUOTES, 'UTF-8') ?>"
+                                 src="<?= htmlspecialchars($imagePath, ENT_QUOTES, 'UTF-8') ?>"
                                  alt="Lámpara decorativa"
                                  loading="lazy">
-                            <div class="pendant-price"><?= htmlspecialchars($pendant['price'], ENT_QUOTES, 'UTF-8') ?></div>
                         </article>
                     <?php endforeach; ?>
                 </div>
