@@ -14,6 +14,8 @@
   const btnFlag  = document.getElementById('lang-flag');
   const base     = document.body.getAttribute('data-base') || './';
   const endpoint = (base.endsWith('/') ? base : base + '/') + 'azure/api.php';
+  const esFlag   = btn?.dataset?.esIcon || '';
+  const enFlag   = btn?.dataset?.enIcon || '';
 
   // Qué NO traducir y qué atributos revisar
   const SKIP_SELECTORS = [
