@@ -2,7 +2,8 @@
 
 // Ruta base del proyecto (ajusta "LumiSpace" si tu carpeta tiene otro nombre)
 if (!defined("BASE_URL")) {
-    define("BASE_URL", "/LumiSpace/");
+    $envBase = getenv('BASE_URL');
+    define("BASE_URL", $envBase !== false ? $envBase : "/LumiSpace/");
 }
 
 include_once(__DIR__ . "/db.php");
@@ -11,12 +12,14 @@ require_once __DIR__ . "/mail.php"; // 📩 enviar correos
 /* ============================================================
    Helpers de seguridad y normalización
    ============================================================ */
-function _normalizeEmail(string $email): string {
+function _normalizeEmail(string $email): string
+{
     return strtolower(trim($email));
 }
 
-function _sanitizeRol(?string $rol): string {
-    $rol = strtolower(trim((string)$rol));
+function _sanitizeRol(?string $rol): string
+{
+    $rol = strtolower(trim((string) $rol));
     $permitidos = ['usuario', 'cajero', 'gestor', 'admin'];
     return in_array($rol, $permitidos, true) ? $rol : 'usuario';
 }
@@ -26,8 +29,10 @@ function _sanitizeRol(?string $rol): string {
    ============================================================ */
 
 // Agregar un producto al carrito
-function carritoAgregar(int $producto_id, int $cantidad = 1): void {
-    if (session_status() === PHP_SESSION_NONE) session_start();
+function carritoAgregar(int $producto_id, int $cantidad = 1): void
+{
+    if (session_status() === PHP_SESSION_NONE)
+        session_start();
     $_SESSION['carrito'] = $_SESSION['carrito'] ?? [];
 
     // Si ya existe, sumar cantidad
@@ -38,46 +43,53 @@ function carritoAgregar(int $producto_id, int $cantidad = 1): void {
         if ($producto) {
             $_SESSION['carrito'][$producto_id] = [
                 'producto_id' => $producto['id'],
-                'nombre'      => $producto['nombre'],
-                'precio'      => (float)$producto['precio'],
-                'imagen'      => $producto['imagen'] ?? 'images/default.png',
-                'cantidad'    => $cantidad,
-                'categoria'   => $producto['categoria'] ?? '',
-                'subtotal'    => (float)$producto['precio'] * $cantidad
+                'nombre' => $producto['nombre'],
+                'precio' => (float) $producto['precio'],
+                'imagen' => $producto['imagen'] ?? 'images/default.png',
+                'cantidad' => $cantidad,
+                'categoria' => $producto['categoria'] ?? '',
+                'subtotal' => (float) $producto['precio'] * $cantidad
             ];
         }
     }
 }
 
 // Eliminar producto del carrito
-function carritoEliminar(int $producto_id): void {
-    if (session_status() === PHP_SESSION_NONE) session_start();
+function carritoEliminar(int $producto_id): void
+{
+    if (session_status() === PHP_SESSION_NONE)
+        session_start();
     unset($_SESSION['carrito'][$producto_id]);
 }
 
 // Vaciar todo el carrito
-function carritoVaciar(): void {
-    if (session_status() === PHP_SESSION_NONE) session_start();
+function carritoVaciar(): void
+{
+    if (session_status() === PHP_SESSION_NONE)
+        session_start();
     unset($_SESSION['carrito']);
 }
 
 // Obtener todos los productos del carrito (ya con detalles)
-function carritoObtener(): array {
-    if (session_status() === PHP_SESSION_NONE) session_start();
+function carritoObtener(): array
+{
+    if (session_status() === PHP_SESSION_NONE)
+        session_start();
     $carrito = $_SESSION['carrito'] ?? [];
     $resultado = [];
 
     foreach ($carrito as $id => $item) {
-        if (!isset($item['precio'], $item['cantidad'])) continue;
+        if (!isset($item['precio'], $item['cantidad']))
+            continue;
 
         $subtotal = $item['precio'] * $item['cantidad'];
         $resultado[] = [
             'producto_id' => $id,
-            'nombre'      => $item['nombre'],
-            'precio'      => $item['precio'],
-            'imagen'      => publicImageUrl($item['imagen']),
-            'cantidad'    => $item['cantidad'],
-            'subtotal'    => $subtotal
+            'nombre' => $item['nombre'],
+            'precio' => $item['precio'],
+            'imagen' => publicImageUrl($item['imagen']),
+            'cantidad' => $item['cantidad'],
+            'subtotal' => $subtotal
         ];
     }
 
@@ -85,7 +97,8 @@ function carritoObtener(): array {
 }
 
 // Calcular total general del carrito
-function carritoTotal(): float {
+function carritoTotal(): float
+{
     $items = carritoObtener();
     $total = 0;
     foreach ($items as $i) {
@@ -97,15 +110,16 @@ function carritoTotal(): float {
 /* ============================================================
    Usuarios (auth + registro)
    ============================================================ */
-function obtenerUsuarioPorEmail(string $email): ?array {
-    $conn  = getDBConnection();
+function obtenerUsuarioPorEmail(string $email): ?array
+{
+    $conn = getDBConnection();
     $email = _normalizeEmail($email);
 
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         return null;
     }
 
-    $sql  = "SELECT id, nombre, email, password, rol, estado, proveedor, provider_id, email_verificado 
+    $sql = "SELECT id, nombre, email, password, rol, estado, proveedor, provider_id, email_verificado 
              FROM usuarios WHERE email = ? LIMIT 1";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("s", $email);
@@ -114,18 +128,21 @@ function obtenerUsuarioPorEmail(string $email): ?array {
     return $res->fetch_assoc() ?: null;
 }
 
-function registrarUsuario(string $nombre, string $email, ?string $password, string $rol = "usuario") {
-    $conn  = getDBConnection();
+function registrarUsuario(string $nombre, string $email, ?string $password, string $rol = "usuario")
+{
+    $conn = getDBConnection();
     $email = _normalizeEmail($email);
-    $rol   = _sanitizeRol($rol);
+    $rol = _sanitizeRol($rol);
 
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) return false;
-    if (obtenerUsuarioPorEmail($email)) return false; // evitar duplicados
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL))
+        return false;
+    if (obtenerUsuarioPorEmail($email))
+        return false; // evitar duplicados
 
-    $hash  = $password ? password_hash($password, PASSWORD_DEFAULT) : null;
+    $hash = $password ? password_hash($password, PASSWORD_DEFAULT) : null;
     $token = bin2hex(random_bytes(32));
 
-    $sql  = "INSERT INTO usuarios (nombre, email, password, rol, estado, proveedor, provider_id, email_verificado, token_verificacion) 
+    $sql = "INSERT INTO usuarios (nombre, email, password, rol, estado, proveedor, provider_id, email_verificado, token_verificacion) 
              VALUES (?, ?, ?, ?, 'activo', 'manual', NULL, 0, ?)";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("sssss", $nombre, $email, $hash, $rol, $token);
@@ -155,22 +172,26 @@ function registrarUsuario(string $nombre, string $email, ?string $password, stri
     return $id;
 }
 
-function insertarUsuario(string $nombre, string $email, ?string $password, string $rol = 'usuario') {
+function insertarUsuario(string $nombre, string $email, ?string $password, string $rol = 'usuario')
+{
     $res = registrarUsuario($nombre, $email, $password, $rol);
-    return $res === false ? false : (int)$res;
+    return $res === false ? false : (int) $res;
 }
 
-function registrarUsuarioSocial(string $nombre, string $email, ?string $providerId = null, string $rol = "usuario", string $proveedor = "google"): ?array {
-    $conn  = getDBConnection();
+function registrarUsuarioSocial(string $nombre, string $email, ?string $providerId = null, string $rol = "usuario", string $proveedor = "google"): ?array
+{
+    $conn = getDBConnection();
     $email = _normalizeEmail($email);
-    $rol   = _sanitizeRol($rol);
+    $rol = _sanitizeRol($rol);
 
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) return null;
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL))
+        return null;
 
     $user = obtenerUsuarioPorEmail($email);
-    if ($user) return $user; // ya existe
+    if ($user)
+        return $user; // ya existe
 
-    $sql  = "INSERT INTO usuarios (nombre, email, password, rol, estado, proveedor, provider_id, email_verificado) 
+    $sql = "INSERT INTO usuarios (nombre, email, password, rol, estado, proveedor, provider_id, email_verificado) 
              VALUES (?, ?, NULL, ?, 'activo', ?, ?, 1)";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("ssss", $nombre, $email, $rol, $proveedor, $providerId);
@@ -193,12 +214,12 @@ function registrarUsuarioSocial(string $nombre, string $email, ?string $provider
     }
 
     return [
-        "id"          => $id,
-        "nombre"      => htmlspecialchars($nombre, ENT_QUOTES, 'UTF-8'),
-        "email"       => $email,
-        "rol"         => $rol,
-        "estado"      => "activo",
-        "proveedor"   => $proveedor,
+        "id" => $id,
+        "nombre" => htmlspecialchars($nombre, ENT_QUOTES, 'UTF-8'),
+        "email" => $email,
+        "rol" => $rol,
+        "estado" => "activo",
+        "proveedor" => $proveedor,
         "provider_id" => $providerId,
         "email_verificado" => 1
     ];
@@ -211,7 +232,7 @@ function registrarUsuarioSocial(string $nombre, string $email, ?string $provider
 /**
  * Registrar una nueva venta (POS o en línea).
  */
-function registrarVenta( 
+function registrarVenta(
     ?int $cliente_id,
     ?int $usuario_id,
     array $items,
@@ -225,7 +246,7 @@ function registrarVenta(
         // Calcular cantidad total
         $cantidad_total = 0;
         foreach ($items as $item) {
-            $cantidad_total += (int)$item['cantidad'];
+            $cantidad_total += (int) $item['cantidad'];
         }
 
         // 1. Insertar venta
@@ -260,8 +281,8 @@ function registrarVenta(
         }
 
         foreach ($items as $item) {
-            $cantidad = (int)$item['cantidad'];
-            $precio   = (float)$item['precio'];
+            $cantidad = (int) $item['cantidad'];
+            $precio = (float) $item['precio'];
             $subtotal = $cantidad * $precio;
 
             $stmtDetalle->bind_param(
@@ -304,30 +325,33 @@ function registrarVenta(
    ============================================================ */
 
 // Total de ventas de hoy
-function getVentasHoy(): float {
+function getVentasHoy(): float
+{
     $conn = getDBConnection();
-    $sql  = "SELECT IFNULL(SUM(total),0) as total FROM ventas WHERE DATE(fecha)=CURDATE()";
-    $res  = $conn->query($sql);
-    return (float)($res->fetch_assoc()['total'] ?? 0);
+    $sql = "SELECT IFNULL(SUM(total),0) as total FROM ventas WHERE DATE(fecha)=CURDATE()";
+    $res = $conn->query($sql);
+    return (float) ($res->fetch_assoc()['total'] ?? 0);
 }
 
 // Resumen de hoy
-function getResumenHoy(): array {
+function getResumenHoy(): array
+{
     $conn = getDBConnection();
-    $sql  = "SELECT 
+    $sql = "SELECT 
                 IFNULL(SUM(total),0) as total,
                 COUNT(id) as transacciones,
                 IFNULL(SUM(cantidad_total),0) as productos
              FROM ventas
              WHERE DATE(fecha)=CURDATE()";
     $res = $conn->query($sql);
-    return $res ? $res->fetch_assoc() : ['total'=>0,'transacciones'=>0,'productos'=>0];
+    return $res ? $res->fetch_assoc() : ['total' => 0, 'transacciones' => 0, 'productos' => 0];
 }
 
 // Últimas N ventas
-function getVentasRecientes(int $limit=6): array {
+function getVentasRecientes(int $limit = 6): array
+{
     $conn = getDBConnection();
-    $limit = max(1, (int)$limit); // siempre mínimo 1
+    $limit = max(1, (int) $limit); // siempre mínimo 1
 
     $sql = "
         SELECT v.id, 
@@ -355,28 +379,31 @@ function getVentasRecientes(int $limit=6): array {
 }
 
 // Clientes únicos atendidos hoy
-function getClientesUnicosHoy(): int {
+function getClientesUnicosHoy(): int
+{
     $conn = getDBConnection();
-    $sql  = "SELECT COUNT(DISTINCT cliente_id) as clientes FROM ventas WHERE DATE(fecha)=CURDATE()";
-    $res  = $conn->query($sql);
-    return (int)($res->fetch_assoc()['clientes'] ?? 0);
+    $sql = "SELECT COUNT(DISTINCT cliente_id) as clientes FROM ventas WHERE DATE(fecha)=CURDATE()";
+    $res = $conn->query($sql);
+    return (int) ($res->fetch_assoc()['clientes'] ?? 0);
 }
 
 // Corte de caja por método de pago (hoy)
-function getCorteCajaHoy(): array {
+function getCorteCajaHoy(): array
+{
     $conn = getDBConnection();
-    $sql  = "SELECT metodo_pago, SUM(total) as total 
+    $sql = "SELECT metodo_pago, SUM(total) as total 
              FROM ventas 
              WHERE DATE(fecha)=CURDATE()
              GROUP BY metodo_pago";
-    $res  = $conn->query($sql);
+    $res = $conn->query($sql);
     return $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
 }
 
 // Ventas agrupadas por categoría (hoy)
-function getVentasPorCategoria(): array {
+function getVentasPorCategoria(): array
+{
     $conn = getDBConnection();
-    $sql  = "SELECT cat.nombre as categoria, SUM(dv.subtotal) as total
+    $sql = "SELECT cat.nombre as categoria, SUM(dv.subtotal) as total
              FROM detalle_ventas dv
              INNER JOIN productos p ON dv.producto_id = p.id
              INNER JOIN categorias cat ON p.categoria_id = cat.id
@@ -388,7 +415,8 @@ function getVentasPorCategoria(): array {
 }
 
 // Detalle completo de una venta
-function getVentaById(int $venta_id): ?array {
+function getVentaById(int $venta_id): ?array
+{
     $conn = getDBConnection();
     $stmt = $conn->prepare("
         SELECT v.*, c.nombre as cliente, u.nombre as cajero
@@ -398,11 +426,12 @@ function getVentaById(int $venta_id): ?array {
         WHERE v.id=?
         LIMIT 1
     ");
-    $stmt->bind_param("i",$venta_id);
+    $stmt->bind_param("i", $venta_id);
     $stmt->execute();
     $venta = $stmt->get_result()->fetch_assoc();
 
-    if (!$venta) return null;
+    if (!$venta)
+        return null;
 
     $stmt2 = $conn->prepare("
         SELECT dv.*, p.nombre as producto
@@ -410,7 +439,7 @@ function getVentaById(int $venta_id): ?array {
         JOIN productos p ON dv.producto_id=p.id
         WHERE dv.venta_id=?
     ");
-    $stmt2->bind_param("i",$venta_id);
+    $stmt2->bind_param("i", $venta_id);
     $stmt2->execute();
     $venta['items'] = $stmt2->get_result()->fetch_all(MYSQLI_ASSOC);
 
@@ -419,11 +448,12 @@ function getVentaById(int $venta_id): ?array {
 /**
  * Categorías más vendidas del mes
  */
-function getCategoriasMasVendidasMes(int $limit = 10): array {
+function getCategoriasMasVendidasMes(int $limit = 10): array
+{
     $conn = getDBConnection();
 
     // Sanitizar límite
-    $limit = (int)$limit;
+    $limit = (int) $limit;
 
     $sql = "
         SELECT c.id, c.nombre AS categoria,
@@ -451,9 +481,10 @@ function getCategoriasMasVendidasMes(int $limit = 10): array {
    ============================================================ */
 
 // Ventas por mes (para gráficas del dashboard)
-function getVentasMensuales(): array {
+function getVentasMensuales(): array
+{
     $conn = getDBConnection();
-    $sql  = "SELECT MONTHNAME(fecha) as mes, SUM(total) as total 
+    $sql = "SELECT MONTHNAME(fecha) as mes, SUM(total) as total 
              FROM ventas 
              WHERE YEAR(fecha)=YEAR(NOW())
              GROUP BY MONTH(fecha)
@@ -463,7 +494,8 @@ function getVentasMensuales(): array {
 }
 
 // Ventas por día en el mes actual
-function getVentasPorDiaMesActual(): array {
+function getVentasPorDiaMesActual(): array
+{
     $conn = getDBConnection();
     $sql = "SELECT DAY(fecha) as dia, SUM(total) as total
             FROM ventas
@@ -480,7 +512,8 @@ function getVentasPorDiaMesActual(): array {
    ============================================================ */
 
 // Top N productos más vendidos (general)
-function getProductosMasVendidos(int $limit=10): array {
+function getProductosMasVendidos(int $limit = 10): array
+{
     $conn = getDBConnection();
     $stmt = $conn->prepare("
         SELECT p.id, p.nombre, p.precio, p.imagen,
@@ -500,11 +533,12 @@ function getProductosMasVendidos(int $limit=10): array {
 }
 
 // Top N productos más vendidos del mes actual
-function getProductosMasVendidosMes(int $limit = 10): array {
+function getProductosMasVendidosMes(int $limit = 10): array
+{
     $conn = getDBConnection();
 
     // Sanitizar el límite para evitar SQL injection
-    $limit = (int)$limit;
+    $limit = (int) $limit;
 
     $sql = "
         SELECT p.id, p.nombre, p.precio, p.imagen,
@@ -532,7 +566,8 @@ function getProductosMasVendidosMes(int $limit = 10): array {
    🔧 FUNCIONES ADMIN USUARIOS (Panel)
    ============================================================ */
 
-function getTodosLosUsuarios(): array {
+function getTodosLosUsuarios(): array
+{
     $conn = getDBConnection();
     $sql = "SELECT 
                 id, 
@@ -550,7 +585,8 @@ function getTodosLosUsuarios(): array {
 }
 
 
-function getUsuarioPorId(int $id): ?array {
+function getUsuarioPorId(int $id): ?array
+{
     $conn = getDBConnection();
 
     $sql = "SELECT 
@@ -595,7 +631,8 @@ function getUsuarioPorId(int $id): ?array {
 }
 
 
-function actualizarUsuarioAdmin(int $id, string $nombre, string $email, string $rol, string $estado): bool {
+function actualizarUsuarioAdmin(int $id, string $nombre, string $email, string $rol, string $estado): bool
+{
     $conn = getDBConnection();
     $sql = "UPDATE usuarios SET nombre=?, email=?, rol=?, estado=? WHERE id=?";
     $stmt = $conn->prepare($sql);
@@ -603,7 +640,8 @@ function actualizarUsuarioAdmin(int $id, string $nombre, string $email, string $
     return $stmt->execute();
 }
 
-function eliminarUsuarioAdmin(int $id): bool {
+function eliminarUsuarioAdmin(int $id): bool
+{
     $conn = getDBConnection();
     $stmt = $conn->prepare("DELETE FROM usuarios WHERE id=?");
     $stmt->bind_param("i", $id);
@@ -614,9 +652,11 @@ function eliminarUsuarioAdmin(int $id): bool {
    Funciones para conexión
    ============================================================ */
 if (!function_exists('getDBConnection')) {
-    function getDBConnection(): mysqli {
+    function getDBConnection(): mysqli
+    {
         static $conn;
-        if ($conn instanceof mysqli) return $conn;
+        if ($conn instanceof mysqli)
+            return $conn;
 
         $conn = new mysqli("localhost", "root", "", "lumispace");
         if ($conn->connect_error) {
@@ -630,14 +670,16 @@ if (!function_exists('getDBConnection')) {
 /* ============================================================
    Funciones para el Dashboard Admin
    ============================================================ */
-function getTotalUsuarios(): int {
+function getTotalUsuarios(): int
+{
     $conn = getDBConnection();
     $sql = "SELECT COUNT(*) as total FROM usuarios";
     $res = $conn->query($sql);
-    return (int)($res->fetch_assoc()['total'] ?? 0);
+    return (int) ($res->fetch_assoc()['total'] ?? 0);
 }
 
-function getTotalGestores(): int {
+function getTotalGestores(): int
+{
     $conn = getDBConnection();
     $sql = "SELECT COUNT(*) AS total FROM usuarios WHERE rol = 'gestor'";
     $res = $conn->query($sql);
@@ -648,9 +690,10 @@ function getTotalGestores(): int {
     }
 
     $row = $res->fetch_assoc();
-    return (int)($row['total'] ?? 0);
+    return (int) ($row['total'] ?? 0);
 }
-function getTotalPorRol(string $rol): int {
+function getTotalPorRol(string $rol): int
+{
     $conn = getDBConnection();
 
     // 🔍 Verificar conexión
@@ -677,35 +720,39 @@ function getTotalPorRol(string $rol): int {
     }
 
     $row = $res->fetch_assoc();
-    return (int)($row['total'] ?? 0);
+    return (int) ($row['total'] ?? 0);
 }
 
-function getTotalProductos(): int {
+function getTotalProductos(): int
+{
     $conn = getDBConnection();
     $sql = "SELECT COUNT(*) as total FROM productos";
     $res = $conn->query($sql);
-    return (int)($res->fetch_assoc()['total'] ?? 0);
+    return (int) ($res->fetch_assoc()['total'] ?? 0);
 }
 
-function getIngresosMes(): float {
+function getIngresosMes(): float
+{
     $conn = getDBConnection();
     $sql = "SELECT SUM(total) as ingresos 
             FROM ventas 
             WHERE MONTH(fecha)=MONTH(NOW()) AND YEAR(fecha)=YEAR(NOW())";
     $res = $conn->query($sql);
-    return (float)($res->fetch_assoc()['ingresos'] ?? 0);
+    return (float) ($res->fetch_assoc()['ingresos'] ?? 0);
 }
 
-function getUsuariosRecientes(int $limit=5): array {
+function getUsuariosRecientes(int $limit = 5): array
+{
     $conn = getDBConnection();
     $stmt = $conn->prepare("SELECT nombre,email,fecha_registro FROM usuarios ORDER BY fecha_registro DESC LIMIT ?");
-    $stmt->bind_param("i",$limit);
+    $stmt->bind_param("i", $limit);
     $stmt->execute();
     $res = $stmt->get_result();
     return $res->fetch_all(MYSQLI_ASSOC);
 }
 
-function getInventarioResumen(): array {
+function getInventarioResumen(): array
+{
     $conn = getDBConnection();
     $sql = "
         SELECT c.nombre AS categoria, 
@@ -720,7 +767,8 @@ function getInventarioResumen(): array {
 }
 
 
-function getUsuariosMensuales(): array {
+function getUsuariosMensuales(): array
+{
     $conn = getDBConnection();
     $sql = "SELECT MONTHNAME(fecha_registro) as mes, COUNT(*) as total 
             FROM usuarios 
@@ -733,18 +781,23 @@ function getUsuariosMensuales(): array {
 /* ============================================================
    Helpers de formato
    ============================================================ */
-function formatCurrency($amount) {
+function formatCurrency($amount)
+{
     return "$" . number_format($amount, 2, '.', ',');
 }
 
-function timeAgo($date) {
+function timeAgo($date)
+{
     $timestamp = strtotime($date);
     $diff = time() - $timestamp;
-    if ($diff < 60) return "justo ahora";
+    if ($diff < 60)
+        return "justo ahora";
     $minutes = floor($diff / 60);
-    if ($minutes < 60) return "hace $minutes min";
+    if ($minutes < 60)
+        return "hace $minutes min";
     $hours = floor($minutes / 60);
-    if ($hours < 24) return "hace $hours horas";
+    if ($hours < 24)
+        return "hace $hours horas";
     $days = floor($hours / 24);
     return "hace $days días";
 }
@@ -752,7 +805,8 @@ function timeAgo($date) {
 // config/functions.php
 
 if (!function_exists('tableExists')) {
-    function tableExists(mysqli $conn, string $table): bool {
+    function tableExists(mysqli $conn, string $table): bool
+    {
         // Sanear nombre de tabla por seguridad básica
         if (!preg_match('/^[a-zA-Z0-9_]+$/', $table)) {
             return false;
@@ -766,7 +820,8 @@ if (!function_exists('tableExists')) {
 }
 
 if (!function_exists('columnExists')) {
-    function columnExists(mysqli $conn, string $table, string $column): bool {
+    function columnExists(mysqli $conn, string $table, string $column): bool
+    {
         if (!preg_match('/^[a-zA-Z0-9_]+$/', $table)) {
             return false;
         }
@@ -779,36 +834,43 @@ if (!function_exists('columnExists')) {
 }
 
 /* ===== URL pública de imagen (admin sube a /images/productos) ===== */
-function publicImageUrl(?string $raw): string {
-    $r = trim((string)$raw);
-    $base = rtrim(BASE_URL, '/').'/';
-    if ($r === '') return $base.'images/default.png';
-    if (preg_match('#^https?://#i', $r)) return $r;
-    if (stripos($r, 'images/') === 0) return $base.$r;
-    return $base.'images/productos/'.$r;
+function publicImageUrl(?string $raw): string
+{
+    $r = trim((string) $raw);
+    $base = rtrim(BASE_URL, '/') . '/';
+    if ($r === '')
+        return $base . 'images/default.png';
+    if (preg_match('#^https?://#i', $r))
+        return $r;
+    if (stripos($r, 'images/') === 0)
+        return $base . $r;
+    return $base . 'images/productos/' . $r;
 }
 
 /* ============================================================
    Logs y Pagos
    ============================================================ */
-function registrarLog($usuario_id,$accion,$ip=''): bool {
+function registrarLog($usuario_id, $accion, $ip = ''): bool
+{
     $conn = getDBConnection();
     $stmt = $conn->prepare("INSERT INTO logs (usuario_id,accion,ip) VALUES (?,?,?)");
-    $stmt->bind_param("iss",$usuario_id,$accion,$ip);
+    $stmt->bind_param("iss", $usuario_id, $accion, $ip);
     return $stmt->execute();
 }
 
-function registrarPago($venta_id,$metodo,$monto): bool {
+function registrarPago($venta_id, $metodo, $monto): bool
+{
     $conn = getDBConnection();
     $stmt = $conn->prepare("INSERT INTO pagos (venta_id,metodo,monto) VALUES (?,?,?)");
-    $stmt->bind_param("isd",$venta_id,$metodo,$monto);
+    $stmt->bind_param("isd", $venta_id, $metodo, $monto);
     return $stmt->execute();
 }
 
-function getPagosPorVenta($venta_id): array {
+function getPagosPorVenta($venta_id): array
+{
     $conn = getDBConnection();
     $stmt = $conn->prepare("SELECT * FROM pagos WHERE venta_id=?");
-    $stmt->bind_param("i",$venta_id);
+    $stmt->bind_param("i", $venta_id);
     $stmt->execute();
     $res = $stmt->get_result();
     return $res->fetch_all(MYSQLI_ASSOC);
@@ -817,23 +879,26 @@ function getPagosPorVenta($venta_id): array {
 /* ============================================================
    Clientes
    ============================================================ */
-function getClientes(): array {
+function getClientes(): array
+{
     $conn = getDBConnection();
     $res = $conn->query("SELECT * FROM clientes ORDER BY creado_en DESC");
     return $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
 }
 
-function insertarCliente($nombre,$email,$telefono,$direccion): bool {
+function insertarCliente($nombre, $email, $telefono, $direccion): bool
+{
     $conn = getDBConnection();
     $stmt = $conn->prepare("INSERT INTO clientes (nombre,email,telefono,direccion) VALUES (?,?,?,?)");
-    $stmt->bind_param("ssss",$nombre,$email,$telefono,$direccion);
+    $stmt->bind_param("ssss", $nombre, $email, $telefono, $direccion);
     return $stmt->execute();
 }
 
 /* ============================================================
    Inventario
    ============================================================ */
- function getInventarioByProducto(int $producto_id): array {
+function getInventarioByProducto(int $producto_id): array
+{
     $conn = getDBConnection();
 
     $sql = "
@@ -867,7 +932,8 @@ function insertarCliente($nombre,$email,$telefono,$direccion): bool {
 /**
  * Obtener todo el inventario (por producto y sucursal)
  */
-function getInventario(): array {
+function getInventario(): array
+{
     $conn = getDBConnection();
     $sql = "
         SELECT 
@@ -889,7 +955,8 @@ function getInventario(): array {
 /**
  * Obtener un registro de inventario por ID
  */
-function getInventarioById(int $id): ?array {
+function getInventarioById(int $id): ?array
+{
     $conn = getDBConnection();
 
     $sql = "
@@ -923,7 +990,8 @@ function getInventarioById(int $id): ?array {
 /**
  * Actualizar inventario
  */
-function actualizarInventario(int $id, int $producto_id, int $cantidad, string $sucursal): bool {
+function actualizarInventario(int $id, int $producto_id, int $cantidad, string $sucursal): bool
+{
     $conn = getDBConnection();
 
     $sql = "UPDATE inventario SET cantidad=?, sucursal=? WHERE id=? AND producto_id=?";
@@ -938,7 +1006,8 @@ function actualizarInventario(int $id, int $producto_id, int $cantidad, string $
 }
 
 
-function insertarInventario(int $producto_id, int $cantidad, string $sucursal='Principal'): bool {
+function insertarInventario(int $producto_id, int $cantidad, string $sucursal = 'Principal'): bool
+{
     $conn = getDBConnection();
     $stmt = $conn->prepare("INSERT INTO inventario(producto_id, sucursal, cantidad) VALUES(?,?,?)");
     $stmt->bind_param("isi", $producto_id, $sucursal, $cantidad);
@@ -946,7 +1015,8 @@ function insertarInventario(int $producto_id, int $cantidad, string $sucursal='P
 }
 
 
-function eliminarInventario(int $id): bool {
+function eliminarInventario(int $id): bool
+{
     $conn = getDBConnection();
     $stmt = $conn->prepare("DELETE FROM inventario WHERE id=?");
     $stmt->bind_param("i", $id);
@@ -962,8 +1032,8 @@ function registrarMovimiento(
     int $usuario_id,
     string $tipo,
     int $cantidad,
-    string $motivo='',
-    string $sucursal='Principal'
+    string $motivo = '',
+    string $sucursal = 'Principal'
 ): bool {
     $conn = getDBConnection();
     $conn->begin_transaction();
@@ -989,7 +1059,7 @@ function registrarMovimiento(
         $stmt2->bind_param("is", $producto_id, $sucursal);
         $stmt2->execute();
         $res = $stmt2->get_result()->fetch_assoc();
-        $stockActual = $res ? (int)$res['cantidad'] : 0;
+        $stockActual = $res ? (int) $res['cantidad'] : 0;
 
         // 3. Calcular nuevo stock
         if ($tipo === 'entrada') {
@@ -1003,12 +1073,14 @@ function registrarMovimiento(
         // 4. Insertar o actualizar inventario
         if ($res) {
             $stmt3 = $conn->prepare("UPDATE inventario SET cantidad=? WHERE producto_id=? AND sucursal=?");
-            if (!$stmt3) throw new Exception("Error en UPDATE inventario: " . $conn->error);
+            if (!$stmt3)
+                throw new Exception("Error en UPDATE inventario: " . $conn->error);
             $stmt3->bind_param("iis", $nuevoStock, $producto_id, $sucursal);
             $stmt3->execute();
         } else {
             $stmt3 = $conn->prepare("INSERT INTO inventario (producto_id, sucursal, cantidad) VALUES (?, ?, ?)");
-            if (!$stmt3) throw new Exception("Error en INSERT inventario: " . $conn->error);
+            if (!$stmt3)
+                throw new Exception("Error en INSERT inventario: " . $conn->error);
             $stmt3->bind_param("isi", $producto_id, $sucursal, $nuevoStock);
             $stmt3->execute();
         }
@@ -1023,7 +1095,8 @@ function registrarMovimiento(
         return false;
     }
 }
-function getMovimientoById(int $id): ?array {
+function getMovimientoById(int $id): ?array
+{
     $conn = getDBConnection();
 
     $sql = "
@@ -1075,17 +1148,19 @@ function actualizarMovimiento(
     try {
         // 🔹 Obtener movimiento anterior
         $stmt = $conn->prepare("SELECT cantidad, tipo, sucursal FROM movimientos_inventario WHERE id=? LIMIT 1");
-        if (!$stmt) throw new Exception("Error SELECT movimiento: " . $conn->error);
+        if (!$stmt)
+            throw new Exception("Error SELECT movimiento: " . $conn->error);
         $stmt->bind_param("i", $id);
         $stmt->execute();
         $old = $stmt->get_result()->fetch_assoc();
         $stmt->close();
 
-        if (!$old) throw new Exception("Movimiento no encontrado");
+        if (!$old)
+            throw new Exception("Movimiento no encontrado");
 
-        $oldCantidad = (int)$old['cantidad'];
-        $oldTipo     = $old['tipo'];
-        $sucursal    = $old['sucursal'];
+        $oldCantidad = (int) $old['cantidad'];
+        $oldTipo = $old['tipo'];
+        $sucursal = $old['sucursal'];
 
         // 🔹 Revertir efecto anterior
         if ($oldTipo === 'entrada') {
@@ -1113,14 +1188,16 @@ function actualizarMovimiento(
             SET tipo=?, cantidad=?, motivo=?, usuario_id=?, creado_en=NOW()
             WHERE id=?
         ");
-        if (!$stmt) throw new Exception("Error UPDATE movimiento: " . $conn->error);
+        if (!$stmt)
+            throw new Exception("Error UPDATE movimiento: " . $conn->error);
         $stmt->bind_param("sisii", $tipo, $cantidad, $motivo, $usuario_id, $id);
         $stmt->execute();
         $stmt->close();
 
         // 🔹 Actualizar inventario
         $stmt = $conn->prepare("SELECT id, cantidad FROM inventario WHERE producto_id=? AND sucursal=? LIMIT 1");
-        if (!$stmt) throw new Exception("Error SELECT inventario: " . $conn->error);
+        if (!$stmt)
+            throw new Exception("Error SELECT inventario: " . $conn->error);
         $stmt->bind_param("is", $producto_id, $sucursal);
         $stmt->execute();
         $inv = $stmt->get_result()->fetch_assoc();
@@ -1129,7 +1206,8 @@ function actualizarMovimiento(
         if ($inv) {
             $nuevoStock = max(0, $inv['cantidad'] + $ajusteFinal);
             $stmt = $conn->prepare("UPDATE inventario SET cantidad=? WHERE id=?");
-            if (!$stmt) throw new Exception("Error UPDATE inventario: " . $conn->error);
+            if (!$stmt)
+                throw new Exception("Error UPDATE inventario: " . $conn->error);
             $stmt->bind_param("ii", $nuevoStock, $inv['id']);
             $stmt->execute();
             $stmt->close();
@@ -1156,14 +1234,16 @@ function actualizarMovimiento(
 }
 
 
-function eliminarMovimiento(int $id): bool {
+function eliminarMovimiento(int $id): bool
+{
     $conn = getDBConnection();
     $stmt = $conn->prepare("DELETE FROM movimientos_inventario WHERE id=?");
-    $stmt->bind_param("i",$id);
+    $stmt->bind_param("i", $id);
     return $stmt->execute();
 }
 
-function getMovimientos(): array {
+function getMovimientos(): array
+{
     $conn = getDBConnection();
     $sql = "SELECT m.*, p.nombre AS producto, u.nombre AS usuario
             FROM movimientos_inventario m
@@ -1179,25 +1259,27 @@ function getMovimientos(): array {
 /* ============================================================
    Productos
     ============================================================ */
-    /* ===== Detalle seguro por ID (se adapta a tu BD) ===== */
-function getProductoPorId(int $id): ?array {
+/* ===== Detalle seguro por ID (se adapta a tu BD) ===== */
+function getProductoPorId(int $id): ?array
+{
     $conn = getDBConnection();
-    if ($id <= 0) return null;
+    if ($id <= 0)
+        return null;
 
     $joinCat = $joinProv = "";
-    $selCat  = "NULL AS categoria_id, NULL AS categoria";
+    $selCat = "NULL AS categoria_id, NULL AS categoria";
     $selProv = "NULL AS marca";
 
     if (tableExists($conn, "categorias") && columnExists($conn, "productos", "categoria_id")) {
         $joinCat = " LEFT JOIN categorias c ON p.categoria_id = c.id";
-        $selCat  = "c.id AS categoria_id, c.nombre AS categoria";
+        $selCat = "c.id AS categoria_id, c.nombre AS categoria";
     }
     if (tableExists($conn, "proveedores") && columnExists($conn, "productos", "proveedor_id")) {
         $joinProv = " LEFT JOIN proveedores pr ON p.proveedor_id = pr.id";
-        $selProv  = "pr.nombre AS marca";
+        $selProv = "pr.nombre AS marca";
     } elseif (tableExists($conn, "marcas") && columnExists($conn, "productos", "marca_id")) {
         $joinProv = " LEFT JOIN marcas m ON p.marca_id = m.id";
-        $selProv  = "m.nombre AS marca";
+        $selProv = "m.nombre AS marca";
     }
 
     $sql = "
@@ -1230,19 +1312,23 @@ function getProductoPorId(int $id): ?array {
 }
 
 /* Thumbs adicionales si tienes la tabla producto_imagenes */
-function getProductoImagenes(int $producto_id): array {
+function getProductoImagenes(int $producto_id): array
+{
     $conn = getDBConnection();
-    if (!tableExists($conn, "producto_imagenes")) return [];
+    if (!tableExists($conn, "producto_imagenes"))
+        return [];
     $stmt = $conn->prepare("SELECT ruta FROM producto_imagenes WHERE producto_id=? ORDER BY orden ASC, id ASC");
     $stmt->bind_param("i", $producto_id);
     $stmt->execute();
     $rs = $stmt->get_result();
     $imgs = [];
-    while ($row = $rs->fetch_assoc()) $imgs[] = publicImageUrl((string)$row['ruta']);
+    while ($row = $rs->fetch_assoc())
+        $imgs[] = publicImageUrl((string) $row['ruta']);
     return $imgs;
 }
 
-function getProductosPublicos(int $limit = 12): array {
+function getProductosPublicos(int $limit = 12): array
+{
     $conn = getDBConnection();
 
     $sql = "SELECT p.id, p.nombre, p.descripcion, p.precio, p.stock, p.imagen, 
@@ -1269,7 +1355,8 @@ function getProductosPublicos(int $limit = 12): array {
 /**
  * Obtener todos los productos con su stock REAL (suma de inventario por sucursales).
  */
-function getProductos(): array {
+function getProductos(): array
+{
     $conn = getDBConnection();
 
     $sql = "
@@ -1301,7 +1388,8 @@ function getProductos(): array {
 /**
  * Obtener un producto por su ID con su stock REAL (suma de inventario).
  */
-function getProductoById(int $id): ?array {
+function getProductoById(int $id): ?array
+{
     $conn = getDBConnection();
 
     $sql = "
@@ -1336,7 +1424,8 @@ function getProductoById(int $id): ?array {
 
 
 // 🔴 Eliminar producto definitivamente
-function eliminarProducto(int $id): bool {
+function eliminarProducto(int $id): bool
+{
     $conn = getDBConnection();
 
     // eliminar inventario asociado
@@ -1450,7 +1539,8 @@ function actualizarProducto(
     return false;
 }
 
-function inactivarProducto(int $id): bool {
+function inactivarProducto(int $id): bool
+{
     $conn = getDBConnection();
     $stmt = $conn->prepare("UPDATE productos SET estado='inactivo' WHERE id=?");
     if (!$stmt) {
@@ -1460,9 +1550,10 @@ function inactivarProducto(int $id): bool {
     $stmt->bind_param("i", $id);
     return $stmt->execute();
 }
-function getProductosPorCategoria(?int $categoria_id = null, int $limit = 12): array {
-    $conn  = getDBConnection();
-    $limit = max(1, (int)$limit);
+function getProductosPorCategoria(?int $categoria_id = null, int $limit = 12): array
+{
+    $conn = getDBConnection();
+    $limit = max(1, (int) $limit);
 
     // ==============================
     // 🔍 Detectar columnas existentes
@@ -1483,7 +1574,8 @@ function getProductosPorCategoria(?int $categoria_id = null, int $limit = 12): a
     // ==============================
     $select = ['p.id', 'p.nombre'];
     foreach (['descripcion', 'precio', 'precio_original', 'descuento', 'stock', 'imagen'] as $c) {
-        if (in_array($c, $cols)) $select[] = "p.$c";
+        if (in_array($c, $cols))
+            $select[] = "p.$c";
     }
 
     // ==============================
@@ -1494,7 +1586,10 @@ function getProductosPorCategoria(?int $categoria_id = null, int $limit = 12): a
         $candidatas = ['creado_en', 'created_at', 'fecha_creacion', 'fecha'];
         $orderCol = 'id';
         foreach ($candidatas as $col) {
-            if (in_array($col, $cols)) { $orderCol = $col; break; }
+            if (in_array($col, $cols)) {
+                $orderCol = $col;
+                break;
+            }
         }
     }
 
@@ -1549,11 +1644,12 @@ function getProductosPorCategoria(?int $categoria_id = null, int $limit = 12): a
     // ==============================
     // 🧾 Sin filtro de categoría
     // ==============================
-    $sql = $sqlBase . " ORDER BY p.`{$orderCol}` DESC, p.id DESC LIMIT " . (int)$limit;
+    $sql = $sqlBase . " ORDER BY p.`{$orderCol}` DESC, p.id DESC LIMIT " . (int) $limit;
     $res = $conn->query($sql);
     return $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
 }
-function getProductosCatalogo(?string $categoria = null, ?int $limit = null): array {
+function getProductosCatalogo(?string $categoria = null, ?int $limit = null): array
+{
     $conn = getDBConnection();
 
     // =====================================
@@ -1564,18 +1660,19 @@ function getProductosCatalogo(?string $categoria = null, ?int $limit = null): ar
         $cols = [];
         $res = $conn->query("SHOW COLUMNS FROM productos");
         if ($res) {
-            while ($r = $res->fetch_assoc()) $cols[] = $r['Field'];
+            while ($r = $res->fetch_assoc())
+                $cols[] = $r['Field'];
         }
         $hasCategoriaId = in_array('categoria_id', $cols);
-        $hasInventario  = $conn->query("SHOW TABLES LIKE 'inventario'")?->num_rows > 0;
+        $hasInventario = $conn->query("SHOW TABLES LIKE 'inventario'")?->num_rows > 0;
     }
 
     // =====================================
     // 🧩 Selección dinámica de columnas
     // =====================================
     $select = "p.id, p.nombre";
-    $select .= in_array('precio', $cols)  ? ", p.precio"  : "";
-    $select .= in_array('imagen', $cols)  ? ", p.imagen"  : "";
+    $select .= in_array('precio', $cols) ? ", p.precio" : "";
+    $select .= in_array('imagen', $cols) ? ", p.imagen" : "";
     $select .= $hasCategoriaId ? ", c.nombre AS categoria" : "";
 
     // Si hay tabla inventario → calcular stock real
@@ -1584,7 +1681,7 @@ function getProductosCatalogo(?string $categoria = null, ?int $limit = null): ar
     // =====================================
     // 🏗️ Construcción base del SQL
     // =====================================
-    $sql  = "SELECT $select FROM productos p";
+    $sql = "SELECT $select FROM productos p";
 
     if ($hasCategoriaId) {
         $sql .= " LEFT JOIN categorias c ON p.categoria_id = c.id";
@@ -1597,20 +1694,23 @@ function getProductosCatalogo(?string $categoria = null, ?int $limit = null): ar
     // ⚙️ Filtro opcional por categoría
     // =====================================
     $params = [];
-    $types  = "";
+    $types = "";
     if ($categoria && $hasCategoriaId) {
         $sql .= " WHERE c.nombre = ?";
         $params[] = $categoria;
-        $types   .= "s";
+        $types .= "s";
     }
 
     // =====================================
     // 📊 Agrupar y ordenar
     // =====================================
     $group = "p.id, p.nombre";
-    if (in_array('precio', $cols)) $group .= ", p.precio";
-    if (in_array('imagen', $cols)) $group .= ", p.imagen";
-    if ($hasCategoriaId) $group .= ", c.nombre";
+    if (in_array('precio', $cols))
+        $group .= ", p.precio";
+    if (in_array('imagen', $cols))
+        $group .= ", p.imagen";
+    if ($hasCategoriaId)
+        $group .= ", c.nombre";
 
     $sql .= " GROUP BY $group ORDER BY p.nombre ASC";
 
@@ -1618,7 +1718,7 @@ function getProductosCatalogo(?string $categoria = null, ?int $limit = null): ar
     // 🚦 Límite opcional
     // =====================================
     if ($limit !== null && $limit > 0) {
-        $sql .= " LIMIT " . (int)$limit;
+        $sql .= " LIMIT " . (int) $limit;
     }
 
     // =====================================
@@ -1647,14 +1747,16 @@ function getProductosCatalogo(?string $categoria = null, ?int $limit = null): ar
 /* ============================================================
    Proveedores
    ============================================================ */
-function getProveedores(): array {
+function getProveedores(): array
+{
     $conn = getDBConnection();
     $sql = "SELECT * FROM proveedores ORDER BY nombre";
     $res = $conn->query($sql);
     return $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
 }
 
-function insertarProveedor(string $nombre, ?string $contacto, ?string $telefono, ?string $email, ?string $direccion): bool {
+function insertarProveedor(string $nombre, ?string $contacto, ?string $telefono, ?string $email, ?string $direccion): bool
+{
     $conn = getDBConnection();
     $sql = "INSERT INTO proveedores (nombre, contacto, telefono, email, direccion) 
             VALUES (?, ?, ?, ?, ?)";
@@ -1666,9 +1768,9 @@ function insertarProveedor(string $nombre, ?string $contacto, ?string $telefono,
     }
 
     // Si vienen vacíos, los mandamos como NULL
-    $contacto  = !empty($contacto) ? $contacto : null;
-    $telefono  = !empty($telefono) ? $telefono : null;
-    $email     = !empty($email) ? $email : null;
+    $contacto = !empty($contacto) ? $contacto : null;
+    $telefono = !empty($telefono) ? $telefono : null;
+    $email = !empty($email) ? $email : null;
     $direccion = !empty($direccion) ? $direccion : null;
 
     $stmt->bind_param("sssss", $nombre, $contacto, $telefono, $email, $direccion);
@@ -1680,7 +1782,8 @@ function insertarProveedor(string $nombre, ?string $contacto, ?string $telefono,
 
     return true;
 }
-function actualizarProveedor(int $id, string $nombre, ?string $contacto, ?string $telefono, ?string $email, ?string $direccion): bool {
+function actualizarProveedor(int $id, string $nombre, ?string $contacto, ?string $telefono, ?string $email, ?string $direccion): bool
+{
     $conn = getDBConnection();
     $sql = "UPDATE proveedores 
             SET nombre=?, contacto=?, telefono=?, email=?, direccion=? 
@@ -1693,9 +1796,9 @@ function actualizarProveedor(int $id, string $nombre, ?string $contacto, ?string
     }
 
     // Si vienen vacíos, los mandamos como NULL
-    $contacto  = !empty($contacto) ? $contacto : null;
-    $telefono  = !empty($telefono) ? $telefono : null;
-    $email     = !empty($email) ? $email : null;
+    $contacto = !empty($contacto) ? $contacto : null;
+    $telefono = !empty($telefono) ? $telefono : null;
+    $email = !empty($email) ? $email : null;
     $direccion = !empty($direccion) ? $direccion : null;
 
     $stmt->bind_param("sssssi", $nombre, $contacto, $telefono, $email, $direccion, $id);
@@ -1712,7 +1815,8 @@ function actualizarProveedor(int $id, string $nombre, ?string $contacto, ?string
    Categorías
    ============================================================ */
 
-function getCategorias(): array {
+function getCategorias(): array
+{
     $conn = getDBConnection();
     $sql = "SELECT id, nombre, descripcion FROM categorias ORDER BY nombre ASC";
     $res = $conn->query($sql);
@@ -1724,7 +1828,8 @@ function getCategorias(): array {
 
 
 
-function insertarCategoria($nombre, $descripcion, $imagenPath = null): bool {
+function insertarCategoria($nombre, $descripcion, $imagenPath = null): bool
+{
     $conn = getDBConnection();
     if ($imagenPath) {
         $stmt = $conn->prepare("INSERT INTO categorias (nombre, descripcion, imagen) VALUES (?, ?, ?)");
@@ -1736,7 +1841,8 @@ function insertarCategoria($nombre, $descripcion, $imagenPath = null): bool {
     return $stmt->execute();
 }
 
-function actualizarCategoria(int $id, string $nombre, string $descripcion, ?string $imagenPath = null): bool {
+function actualizarCategoria(int $id, string $nombre, string $descripcion, ?string $imagenPath = null): bool
+{
     $conn = getDBConnection();
     if ($imagenPath) {
         $sql = "UPDATE categorias SET nombre=?, descripcion=?, imagen=? WHERE id=?";
@@ -1750,7 +1856,8 @@ function actualizarCategoria(int $id, string $nombre, string $descripcion, ?stri
     return $stmt->execute();
 }
 
-function eliminarCategoria(int $id): bool {
+function eliminarCategoria(int $id): bool
+{
     $conn = getDBConnection();
     $stmt = $conn->prepare("DELETE FROM categorias WHERE id=?");
     if (!$stmt) {
@@ -1760,17 +1867,20 @@ function eliminarCategoria(int $id): bool {
     $stmt->bind_param("i", $id);
     return $stmt->execute();
 }
-function favoritosAvailable(): bool {
+function favoritosAvailable(): bool
+{
     $conn = getDBConnection();
     return tableExists($conn, "favoritos")
         && columnExists($conn, "favoritos", "usuario_id")
         && columnExists($conn, "favoritos", "producto_id");
 }
 
-function toggleFavorito(int $usuario_id, int $producto_id): bool {
+function toggleFavorito(int $usuario_id, int $producto_id): bool
+{
     if ($usuario_id <= 0 || !favoritosAvailable()) {
         // fallback sesión
-        if (!isset($_SESSION)) session_start();
+        if (!isset($_SESSION))
+            session_start();
         $_SESSION['favoritos'] = $_SESSION['favoritos'] ?? [];
         if (in_array($producto_id, $_SESSION['favoritos'])) {
             $_SESSION['favoritos'] = array_values(array_diff($_SESSION['favoritos'], [$producto_id]));
@@ -1796,18 +1906,21 @@ function toggleFavorito(int $usuario_id, int $producto_id): bool {
     }
 }
 
-function getFavoritosCount(?int $usuario_id): int {
+function getFavoritosCount(?int $usuario_id): int
+{
     if ($usuario_id && $usuario_id > 0 && favoritosAvailable()) {
         $conn = getDBConnection();
         $stmt = $conn->prepare("SELECT COUNT(*) c FROM favoritos WHERE usuario_id=?");
         $stmt->bind_param("i", $usuario_id);
         $stmt->execute();
-        return (int)($stmt->get_result()->fetch_assoc()['c'] ?? 0);
+        return (int) ($stmt->get_result()->fetch_assoc()['c'] ?? 0);
     }
-    if (!isset($_SESSION)) session_start();
+    if (!isset($_SESSION))
+        session_start();
     return isset($_SESSION['favoritos']) ? count($_SESSION['favoritos']) : 0;
 }
-function getFavoritos(?int $usuario_id): array {
+function getFavoritos(?int $usuario_id): array
+{
     if ($usuario_id && $usuario_id > 0 && favoritosAvailable()) {
         $conn = getDBConnection();
         $sql = "
@@ -1829,9 +1942,11 @@ function getFavoritos(?int $usuario_id): array {
         return $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
     }
     // fallback sesión
-    if (!isset($_SESSION)) session_start();
+    if (!isset($_SESSION))
+        session_start();
     $favoritos_ids = $_SESSION['favoritos'] ?? [];
-    if (empty($favoritos_ids)) return [];
+    if (empty($favoritos_ids))
+        return [];
 
     $conn = getDBConnection();
     $placeholders = implode(',', array_fill(0, count($favoritos_ids), '?'));
