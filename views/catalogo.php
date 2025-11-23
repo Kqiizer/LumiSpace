@@ -66,12 +66,6 @@ $stats = [
     'clientes' => (int)($conn->query("SELECT COUNT(*) as total FROM usuarios WHERE rol!='admin'")->fetch_assoc()['total'] ?? 0),
 ];
 
-$heroPendents = [
-    $BASE . 'imagenes/lamparas/deco2.jpg',
-    $BASE . 'imagenes/lamparas/deco3.jpg',
-    $BASE . 'imagenes/lamparas/deco4.jpg',
-];
-
 // ==========================================
 // FUNCIÓN HELPER PARA IMÁGENES
 // ==========================================
@@ -247,63 +241,71 @@ function img_url($path, $BASE, $folder = 'productos') {
            HERO SECTION
            ========================================== */
         .catalog-hero {
-            background: linear-gradient(135deg, #6D5A42 0%, #A0896B 100%);
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
             color: #fff;
             text-align: center;
-            padding: 70px 20px 50px;
-            border-bottom-left-radius: 36px;
-            border-bottom-right-radius: 36px;
-            box-shadow: 0 18px 40px rgba(34, 23, 8, 0.25);
+            padding: 80px 20px 60px;
             position: relative;
             overflow: hidden;
+            border-bottom-left-radius: 40px;
+            border-bottom-right-radius: 40px;
+            box-shadow: 0 18px 40px rgba(34, 23, 8, 0.2);
         }
 
         .catalog-hero::before {
             content: '';
             position: absolute;
             inset: 0;
-            background: radial-gradient(circle at 20% 30%, rgba(255,255,255,0.25), transparent 55%);
-            opacity: 0.5;
+            background: radial-gradient(circle at 20% 20%, rgba(255,255,255,0.18), transparent 55%);
+            opacity: 0.6;
         }
 
         .catalog-hero-content {
             position: relative;
-            max-width: 760px;
+            z-index: 1;
+            max-width: 820px;
             margin: 0 auto;
         }
 
         .catalog-hero h1 {
-            font-size: clamp(2.2rem, 3.8vw, 3.3rem);
+            font-size: clamp(2.4rem, 4vw, 3.5rem);
             font-weight: 800;
-            margin-bottom: 14px;
-            letter-spacing: -0.8px;
+            margin-bottom: 16px;
+            letter-spacing: -0.6px;
         }
 
         .catalog-hero p {
-            font-size: 1.05rem;
+            font-size: 1.1rem;
             opacity: 0.92;
-            margin-bottom: 28px;
+            margin-bottom: 32px;
             color: rgba(255,255,255,0.9);
         }
 
-        .pendants-grid {
+        .hero-stats {
             display: flex;
             justify-content: center;
-            gap: 24px;
-            margin-top: 24px;
+            gap: 40px;
             flex-wrap: wrap;
         }
 
-        .pendant-card {
+        .hero-stat {
             text-align: center;
         }
 
-        .pendant-image {
-            width: 130px;
-            height: 130px;
-            object-fit: contain;
+        .hero-stat-number {
             display: block;
-            margin: 0 auto 8px;
+            font-size: 2.6rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .hero-stat-label {
+            display: block;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            opacity: 0.85;
+            margin-top: 6px;
         }
 
         .hero-stats {
@@ -931,20 +933,26 @@ function img_url($path, $BASE, $folder = 'productos') {
 
         <!-- Hero Section -->
         <section class="catalog-hero">
-            <div class="hero-word">pendants</div>
             <div class="catalog-hero-content">
-                <h1>Curated lighting for modern living rooms</h1>
-                <p>Explora piezas colgantes con acabados nórdicos, colores suaves y materiales premium pensados para armonizar cualquier espacio.</p>
+                <h1>
+                    <i class="fas fa-store"></i>
+                    Catálogo Completo
+                </h1>
+                <p>Explora nuestra selección de <?= $stats['productos'] ?> productos en <?= $stats['categorias'] ?> categorías diferentes.</p>
 
-                <div class="pendants-grid">
-                    <?php foreach ($heroPendents as $imagePath): ?>
-                        <article class="pendant-card">
-                            <img class="pendant-image"
-                                 src="<?= htmlspecialchars($imagePath, ENT_QUOTES, 'UTF-8') ?>"
-                                 alt="Lámpara decorativa"
-                                 loading="lazy">
-                        </article>
-                    <?php endforeach; ?>
+                <div class="hero-stats">
+                    <div class="hero-stat">
+                        <span class="hero-stat-number"><?= $stats['productos'] ?></span>
+                        <span class="hero-stat-label">Productos</span>
+                    </div>
+                    <div class="hero-stat">
+                        <span class="hero-stat-number"><?= $stats['categorias'] ?></span>
+                        <span class="hero-stat-label">Categorías</span>
+                    </div>
+                    <div class="hero-stat">
+                        <span class="hero-stat-number"><?= $stats['clientes'] ?></span>
+                        <span class="hero-stat-label">Clientes</span>
+                    </div>
                 </div>
             </div>
         </section>
