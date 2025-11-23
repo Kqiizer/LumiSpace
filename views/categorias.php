@@ -156,7 +156,7 @@ function getCategoryImage($imagen, $BASE) {
       background: rgba(109, 90, 66, 0.12);
       color: #6D5A42;
       border-radius: 50px;
-      font-family: inherit;
+      font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
       font-weight: 600;
       font-size: 16px;
       letter-spacing: 0.5px;
