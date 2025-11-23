@@ -241,48 +241,70 @@ function img_url($path, $BASE, $folder = 'productos') {
            HERO SECTION
            ========================================== */
         .catalog-hero {
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-            color: white;
+            background: linear-gradient(120deg, #6D5A42 0%, #A0896B 60%, #f4ede2 100%);
+            color: #fff;
             text-align: center;
-            padding: 80px 20px 60px;
+            padding: 90px 20px 70px;
             position: relative;
             overflow: hidden;
+            isolation: isolate;
+            border-bottom-left-radius: 60px;
+            border-bottom-right-radius: 60px;
+            box-shadow: 0 25px 60px rgba(34, 23, 8, 0.25);
         }
 
-        .catalog-hero::before {
+        .catalog-hero::before,
+        .catalog-hero::after {
             content: '';
             position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
-                        radial-gradient(circle at 80% 80%, rgba(255,255,255,0.08) 0%, transparent 50%);
+            inset: 0;
             pointer-events: none;
         }
 
-        /* Modo oscuro - hero con menor opacidad */
+        .catalog-hero::before {
+            background:
+                radial-gradient(circle at 20% 30%, rgba(255,255,255,0.25) 0%, transparent 55%),
+                radial-gradient(circle at 80% 70%, rgba(255,255,255,0.18) 0%, transparent 45%);
+            mix-blend-mode: screen;
+            opacity: 0.7;
+        }
+
+        .catalog-hero::after {
+            background:
+                linear-gradient(120deg, rgba(255,255,255,0.15), transparent 55%),
+                repeating-linear-gradient(45deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 2px, transparent 2px, transparent 6px);
+            opacity: 0.6;
+        }
+
         body.dark .catalog-hero::before {
-            background: radial-gradient(circle at 20% 50%, rgba(255,255,255,0.05) 0%, transparent 50%),
-                        radial-gradient(circle at 80% 80%, rgba(255,255,255,0.03) 0%, transparent 50%);
+            background:
+                radial-gradient(circle at 20% 30%, rgba(255,255,255,0.12) 0%, transparent 55%),
+                radial-gradient(circle at 80% 70%, rgba(255,255,255,0.08) 0%, transparent 45%);
+        }
+
+        body.dark .catalog-hero::after {
+            opacity: 0.25;
         }
 
         .catalog-hero-content {
             position: relative;
             z-index: 1;
+            max-width: 840px;
+            margin: 0 auto;
         }
 
         .catalog-hero h1 {
-            font-size: 3rem;
-            font-weight: 700;
-            margin-bottom: 12px;
+            font-size: clamp(2.5rem, 4vw, 3.6rem);
+            font-weight: 800;
+            margin-bottom: 16px;
             letter-spacing: -1px;
         }
 
         .catalog-hero p {
-            font-size: 1.2rem;
-            opacity: 0.95;
-            margin-bottom: 30px;
+            font-size: 1.15rem;
+            opacity: 0.92;
+            margin-bottom: 34px;
+            color: rgba(255,255,255,0.9);
         }
 
         .hero-stats {
