@@ -560,9 +560,6 @@ function getProductosMasVendidosMes(int $limit = 10): array
 
 
 /* ============================================================
-   Funciones para el Dashboard Admin
-<?php
-/* ============================================================
    🔧 FUNCIONES ADMIN USUARIOS (Panel)
    ============================================================ */
 
@@ -1974,7 +1971,8 @@ function getBrandsOverview(): array {
     return $brands;
 }
 
-function favoritosAvailable(): bool {
+function favoritosAvailable(): bool
+{
     $conn = getDBConnection();
     return tableExists($conn, "favoritos")
         && columnExists($conn, "favoritos", "usuario_id")
@@ -2072,7 +2070,8 @@ function lsFavoritesProductSelect(mysqli $conn, bool $withAddedAt = false): arra
     ];
 }
 
-function getFavoritosCount(?int $usuario_id): int {
+function getFavoritosCount(?int $usuario_id): int
+{
     if ($usuario_id && $usuario_id > 0 && favoritosAvailable()) {
         $conn = getDBConnection();
         $stmt = $conn->prepare("SELECT COUNT(*) c FROM favoritos WHERE usuario_id=?");

@@ -15,6 +15,16 @@ $stats = [
     'categorias' => count($categorias),
     'clientes'   => (int)($conn->query("SELECT COUNT(*) AS total FROM usuarios WHERE rol!='admin'")->fetch_assoc()['total'] ?? 0),
 ];
+
+// ==========================================
+// FUNCIÓN HELPER PARA IMÁGENES
+// ==========================================
+function img_url($path, $BASE, $folder = 'productos') {
+    $path = trim((string)$path);
+    if ($path === '') return $BASE . "images/default.png";
+    if (preg_match('#^https?://#i', $path)) return $path;
+    return $BASE . "images/{$folder}/" . ltrim($path, '/');
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -32,8 +42,8 @@ $stats = [
     <link rel="stylesheet" href="<?= $BASE ?>css/styles/reset.css">
     <link rel="stylesheet" href="<?= $BASE ?>css/styles/header.css">
     <link rel="stylesheet" href="<?= $BASE ?>css/styles/footer.css">
-    <link rel="stylesheet" href="<?= $BASE ?>css/styles/responsive.css">
     <link rel="stylesheet" href="<?= $BASE ?>css/styles/sidebar.css">
+    <link rel="stylesheet" href="<?= $BASE ?>css/styles/responsive.css">
     <style>
         /* ==========================================
            VARIABLES Y CONFIGURACIÓN BASE
@@ -968,90 +978,190 @@ $stats = [
             </div>
         </section>
 
-    <section class="catalog-layout">
-        <aside class="filters-panel">
-            <h3>Filtrar por</h3>
-
-            <div class="filter-group">
-                <label>Categorías</label>
-                <div id="catalogCategories" class="categories-list">
-                    <div class="category-item active" data-category="">
-                        <span>Todos</span>
-                        <small><?= $stats['productos'] ?></small>
+        <!-- Barra de Filtros y Búsqueda -->
+        <div class="filters-bar">
+            <div class="filters-container">
+                
+                <!-- Búsqueda -->
+                <div class="search-bar">
+                    <div class="search-input-wrapper">
+                        <input type="text" 
+                               class="search-input" 
+                               id="searchInput" 
+                               placeholder="Buscar productos por nombre...">
+                        <i class="fas fa-search search-icon"></i>
                     </div>
-                    <?php foreach ($categorias as $categoria): ?>
-                        <div class="category-item" data-category="<?= htmlspecialchars($categoria['nombre']) ?>">
-                            <span><?= htmlspecialchars($categoria['nombre']) ?></span>
-                            <small><?= (int)($categoria['total'] ?? 0) ?></small>
-                        </div>
-                    <?php endforeach; ?>
+                    <div class="search-actions">
+                        <button class="btn-icon" id="btnClearFilters" title="Limpiar filtros">
+                            <i class="fas fa-times"></i>
+                            <span>Limpiar</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Filtros de Categorías -->
+                <div class="category-filters">
+                    <div class="filters-scroll">
+
+                        <!-- Botón TODOS -->
+                        <button class="filter-chip active" data-category="">
+                            Todos
+                            <span class="chip-count">(<?= count($todos_productos) ?>)</span>
+                        </button>
+
+                        <!-- Botones de categorías -->
+                        <?php foreach ($categorias_db as $cat): 
+                            $count = $productos_por_categoria[$cat['id']] ?? 0;
+
+                            if ($count > 0): ?>
+                                <button class="filter-chip" data-category="<?= $cat['id'] ?>">
+                                    <?= htmlspecialchars($cat['nombre']) ?>
+                                    <span class="chip-count">(<?= $count ?>)</span>
+                                </button>
+                        <?php endif; endforeach; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Productos -->
+        <section class="products-section">
+
+            <div class="products-header">
+                <div class="products-count">
+                    Mostrando <strong id="visibleCount"><?= count($todos_productos) ?></strong> de 
+                    <strong><?= count($todos_productos) ?></strong> productos
                 </div>
             </div>
 
-            <div class="filter-group">
-                <label for="filterBrand">Marca</label>
-                <select id="filterBrand" data-placeholder="Todas las marcas">
-                    <option value="">Todas</option>
-                </select>
-            </div>
+            <div class="products-grid" id="productsGrid" data-base="<?= htmlspecialchars($BASE) ?>">
+                <?php foreach ($todos_productos as $p): 
+            $img = img_url($p['imagen'], $BASE);
+            $precio = (float)$p['precio'];
+            $precioOriginal = (float)($p['precio_original'] ?? 0);
+            $desc = $precioOriginal > $precio ? round(100 - ($precio * 100 / $precioOriginal)) : 0;
+            $fav = !empty($favoritosSet[$p['id']]);
+        ?>
+        <div class="product-card"
+             data-id="<?= $p['id'] ?>"
+             data-category="<?= $p['categoria_id'] ?>"
+             data-nombre="<?= htmlspecialchars($p['nombre'], ENT_QUOTES) ?>">
 
-            <div class="filter-group">
-                <label for="filterColor">Color</label>
-                <select id="filterColor" data-placeholder="Todos los colores">
-                    <option value="">Todos</option>
-                </select>
-            </div>
+            <div class="product-image-wrapper">
+                <div class="product-image" style="background-image:url('<?= $img ?>')"></div>
 
-            <div class="filter-group">
-                <label for="filterSize">Talla / Tamaño</label>
-                <select id="filterSize" data-placeholder="Todas las tallas">
-                    <option value="">Todos</option>
-                </select>
-            </div>
+                <?php if ($desc): ?>
+                    <div class="product-badge">-<?= $desc ?>%</div>
+                <?php endif; ?>
 
-            <div class="filter-group">
-                <label>Precio</label>
-                <input type="number" id="filterPriceMin" placeholder="Desde $" min="0">
-                <input type="number" id="filterPriceMax" placeholder="Hasta $" min="0" style="margin-top:8px;">
-            </div>
+                <div class="product-actions">
+                    <button class="action-btn js-wish <?= $fav ? 'active' : '' ?>"
+                            title="<?= $fav ? 'Quitar de favoritos' : 'Agregar a favoritos' ?>">
+                        <i class="fas fa-heart"></i>
+                    </button>
 
-            <div class="filter-group">
-                <label for="filterAvailability">Disponibilidad</label>
-                <select id="filterAvailability">
-                    <option value="">Todos</option>
-                    <option value="in">En stock</option>
-                    <option value="out">Agotado</option>
-                </select>
-            </div>
+                    <a class="action-btn"
+                       href="<?= $BASE ?>views/productos-detal.php?id=<?= $p['id'] ?>"
+                       title="Ver detalles del producto">
+                        <i class="fas fa-eye"></i>
+                    </a>
 
-            <div class="filter-group">
-                <label>
-                    <input type="checkbox" id="filterDiscount">
-                    Solo productos con descuento
-                </label>
-            </div>
-        </aside>
-
-        <section class="catalog-results">
-            <header class="results-header">
-                <div id="resultsInfo">Mostrando productos...</div>
-                <div class="catalog-sort">
-                    <label for="catalogSort">Ordenar:</label>
-                    <select id="catalogSort">
-                        <option value="relevance">Relevancia</option>
-                        <option value="price_asc">Precio: menor a mayor</option>
-                        <option value="price_desc">Precio: mayor a menor</option>
-                        <option value="popularity">Popularidad</option>
-                        <option value="rating">Mejor calificación</option>
-                        <option value="newest">Novedades</option>
-                    </select>
+                    <button class="action-btn js-cart" title="Agregar al carrito">
+                        <i class="fas fa-shopping-cart"></i>
+                    </button>
                 </div>
-            </header>
+            </div>
 
-            <div id="productGrid" class="product-grid"></div>
-            <div id="catalogPagination" class="pagination"></div>
-        </section>
-    </section>
+            <div class="product-info">
+                <div class="product-category-tag">
+                    <?= htmlspecialchars($p['categoria']) ?>
+                </div>
+
+                <div class="product-name">
+                    <?= htmlspecialchars($p['nombre']) ?>
+                </div>
+
+                <div class="product-price-wrapper">
+                    <span class="product-price">$<?= number_format($precio, 2) ?></span>
+
+                    <?php if ($desc): ?>
+                        <span class="original-price">$<?= number_format($precioOriginal, 2) ?></span>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+        <?php endforeach; ?>
+    </div>
+
+    <div class="empty-state" id="emptyState" style="display:none;">
+        <i class="fas fa-search"></i>
+        <h3>No se encontraron productos</h3>
+        <p>Intenta con otros filtros o términos de búsqueda</p>
+    </div>
+
+</section>
+
+
+<!-- =================================================================== -->
+<!--  🔥 JAVASCRIPT INTEGRADO - FILTROS 100% FUNCIONALES -->
+<!-- =================================================================== -->
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+
+    const products = document.querySelectorAll(".product-card");
+    const chips = document.querySelectorAll(".filter-chip");
+    const searchInput = document.getElementById("searchInput");
+    const emptyState = document.getElementById("emptyState");
+    const visibleCount = document.getElementById("visibleCount");
+    const btnClear = document.getElementById("btnClearFilters");
+
+    function aplicarFiltros() {
+        const texto = searchInput.value.toLowerCase();
+        const chipActivo = document.querySelector(".filter-chip.active");
+        const categoria = chipActivo ? chipActivo.dataset.category : "";
+
+        let visibles = 0;
+
+        products.forEach(p => {
+            const nombre = p.dataset.nombre.toLowerCase();
+            const cat = p.dataset.category;
+
+            const coincideTexto = nombre.includes(texto);
+            const coincideCategoria = categoria === "" || categoria === cat;
+
+            if (coincideTexto && coincideCategoria) {
+                p.style.display = "block";
+                visibles++;
+            } else {
+                p.style.display = "none";
+            }
+        });
+
+        visibleCount.textContent = visibles;
+        emptyState.style.display = visibles === 0 ? "block" : "none";
+    }
+
+    chips.forEach(chip => {
+        chip.addEventListener("click", () => {
+            chips.forEach(c => c.classList.remove("active"));
+            chip.classList.add("active");
+            aplicarFiltros();
+        });
+    });
+
+    searchInput.addEventListener("keyup", aplicarFiltros);
+
+    btnClear.addEventListener("click", () => {
+        searchInput.value = "";
+        chips.forEach(c => c.classList.remove("active"));
+        chips[0].classList.add("active");
+        aplicarFiltros();
+    });
+
+});
+</script>
+
 
         <!-- Footer -->
         <?php include __DIR__ . "/../includes/footer.php"; ?>
@@ -1059,8 +1169,6 @@ $stats = [
 
     <script>
         window.BASE_URL = "<?= $BASE ?>";
-        window.USER_LOGGED = <?= isset($_SESSION['usuario_id']) ? 'true' : 'false' ?>;
-        window.LOGIN_URL = "<?= $BASE ?>views/login.php";
     </script>
     <script src="<?= $BASE ?>js/catalogo.js"></script>
 </body>
