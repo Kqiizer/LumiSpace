@@ -268,15 +268,96 @@ async function setupCerrarTurno() {
     };
   });
 }
-// Botón del carrito
+// Botón flotante del carrito - Abrir/cerrar modal de checkout
 const btnCarrito = $('#btnCarrito');
+const ticketPanel = $('#ticketPanel');
+const ticketOverlay = $('#ticketOverlay');
+const btnCerrarTicket = $('#btnCerrarTicket');
+
+function toggleTicketPanel() {
+  if (!ticketPanel || !ticketOverlay) return;
+  
+  const isActive = ticketPanel.classList.contains('active');
+  
+  if (isActive) {
+    // Cerrar modal
+    ticketPanel.classList.remove('active');
+    ticketOverlay.classList.remove('active');
+    document.body.style.overflow = '';
+  } else {
+    // Abrir modal
+    ticketPanel.classList.add('active');
+    ticketOverlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    
+    // Scroll al inicio del modal
+    setTimeout(() => {
+      if (ticketPanel) {
+        ticketPanel.scrollTop = 0;
+      }
+    }, 100);
+  }
+}
+
 if (btnCarrito) {
-  btnCarrito.addEventListener('click', () => {
-    const dlg = $('#dlgCarrito');
-    if (dlg) dlg.showModal();
+  btnCarrito.addEventListener('click', (e) => {
+    e.stopPropagation();
+    // Si existe el panel moderno, usarlo
+    if (ticketPanel && ticketOverlay) {
+      toggleTicketPanel();
+    } else {
+      // Fallback al diálogo antiguo
+      const dlg = $('#dlgCarrito');
+      if (dlg) dlg.showModal();
+    }
   });
 }
 
+if (ticketOverlay) {
+  ticketOverlay.addEventListener('click', (e) => {
+    if (e.target === ticketOverlay) {
+      toggleTicketPanel();
+    }
+  });
+}
+
+if (btnCerrarTicket) {
+  btnCerrarTicket.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleTicketPanel();
+  });
+}
+
+// Cerrar con ESC
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && ticketPanel && ticketPanel.classList.contains('active')) {
+    toggleTicketPanel();
+  }
+});
+
+// Prevenir que el modal se cierre al hacer clic dentro de él
+if (ticketPanel) {
+  ticketPanel.addEventListener('click', (e) => {
+    e.stopPropagation();
+  });
+}
+
+const metodoRadios = $$('input[name=metodo]');
+if (metodoRadios.length) {
+  // Los estilos ahora se manejan con :checked en CSS, pero mantenemos compatibilidad
+  const syncMetodoHighlight = () => {
+    metodoRadios.forEach(radio => {
+      const wrapper = radio.closest('.payment-card');
+      if (!wrapper) return;
+      // El estilo se maneja con CSS :checked, pero podemos agregar clase si es necesario
+      wrapper.classList.toggle('is-active', radio.checked);
+    });
+  };
+  metodoRadios.forEach(radio => radio.addEventListener('change', syncMetodoHighlight));
+  syncMetodoHighlight();
+}
+
+// Compatibilidad: también manejar dlgCarrito si existe (versión antigua)
 const btnCerrarCarrito = $('#btnCerrarCarrito');
 if (btnCerrarCarrito) {
   btnCerrarCarrito.addEventListener('click', () => {
@@ -346,9 +427,31 @@ function renderCart() {
   
   if (!list) return;
   
+<<<<<<< HEAD
+  // Calcular cantidad total
+  const totalQty = cart.reduce((sum, it) => sum + it.qty, 0);
+  
+  // Actualizar contador de productos
+  const productCount = $('#productCount');
+  if (productCount) {
+    productCount.textContent = totalQty > 0 ? `${totalQty} ${totalQty === 1 ? 'item' : 'items'}` : '0 items';
+  }
+
   if (!cart.length) {
-    list.innerHTML = '<p class="muted" style="text-align:center;padding:40px 20px">(sin items)</p>';
-    if (badge) badge.textContent = '0';
+    list.innerHTML = `
+      <div class="checkout-empty">
+        <svg class="empty-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M3 6h18M16 10a4 4 0 11-8 0" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <p class="empty-text">Carrito vacío</p>
+        <small class="empty-hint">Agrega productos para continuar</small>
+      </div>
+    `;
+    if (badge) {
+      badge.textContent = '0';
+      badge.style.display = 'none';
+    }
 
     // totales en cero
     const t0 = {subtotal:0, iva:0, total:0};
@@ -358,22 +461,77 @@ function renderCart() {
     return;
   }
 
-  list.innerHTML = cart.map((it, i) => `
-    <div class="cart-item">
-      <div class="cart-item-info">
-        <div class="cart-item-name">${it.nombre}</div>
-        <div class="cart-item-price">$${it.precio.toFixed(2)}</div>
+  // Determinar qué HTML usar basado en qué elementos existen en el DOM
+  const useModernUI = $('#ticketPanel') || list.classList.contains('checkout-list-modern');
+  
+  if (useModernUI) {
+    // UI moderna con checkout-item-modern
+    list.innerHTML = cart.map((it, i) => `
+      <div class="checkout-item-modern">
+        <div class="checkout-item-content">
+          <div class="checkout-item-main">
+            <h5 class="checkout-item-name">${it.nombre}</h5>
+            <div class="checkout-item-price">$${it.precio.toFixed(2)}</div>
+          </div>
+          <div class="checkout-item-qty-modern">
+            <button data-i="${i}" class="qty-btn qty-dec btnDec" aria-label="Decrementar">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </button>
+            <span class="qty-value">${it.qty}</span>
+            <button data-i="${i}" class="qty-btn qty-inc btnInc" aria-label="Incrementar">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </button>
+          </div>
+          <div class="checkout-item-total">
+            <span class="item-total-label">Subtotal</span>
+            <strong class="item-total-value">$${(it.precio * it.qty).toFixed(2)}</strong>
+          </div>
+        </div>
+        <button data-i="${i}" class="checkout-item-remove cart-item-remove" aria-label="Eliminar">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
       </div>
-      <div class="cart-item-qty">
-        <button data-i="${i}" class="btnDec">−</button>
-        <span>${it.qty}</span>
-        <button data-i="${i}" class="btnInc">+</button>
+    `).join('');
+  } else {
+    // UI simple con cart-item (compatibilidad)
+    list.innerHTML = cart.map((it, i) => `
+      <div class="cart-item">
+        <div class="cart-item-info">
+          <div class="cart-item-name">${it.nombre}</div>
+          <div class="cart-item-price">$${it.precio.toFixed(2)}</div>
+        </div>
+        <div class="cart-item-qty">
+          <button data-i="${i}" class="btnDec">−</button>
+          <span>${it.qty}</span>
+          <button data-i="${i}" class="btnInc">+</button>
+        </div>
+        <button data-i="${i}" class="cart-item-remove">×</button>
       </div>
-      <button data-i="${i}" class="cart-item-remove">×</button>
-    </div>
-  `).join('');
+    `).join('');
+  }
 
-  if (badge) badge.textContent = String(cart.reduce((sum, it) => sum + it.qty, 0));
+  // Actualizar badge del botón flotante
+  if (badge) {
+    if (totalQty > 0) {
+      badge.textContent = String(totalQty);
+      badge.style.display = 'flex';
+      
+      // Animación cuando se agrega un producto
+      badge.style.animation = 'none';
+      setTimeout(() => {
+        badge.style.animation = 'badgePulse 0.5s ease';
+      }, 10);
+    } else {
+      badge.textContent = '0';
+      badge.style.display = 'none';
+    }
+  }
 
   // Eventos de cantidad
   $$('.btnDec', list).forEach(b => b.addEventListener('click', () => {
@@ -468,7 +626,13 @@ async function pagar() {
           renderCart();
           cargarProductos();
           dlg.close();
-          $('#dlgCarrito')?.close();
+          // Cerrar también el modal del carrito si existe (compatibilidad)
+          const dlgCarrito = $('#dlgCarrito');
+          if (dlgCarrito) dlgCarrito.close();
+          // Cerrar también el panel de ticket si existe
+          if (ticketPanel && ticketPanel.classList.contains('active')) {
+            toggleTicketPanel();
+          }
         } finally {
           btnOk.disabled = false;
         }
@@ -493,7 +657,13 @@ async function pagar() {
     cart = [];
     renderCart();
     cargarProductos();
-    $('#dlgCarrito')?.close();
+    // Cerrar también el modal del carrito si existe (compatibilidad)
+    const dlgCarrito = $('#dlgCarrito');
+    if (dlgCarrito) dlgCarrito.close();
+    // Cerrar también el panel de ticket si existe
+    if (ticketPanel && ticketPanel.classList.contains('active')) {
+      toggleTicketPanel();
+    }
 
   } catch (e) {
     alert(e?.message || 'Abre un turno para continuar.');
@@ -840,3 +1010,90 @@ async function descargarTicket(venta_id){
   doc.save(`ticket_${v.id}.pdf`);
 }
 
+<<<<<<< HEAD
+// ===== Selector de Idioma =====
+document.addEventListener('DOMContentLoaded', () => {
+  const langSelector = $('#languageSelector');
+  const langBtn = $('#btnLangToggle');
+  const langDropdown = $('#langDropdown');
+  const langText = $('#langText');
+  const langFlagBtn = $('#langFlagBtn');
+  const langOptions = $$('.lang-option');
+
+  if (!langSelector || !langBtn || !langDropdown) return;
+
+  // Obtener idioma guardado o usar español por defecto
+  const getSavedLang = () => {
+    return localStorage.getItem('pos_language') || 'es';
+  };
+
+  const setSavedLang = (lang) => {
+    localStorage.setItem('pos_language', lang);
+    document.documentElement.lang = lang;
+    
+    // Disparar evento personalizado para que otros scripts puedan escuchar el cambio
+    window.dispatchEvent(new CustomEvent('languageChanged', { detail: { lang } }));
+  };
+
+  // Actualizar UI según idioma guardado
+  const updateLangUI = () => {
+    const currentLang = getSavedLang();
+    langOptions.forEach(opt => {
+      const lang = opt.dataset.lang;
+      if (lang === currentLang) {
+        opt.classList.add('active');
+        // Actualizar botón principal
+        langFlagBtn.textContent = opt.dataset.flag;
+        langText.textContent = opt.dataset.name;
+      } else {
+        opt.classList.remove('active');
+      }
+    });
+  };
+
+  // Inicializar
+  updateLangUI();
+  document.documentElement.lang = getSavedLang();
+
+  // Toggle dropdown
+  langBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    langSelector.classList.toggle('active');
+  });
+
+  // Cerrar al hacer click fuera
+  document.addEventListener('click', (e) => {
+    if (!langSelector.contains(e.target)) {
+      langSelector.classList.remove('active');
+    }
+  });
+
+  // Cambiar idioma
+  langOptions.forEach(opt => {
+    opt.addEventListener('click', () => {
+      const lang = opt.dataset.lang;
+      const flag = opt.dataset.flag;
+      const name = opt.dataset.name;
+      
+      // Animación suave al cambiar
+      langFlagBtn.style.transform = 'scale(0.8) rotate(-10deg)';
+      langText.style.opacity = '0.5';
+      
+      setTimeout(() => {
+        setSavedLang(lang);
+        langFlagBtn.textContent = flag;
+        langText.textContent = name;
+        updateLangUI();
+        
+        langFlagBtn.style.transform = 'scale(1) rotate(0deg)';
+        langText.style.opacity = '1';
+        langSelector.classList.remove('active');
+      }, 150);
+    });
+  });
+
+  // Prevenir que el dropdown se cierre al hacer click dentro
+  langDropdown.addEventListener('click', (e) => {
+    e.stopPropagation();
+  });
+});
