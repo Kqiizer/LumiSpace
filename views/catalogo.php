@@ -349,43 +349,34 @@ function img_url($path, $BASE, $folder = 'productos') {
 
         .pendant-card {
             position: relative;
-            padding: 46px 18px 24px;
-            border-radius: 24px;
-            background: rgba(255,255,255,0.10);
-            backdrop-filter: blur(12px);
-            box-shadow: 0 18px 38px rgba(15,10,5,0.18);
+            padding: 40px 10px 10px;
+            border-radius: 0;
+            background: transparent;
+            text-align: center;
         }
 
         .pendant-line {
             position: absolute;
-            top: -110px;
+            top: -90px;
             left: 50%;
-            width: 2px;
-            height: 110px;
-            background: rgba(255,255,255,0.25);
+            width: 1px;
+            height: 90px;
+            background: rgba(255,255,255,0.4);
             transform: translateX(-50%);
         }
 
         .pendant-image {
             width: 100%;
-            aspect-ratio: 3 / 4;
-            margin: 0 auto 14px;
-            background-size: cover;
-            background-position: center;
-            border-radius: 20px;
-            box-shadow: 0 25px 40px rgba(0,0,0,0.25);
-        }
-
-        .pendant-details {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 0.9rem;
-            color: rgba(255,255,255,0.85);
+            height: 170px;
+            object-fit: contain;
+            mix-blend-mode: multiply;
+            filter: drop-shadow(0 12px 25px rgba(0,0,0,0.25));
+            background: transparent;
         }
 
         .pendant-price {
-            font-size: 1rem;
+            margin-top: 8px;
+            font-size: 1.05rem;
             font-weight: 600;
             color: #fff;
         }
@@ -1036,11 +1027,10 @@ function img_url($path, $BASE, $folder = 'productos') {
                     <?php foreach ($heroPendents as $pendant): ?>
                         <article class="pendant-card">
                             <span class="pendant-line"></span>
-                            <div class="pendant-image" style="background-image:url('<?= htmlspecialchars($pendant['image'], ENT_QUOTES, 'UTF-8') ?>')"></div>
-                            <div class="pendant-details">
-                                <span><?= htmlspecialchars($pendant['size'], ENT_QUOTES, 'UTF-8') ?></span>
-                                <span class="pendant-price"><?= htmlspecialchars($pendant['price'], ENT_QUOTES, 'UTF-8') ?></span>
-                            </div>
+                            <img class="pendant-image"
+                                 src="<?= htmlspecialchars($pendant['image'], ENT_QUOTES, 'UTF-8') ?>"
+                                 alt="Lámpara decorativa">
+                            <div class="pendant-price"><?= htmlspecialchars($pendant['price'], ENT_QUOTES, 'UTF-8') ?></div>
                         </article>
                     <?php endforeach; ?>
                 </div>
