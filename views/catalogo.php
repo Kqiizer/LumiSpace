@@ -66,33 +66,6 @@ $stats = [
     'clientes' => (int)($conn->query("SELECT COUNT(*) as total FROM usuarios WHERE rol!='admin'")->fetch_assoc()['total'] ?? 0),
 ];
 
-$featuredCatalog = [
-    [
-        'nombre' => 'Colgante Nordic Beige',
-        'descripcion' => 'Textura suave y difusor cálido para comedores íntimos.',
-        'imagen' => $BASE . 'imagenes/lamparas/deco2.jpg',
-        'precio' => '$129.00'
-    ],
-    [
-        'nombre' => 'Lámpara Studio Azul',
-        'descripcion' => 'Aluminio satinado con acabado mate y cable textil.',
-        'imagen' => $BASE . 'imagenes/lamparas/deco3.jpg',
-        'precio' => '$149.00'
-    ],
-    [
-        'nombre' => 'Pared Verde Olivo',
-        'descripcion' => 'Ideal para crear acentos en salas y pasillos.',
-        'imagen' => $BASE . 'imagenes/lamparas/deco4.jpg',
-        'precio' => '$89.00'
-    ],
-    [
-        'nombre' => 'Colgante Arena Duo',
-        'descripcion' => 'Diseño doble que mezcla madera clara y metal.',
-        'imagen' => $BASE . 'imagenes/lamparas/lamp larga.jpg',
-        'precio' => '$159.00'
-    ],
-];
-
 // ==========================================
 // FUNCIÓN HELPER PARA IMÁGENES
 // ==========================================
@@ -134,23 +107,23 @@ function img_url($path, $BASE, $folder = 'productos') {
            VARIABLES Y CONFIGURACIÓN BASE
            ========================================== */
         :root {
-            --primary-color: #6D5A42;
-            --primary-dark: #A0896B;
-            --primary-light: #d5c4ac;
-            --secondary-color: #C9B59A;
-            --success-color: #7ca380;
-            --warning-color: #d5a05c;
-            --text-primary: #2f261c;
-            --text-secondary: #5b4c3b;
-            --text-muted: #8c7a65;
-            --bg-primary: #fbf6ef;
+            --primary-color: #a1683a;
+            --primary-dark: #8f5e4b;
+            --primary-light: #c2a98f;
+            --secondary-color: #ff6b6b;
+            --success-color: #51cf66;
+            --warning-color: #ffd43b;
+            --text-primary: #333;
+            --text-secondary: #666;
+            --text-muted: #999;
+            --bg-primary: #fafafa;
             --bg-white: #ffffff;
-            --bg-secondary: #f3ece2;
-            --bg-image: #ede2d5;
-            --border-color: rgba(109, 90, 66, 0.2);
-            --shadow-sm: 0 2px 10px rgba(27, 15, 5, 0.08);
-            --shadow-md: 0 6px 18px rgba(27, 15, 5, 0.12);
-            --shadow-lg: 0 14px 32px rgba(27, 15, 5, 0.16);
+            --bg-secondary: #f7f7f7;
+            --bg-image: #f0f0f0;
+            --border-color: #e0e0e0;
+            --shadow-sm: 0 2px 8px rgba(0,0,0,.1);
+            --shadow-md: 0 4px 12px rgba(0,0,0,.12);
+            --shadow-lg: 0 8px 18px rgba(0,0,0,.15);
             --radius-sm: 8px;
             --radius-md: 12px;
             --radius-lg: 16px;
@@ -161,23 +134,23 @@ function img_url($path, $BASE, $folder = 'productos') {
            MODO OSCURO - Compatible con reset.css
            ========================================== */
         body.dark {
-            --primary-color: #b2926e;
-            --primary-dark: #d6c2a8;
-            --primary-light: #8a755e;
-            --secondary-color: #c2a37f;
-            --success-color: #8bc29a;
-            --warning-color: #e3b56f;
-            --text-primary: #f7f2ea;
-            --text-secondary: #d9cfc3;
-            --text-muted: #ab9e90;
-            --bg-primary: #1a140f;
-            --bg-white: #261f18;
-            --bg-secondary: #2d251d;
-            --bg-image: #312920;
-            --border-color: rgba(255,255,255,0.2);
-            --shadow-sm: 0 2px 8px rgba(0,0,0,.5);
-            --shadow-md: 0 4px 14px rgba(0,0,0,.55);
-            --shadow-lg: 0 10px 22px rgba(0,0,0,.6);
+            --primary-color: #d4af7f;
+            --primary-dark: #c2a98f;
+            --primary-light: #8f7a5d;
+            --secondary-color: #ff8787;
+            --success-color: #69db7c;
+            --warning-color: #ffe066;
+            --text-primary: #f0f0f0;
+            --text-secondary: #b8b8b8;
+            --text-muted: #888888;
+            --bg-primary: #1e1e1e;
+            --bg-white: #2a2a2a;
+            --bg-secondary: #2b2b2b;
+            --bg-image: #2e2e2e;
+            --border-color: #404040;
+            --shadow-sm: 0 2px 8px rgba(0,0,0,.4);
+            --shadow-md: 0 4px 12px rgba(0,0,0,.5);
+            --shadow-lg: 0 8px 18px rgba(0,0,0,.6);
         }
 
         /* Transición suave al cambiar tema */
@@ -269,7 +242,7 @@ function img_url($path, $BASE, $folder = 'productos') {
            ========================================== */
         .catalog-hero {
             background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-            color: #fff;
+            color: white;
             text-align: center;
             padding: 80px 20px 60px;
             position: relative;
@@ -306,133 +279,6 @@ function img_url($path, $BASE, $folder = 'productos') {
             opacity: 0.92;
             margin-bottom: 32px;
             color: rgba(255,255,255,0.9);
-        }
-
-        .hero-stats {
-            display: flex;
-            justify-content: center;
-            gap: 40px;
-            flex-wrap: wrap;
-        }
-
-        .hero-stat {
-            text-align: center;
-        }
-
-        .hero-stat-number {
-            display: block;
-            font-size: 2.6rem;
-            font-weight: 700;
-            line-height: 1;
-        }
-
-        .hero-stat-label {
-            display: block;
-            font-size: 0.95rem;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            opacity: 0.85;
-            margin-top: 6px;
-        }
-
-        /* ==========================================
-           CATÁLOGO DESTACADO
-           ========================================== */
-        .catalog-showcase {
-            padding: 70px 0;
-            background: linear-gradient(120deg, rgba(255,255,255,0.9), rgba(244, 236, 225, 0.9));
-        }
-
-        .catalog-showcase .showcase-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(280px, 1fr));
-            gap: 32px;
-        }
-
-        .showcase-card {
-            background: var(--bg-white);
-            border-radius: 30px;
-            padding: 28px;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            box-shadow: var(--shadow-md);
-            border: 1px solid var(--border-color);
-        }
-
-        .showcase-card:nth-child(even) {
-            direction: rtl;
-        }
-
-        .showcase-card:nth-child(even) .showcase-media,
-        .showcase-card:nth-child(even) .showcase-content {
-            direction: ltr;
-        }
-
-        .showcase-media {
-            background: var(--bg-secondary);
-            border-radius: 22px;
-            padding: 18px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .showcase-media img {
-            width: 100%;
-            height: 220px;
-            object-fit: contain;
-        }
-
-        .showcase-content h3 {
-            font-size: 1.45rem;
-            font-weight: 700;
-            color: var(--text-primary);
-            margin-bottom: 10px;
-        }
-
-        .showcase-content p {
-            color: var(--text-secondary);
-            margin-bottom: 20px;
-            font-size: 0.95rem;
-            line-height: 1.6;
-        }
-
-        .showcase-action {
-            display: inline-flex;
-            align-items: center;
-            gap: 12px;
-            padding: 12px 20px;
-            border-radius: 999px;
-            border: 1.5px solid var(--primary-color);
-            color: var(--primary-color);
-            font-weight: 600;
-            text-decoration: none;
-            transition: var(--transition);
-        }
-
-        .showcase-action i {
-            font-size: 0.9rem;
-        }
-
-        .showcase-action:hover {
-            background: var(--primary-color);
-            color: #fff;
-            box-shadow: var(--shadow-sm);
-        }
-
-        @media (max-width: 992px) {
-            .catalog-showcase .showcase-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .showcase-card {
-                grid-template-columns: 1fr;
-            }
-
-            .showcase-card:nth-child(even) {
-                direction: ltr;
-            }
         }
 
         .hero-stats {
@@ -1080,36 +926,6 @@ function img_url($path, $BASE, $folder = 'productos') {
                         <span class="hero-stat-number"><?= $stats['clientes'] ?></span>
                         <span class="hero-stat-label">Clientes</span>
                     </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Catálogo Destacado -->
-        <section class="catalog-showcase">
-            <div class="container">
-                <div class="section-header" style="margin-bottom: 45px;">
-                    <span class="section-label">Destacados del mes</span>
-                    <h2 class="section-title">Selección minimalista para tus espacios</h2>
-                    <p class="section-description">Mezclamos tonos beige, grises suaves y madera para lograr una colección equilibrada que ilumina con elegancia.</p>
-                </div>
-                <div class="showcase-grid">
-                    <?php foreach ($featuredCatalog as $item): ?>
-                        <article class="showcase-card">
-                            <div class="showcase-media">
-                                <img src="<?= htmlspecialchars($item['imagen'], ENT_QUOTES, 'UTF-8') ?>"
-                                     alt="<?= htmlspecialchars($item['nombre'], ENT_QUOTES, 'UTF-8') ?>"
-                                     loading="lazy">
-                            </div>
-                            <div class="showcase-content">
-                                <h3><?= htmlspecialchars($item['nombre'], ENT_QUOTES, 'UTF-8') ?></h3>
-                                <p><?= htmlspecialchars($item['descripcion'], ENT_QUOTES, 'UTF-8') ?></p>
-                                <a href="<?= $BASE ?>views/catalogo.php" class="showcase-action">
-                                    <?= htmlspecialchars($item['precio'], ENT_QUOTES, 'UTF-8') ?>
-                                    <i class="fas fa-arrow-right"></i>
-                                </a>
-                            </div>
-                        </article>
-                    <?php endforeach; ?>
                 </div>
             </div>
         </section>
