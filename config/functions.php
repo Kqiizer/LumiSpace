@@ -1714,7 +1714,20 @@ function actualizarProveedor(int $id, string $nombre, ?string $contacto, ?string
 
 function getCategorias(): array {
     $conn = getDBConnection();
-    $sql = "SELECT id, nombre, descripcion FROM categorias ORDER BY nombre ASC";
+    // Verificar si existe la columna 'imagen' o 'featured_image'
+    $check_imagen = $conn->query("SHOW COLUMNS FROM categorias LIKE 'imagen'");
+    $check_featured = $conn->query("SHOW COLUMNS FROM categorias LIKE 'featured_image'");
+    $has_imagen = $check_imagen && $check_imagen->num_rows > 0;
+    $has_featured = $check_featured && $check_featured->num_rows > 0;
+    
+    $image_col = '';
+    if ($has_featured) {
+        $image_col = ', featured_image';
+    } elseif ($has_imagen) {
+        $image_col = ', imagen';
+    }
+    
+    $sql = "SELECT id, nombre, descripcion{$image_col} FROM categorias ORDER BY nombre ASC";
     $res = $conn->query($sql);
     return $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
 }

@@ -58,6 +58,16 @@ function getCategoryImage($imagen, $BASE) {
     return $imagen;
   }
 
+  // Si la imagen ya tiene una ruta completa, usarla directamente
+  if (strpos($imagen, '/') === 0) {
+    return $BASE . ltrim($imagen, '/');
+  }
+
+  // Si es una ruta relativa, construir la URL completa
+  if (strpos($imagen, 'imagenes/') === 0 || strpos($imagen, 'images/') === 0) {
+    return $BASE . $imagen;
+  }
+
   return $BASE . 'images/categorias/' . basename($imagen);
 }
 
@@ -700,19 +710,10 @@ function getSubcategorias($subcats_data) {
       // Detectar si estamos en la página de inicio
       $isHomePage = basename($_SERVER['SCRIPT_NAME']) === 'index.php';
       
-      // Imágenes específicas para la página de inicio
-      $homeCategoryImages = [
-        $BASE . 'imagenes/lamparas/deco2.jpg',
-        $BASE . 'imagenes/lamparas/deco3.jpg',
-        $BASE . 'imagenes/lamparas/deco4.jpg',
-      ];
-      
       // Limitar a 3 categorías en la página de inicio
       if ($isHomePage && is_array($categorias_db)) {
         $categorias_db = array_slice($categorias_db, 0, 3);
       }
-      
-      $homeCategoryIndex = 0;
     ?>
     <div class="products-grid <?= $isHomePage ? 'home-categories' : '' ?>" data-base="<?= htmlspecialchars($BASE) ?>">
 
@@ -721,13 +722,11 @@ function getSubcategorias($subcats_data) {
           $cat_id = (int)$cat['id'];
           $nombre = htmlspecialchars($cat['nombre'] ?? 'Sin nombre');
           $descripcion = htmlspecialchars($cat['descripcion'] ?? 'Encuentra la mejor selección de productos');
-          $imagen = getCategoryImage($cat['imagen'] ?? '', $BASE);
           
-          // Asignar imágenes específicas solo en la página de inicio
-          if ($isHomePage && isset($homeCategoryImages[$homeCategoryIndex])) {
-            $imagen = $homeCategoryImages[$homeCategoryIndex];
-            $homeCategoryIndex++;
-          }
+          // Obtener la imagen destacada de la categoría (featured_image o imagen)
+          $categoryImage = $cat['featured_image'] ?? $cat['imagen'] ?? '';
+          $imagen = getCategoryImage($categoryImage, $BASE);
+          
           $total_productos = $productos_por_categoria[$cat_id] ?? 0;
           $subcats = getSubcategorias($cat['subcategorias'] ?? null);
         ?>
