@@ -30,35 +30,57 @@ case 'productos_list': {
   $types  = '';
   $params = [];
 
-  if ($q !== '') { $where[] = 'nombre LIKE ?'; $types .= 's'; $params[] = "%$q%"; }
-  if ($categoria !== '') { $where[] = 'categoria = ?'; $types .= 's'; $params[] = $categoria; }
-
-  if ($estado === 'en_stock') {
-    $where[] = 'stock > 0';
-  } elseif ($estado === 'agotado') {
-    $where[] = 'stock <= 0';
-  } elseif ($estado === 'bajo') {
-    $where[] = 'stock > 0 AND stock <= ?';
-    $types  .= 'i'; $params[] = $umbral;
-  }
+  if ($q !== '') { $where[] = 'p.nombre LIKE ?'; $types .= 's'; $params[] = "%$q%"; }
+  if ($categoria !== '') { $where[] = 'p.categoria = ?'; $types .= 's'; $params[] = $categoria; }
 
   $whereSql = $where ? ('WHERE '.implode(' AND ', $where)) : '';
 
-  // total
-  $sqlCnt = "SELECT COUNT(*) c FROM productos $whereSql";
+  // Calcular stock desde movimientos_inventario
+  $stockCalc = "(
+    COALESCE(
+      (SELECT SUM(CASE WHEN tipo='entrada' THEN cantidad ELSE -cantidad END) 
+       FROM movimientos_inventario 
+       WHERE producto_id = p.id), 
+      0
+    )
+  )";
+
+  // Aplicar filtro de estado basado en stock calculado
+  $havingSql = '';
+  if ($estado === 'en_stock') {
+    $havingSql = "HAVING stock_actual > 0";
+  } elseif ($estado === 'agotado') {
+    $havingSql = "HAVING stock_actual <= 0";
+  } elseif ($estado === 'bajo') {
+    $havingSql = "HAVING stock_actual > 0 AND stock_actual <= $umbral";
+  }
+
+  // Total
+  $sqlCnt = "SELECT COUNT(*) c FROM (
+    SELECT p.id, $stockCalc AS stock_actual
+    FROM productos p
+    $whereSql
+    $havingSql
+  ) AS subq";
+  
   $stmt = $db->prepare($sqlCnt);
   if ($types !== '') $stmt->bind_param($types, ...$params);
-  $stmt->execute(); $total = (int)$stmt->get_result()->fetch_assoc()['c'];
+  $stmt->execute(); 
+  $total = (int)$stmt->get_result()->fetch_assoc()['c'];
 
   // order seguro
   $allowed = ['fecha_creado','nombre','stock','precio','id'];
   if (!in_array($order, $allowed, true)) $order = 'fecha_creado';
+  
+  // Si ordenan por stock, usar el calculado
+  if ($order === 'stock') $order = 'stock_actual';
 
-  $sql = "SELECT id, nombre, precio, stock, estado, imagen, categoria
-          FROM productos
+  $sql = "SELECT p.id, p.nombre, p.precio, $stockCalc AS stock, p.estado, p.imagen, p.categoria
+          FROM productos p
           $whereSql
           ORDER BY $order $dir
           LIMIT ?, ?";
+  
   $types2  = $types.'ii';
   $params2 = array_merge($params, [$offset, $perPage]);
 
@@ -139,11 +161,7 @@ case 'cajas_list': {
     }
   }
   
-  // Fallback si falla la extracción
-  if (empty($rows)) {
-    $rows = ['Caja 1', 'Caja 2', 'Caja 3', 'Caja 4', 'Caja 5'];
-  }
-  
+
   out(['ok'=>true, 'data'=>$rows]);
   break;
 }/* =========================
@@ -253,13 +271,9 @@ case 'turnos_historial': {
   $types = 'ss'; $params = [$desde,$hasta];
   
   if ($caja !== '') { 
-    // Validar ENUM
-    $cajas_validas = ['Caja 1','Caja 2','Caja 3','Caja 4','Caja 5'];
-    if (in_array($caja, $cajas_validas, true)) {
-      $where .= " AND t.caja_id=?"; 
-      $types.='s'; 
-      $params[]=$caja; 
-    }
+    $where .= " AND t.caja_id=?"; 
+    $types.='s'; 
+    $params[]=$caja; 
   }
   if ($cajero>0) { $where .= " AND t.cajero_id=?"; $types.='i'; $params[]=$cajero; }
 
@@ -269,8 +283,8 @@ case 'turnos_historial': {
           FROM turnos_caja t
           LEFT JOIN usuarios u ON u.id=t.cajero_id
           WHERE $where
-          ORDER BY t.id DESC
-          LIMIT 200";
+          ORDER BY t.fecha_apertura DESC
+          LIMIT 500";
   
   $stmt = $db->prepare($sql);
   $stmt->bind_param($types, ...$params);
@@ -304,7 +318,14 @@ case 'venta_crear': {
   $types = str_repeat('i', count($ids));
   $precios = []; $nombres = [];
 
-  $sql = "SELECT id, nombre, precio, stock FROM productos WHERE id IN ($in)";
+ $sql = "SELECT p.id, p.nombre, p.precio,
+        COALESCE(
+          (SELECT SUM(CASE WHEN tipo='entrada' THEN cantidad ELSE -cantidad END) 
+           FROM movimientos_inventario 
+           WHERE producto_id = p.id), 
+          0
+        ) AS stock
+        FROM productos p WHERE p.id IN ($in)";
   $stmt = $db->prepare($sql);
   $stmt->bind_param($types, ...$ids);
   $stmt->execute();
@@ -372,52 +393,40 @@ case 'venta_crear': {
    Nota caja: inferimos caja por rango de turno donde cayó la venta.
 */
 case 'ventas_list': {
-$desde = (isset($_REQUEST['desde']) && $_REQUEST['desde'] !== '')
-  ? ($_REQUEST['desde'].' 00:00:00')
-  : '1970-01-01 00:00:00';
+  $desde = ($_REQUEST['desde'] ?? '') !== '' ? ($_REQUEST['desde'].' 00:00:00') : '1970-01-01 00:00:00';
+  $hasta = ($_REQUEST['hasta'] ?? '') !== '' ? ($_REQUEST['hasta'].' 23:59:59') : '2999-12-31 23:59:59';
+  $metodo = $_REQUEST['metodo'] ?? '';
+  $caja   = trim($_REQUEST['caja'] ?? '');
+  $cajero = (int)($_REQUEST['cajero'] ?? 0);
+  $page= max(1,(int)($_REQUEST['page'] ?? 1)); $perPage=20; $offset=($page-1)*$perPage;
 
-$hasta = (isset($_REQUEST['hasta']) && $_REQUEST['hasta'] !== '')
-  ? ($_REQUEST['hasta'].' 23:59:59')
-  : '2999-12-31 23:59:59';
-
-  $metodo  = $_REQUEST['metodo'] ?? '';
-  $caja    = trim($_REQUEST['caja'] ?? '');
-  $cajero  = (int)($_REQUEST['cajero'] ?? 0);
-  $page    = max(1, (int)($_REQUEST['page'] ?? 1));
-  $perPage = 20; $offset = ($page-1)*$perPage;
-
-  // KPIs
+  // KPIs sin cambios
   $stmt = $db->prepare("SELECT COALESCE(SUM(pago_efectivo),0) ef, COALESCE(SUM(pago_tarjeta),0) tj, COALESCE(SUM(total),0) tt, COUNT(*) c
                         FROM ventas WHERE fecha BETWEEN ? AND ?");
   $stmt->bind_param('ss',$desde,$hasta);
   $stmt->execute(); $k = $stmt->get_result()->fetch_assoc();
   $kpis = ['efectivo'=>(float)$k['ef'], 'tarjeta'=>(float)$k['tj'], 'ecommerce'=>0.0, 'ventas'=>(int)$k['c']];
 
-  // build filtros
+  // Filtros
   $where = "v.fecha BETWEEN ? AND ?";
   $types = 'ss'; $params = [$desde,$hasta];
-
   if ($metodo!==''){ $where.=" AND v.metodo_principal=?"; $types.='s'; $params[]=$metodo; }
   if ($cajero>0){ $where.=" AND v.gestor_id=?"; $types.='i'; $params[]=$cajero; }
 
-  // Filtro por caja (usando ventana de turnos)
-  $joinCaja = "";
-  if ($caja!==''){
-    $joinCaja = "LEFT JOIN turnos_caja t ON v.fecha BETWEEN t.fecha_apertura AND COALESCE(t.fecha_cierre, NOW())";
-    $where   .= " AND t.caja_id=?";
-    $types   .= 's'; $params[]=$caja;
-  }
+  // Siempre inferimos caja por ventana de turnos
+  $joinCaja = "LEFT JOIN turnos_caja t
+               ON v.fecha BETWEEN t.fecha_apertura AND COALESCE(t.fecha_cierre, NOW())";
+  if ($caja!==''){ $where.=" AND t.caja_id=?"; $types.='s'; $params[]=$caja; }
 
-  // total filas
+  // total
   $sqlCnt = "SELECT COUNT(*) c FROM ventas v $joinCaja WHERE $where";
   $stmt = $db->prepare($sqlCnt);
   $stmt->bind_param($types, ...$params);
   $stmt->execute(); $total = (int)$stmt->get_result()->fetch_assoc()['c'];
 
-  // rows
+  // rows (siempre devolvemos t.caja_id)
   $sql = "SELECT v.id, v.fecha, v.metodo_principal, v.total, v.gestor_id,
-                 u.nombre AS cajero,
-                 ".($caja!=='' ? "t.caja_id" : "NULL AS caja_id")."
+                 u.nombre AS cajero, t.caja_id
           FROM ventas v
           LEFT JOIN usuarios u ON u.id=v.gestor_id
           $joinCaja
@@ -433,6 +442,7 @@ $hasta = (isset($_REQUEST['hasta']) && $_REQUEST['hasta'] !== '')
   out(['ok'=>true,'kpis'=>$kpis,'data'=>$rows,'total'=>$total,'page'=>$page,'per_page'=>$perPage]);
   break;
 }
+
 
 /* =========================
    DETALLE DE VENTA
