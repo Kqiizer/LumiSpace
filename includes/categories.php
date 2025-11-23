@@ -48,27 +48,13 @@ if ($categorias_db && is_array($categorias_db)) {
 
 /**
  * Obtiene la URL de la imagen de categoría
+ * Misma función que en views/categorias.php para consistencia
  */
 function getCategoryImage($imagen, $BASE) {
-  if (empty($imagen)) {
-    return $BASE . 'images/categorias/default.jpg';
-  }
-
-  if (preg_match('#^https?://#i', $imagen)) {
-    return $imagen;
-  }
-
-  // Si la imagen ya tiene una ruta completa, usarla directamente
-  if (strpos($imagen, '/') === 0) {
-    return $BASE . ltrim($imagen, '/');
-  }
-
-  // Si es una ruta relativa, construir la URL completa
-  if (strpos($imagen, 'imagenes/') === 0 || strpos($imagen, 'images/') === 0) {
-    return $BASE . $imagen;
-  }
-
-  return $BASE . 'images/categorias/' . basename($imagen);
+  if (empty($imagen)) return $BASE . 'images/categorias/default.jpg';
+  if (preg_match('#^https?://#i', $imagen)) return $imagen;
+  if (strpos($imagen, '/') === 0) return $BASE . ltrim($imagen, '/');
+  return $BASE . 'images/categorias/' . $imagen;
 }
 
 /**
@@ -723,8 +709,9 @@ function getSubcategorias($subcats_data) {
           $nombre = htmlspecialchars($cat['nombre'] ?? 'Sin nombre');
           $descripcion = htmlspecialchars($cat['descripcion'] ?? 'Encuentra la mejor selección de productos');
           
-          // Obtener la imagen destacada de la categoría (featured_image o imagen)
-          $categoryImage = $cat['featured_image'] ?? $cat['imagen'] ?? '';
+          // Obtener la imagen de la categoría (exactamente como en views/categorias.php)
+          // Usar 'imagen' o 'featured_image' según lo que exista en la BD
+          $categoryImage = $cat['imagen'] ?? $cat['featured_image'] ?? '';
           $imagen = getCategoryImage($categoryImage, $BASE);
           
           $total_productos = $productos_por_categoria[$cat_id] ?? 0;
