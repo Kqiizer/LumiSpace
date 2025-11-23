@@ -616,6 +616,13 @@ function getCategoryImage($imagen, $BASE) {
             <button class="filter-chip">Smart</button>
           </div>
 
+          <?php
+            $collectionImages = [
+              $BASE . 'imagenes/lamparas/lampara colgante en cono.jpeg',
+              $BASE . 'imagenes/lamparas/lampara colgante plana.jpeg',
+              $BASE . 'imagenes/lamparas/lampara de pared verde.jpeg',
+            ];
+          ?>
           <div class="products-grid" data-base="<?= htmlspecialchars($BASE) ?>">
             <?php if (!empty($categorias_db)): ?>
               <?php foreach ($categorias_db as $cat): 
@@ -623,6 +630,9 @@ function getCategoryImage($imagen, $BASE) {
                 $nombre = htmlspecialchars($cat['nombre']);
                 $descripcion = htmlspecialchars($cat['descripcion'] ?? 'Encuentra la mejor selección de productos');
                 $imagen = getCategoryImage($cat['imagen'] ?? '', $BASE);
+                if (!empty($collectionImages)) {
+                  $imagen = array_shift($collectionImages);
+                }
                 $total_productos = $productos_por_categoria[$cat_id] ?? 0;
                 $subcats = [];
                 if (isset($cat['subcategorias']) && !empty($cat['subcategorias'])) {
