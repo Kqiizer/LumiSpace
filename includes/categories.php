@@ -144,7 +144,6 @@ function getSubcategorias($subcats_data) {
     }
 
     .section-header h1 {
-      font-family: 'Playfair Display', Georgia, serif;
       font-size: clamp(36px, 5vw, 48px);
       font-weight: 800;
       color: var(--text-light);
