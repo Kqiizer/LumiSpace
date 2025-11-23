@@ -1,5 +1,10 @@
+<?php
+if (session_status() === PHP_SESSION_NONE)
+  session_start();
+?>
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -43,4 +48,5 @@
   <script src="js/header.js" defer></script>
   <script src="js/script.js" defer></script>
 </body>
+
 </html>
