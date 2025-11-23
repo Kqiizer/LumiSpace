@@ -30,7 +30,6 @@
           <ul class="footer-links">
             <li><a href="../index.php">Inicio</a></li>
             <li><a href="../views/catalogo.php">Catálogo</a></li>
-            <li><a href="../views/marcas.php">Marcas</a></li>
             <li><a href="../views/proyectos.php">Proyectos</a></li>
             <li><a href="../views/servicios.php">Servicios</a></li>
             <li><a href="../views/contacto.php">Contacto</a></li>
