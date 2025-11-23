@@ -1974,8 +1974,12 @@ function getBrandsOverview(): array {
     return $brands;
 }
 
+<<<<<<< HEAD
 function favoritosAvailable(): bool
 {
+=======
+function favoritosAvailable(): bool {
+>>>>>>> f8f2e030 (Configuraciones, Favoritos, Buscador)
     $conn = getDBConnection();
     return tableExists($conn, "favoritos")
         && columnExists($conn, "favoritos", "usuario_id")
@@ -2014,6 +2018,9 @@ function toggleFavorito(int $usuario_id, int $producto_id): bool
 }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> f8f2e030 (Configuraciones, Favoritos, Buscador)
 /**
  * Construye dinámicamente el SELECT y los JOIN necesarios para consultar productos
  * considerando columnas opcionales (precio_original, descuento, etc.)
@@ -2075,10 +2082,13 @@ function lsFavoritesProductSelect(mysqli $conn, bool $withAddedAt = false): arra
 }
 
 function getFavoritosCount(?int $usuario_id): int {
+<<<<<<< HEAD
 =======
 function getFavoritosCount(?int $usuario_id): int
 {
 >>>>>>> 1d382319 (actualizacion gitignore, db config y functions para docker)
+=======
+>>>>>>> f8f2e030 (Configuraciones, Favoritos, Buscador)
     if ($usuario_id && $usuario_id > 0 && favoritosAvailable()) {
         $conn = getDBConnection();
         $stmt = $conn->prepare("SELECT COUNT(*) c FROM favoritos WHERE usuario_id=?");

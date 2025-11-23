@@ -15,6 +15,26 @@ $stats = [
     'categorias' => count($categorias),
     'clientes'   => (int)($conn->query("SELECT COUNT(*) AS total FROM usuarios WHERE rol!='admin'")->fetch_assoc()['total'] ?? 0),
 ];
+<<<<<<< HEAD
+=======
+
+// ==========================================
+// FUNCIÓN HELPER PARA IMÁGENES
+// ==========================================
+function img_url($path, $BASE, $folder = 'productos') {
+    $path = trim((string)$path);
+
+    if ($path === '') 
+        return $BASE . "images/default.png";
+
+    // Si es URL absoluta
+    if (preg_match('#^https?://#i', $path)) 
+        return $path;
+
+    // 🔥 Ruta fija y correcta aunque estés dentro de /views/
+    return $BASE . "images/{$folder}/" . basename($path);
+}
+>>>>>>> f8f2e030 (Configuraciones, Favoritos, Buscador)
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -828,8 +848,7 @@ $stats = [
         }
     </style>
 </head>
-
-<body>
+<body class="catalog-page">
     <div class="page-wrapper">
         <!-- Botón de Toggle Tema -->
         <button class="theme-toggle" id="themeToggle" aria-label="Cambiar tema">
@@ -865,6 +884,7 @@ $stats = [
             </div>
         </section>
 
+<<<<<<< HEAD
     <section class="catalog-layout">
         <aside class="filters-panel">
             <h3>Filtrar por</h3>
@@ -949,15 +969,41 @@ $stats = [
             <div id="catalogPagination" class="pagination"></div>
         </section>
     </section>
+=======
+        <!-- Barra de Filtros y Búsqueda -->
+        <div class="filters-bar">
+    <div class="filters-container">
+        
+        <!-- Búsqueda -->
+        <div class="search-bar">
+            <div class="search-input-wrapper">
+                <input type="text" 
+                       class="search-input" 
+                       id="searchInput" 
+                       placeholder="Buscar productos por nombre...">
+                <i class="fas fa-search search-icon"></i>
+            </div>
+            <div class="search-actions">
+                <button class="btn-icon" id="btnClearFilters" title="Limpiar filtros">
+                    <i class="fas fa-times"></i>
+                    <span>Limpiar</span>
+                </button>
+            </div>
+        </div>
+    </div>
+>>>>>>> f8f2e030 (Configuraciones, Favoritos, Buscador)
 
         <!-- Footer -->
         <?php include __DIR__ . "/../includes/footer.php"; ?>
     </div>
+<<<<<<< HEAD
 
     <script>
         window.BASE_URL = "<?= $BASE ?>";
     </script>
     <script src="<?= $BASE ?>js/catalogo.js"></script>
+=======
+>>>>>>> f8f2e030 (Configuraciones, Favoritos, Buscador)
 </body>
 </html>
 
