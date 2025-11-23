@@ -2,6 +2,12 @@
 if (session_status() === PHP_SESSION_NONE) session_start();
 require_once __DIR__ . '/../config/functions.php';
 
+if (!function_exists('ls_menu_icon')) {
+    function ls_menu_icon(string $base, string $filename): string {
+        return htmlspecialchars($base . 'images/menu-iconos/' . rawurlencode($filename), ENT_QUOTES, 'UTF-8');
+    }
+}
+
 /* ============================================================
    🔹 BASE dinámica: detecta el nivel de carpeta automáticamente
    ============================================================ */
@@ -249,9 +255,9 @@ window.addEventListener('load', () => {
       <li><a href="<?= $BASE ?>index.php" class="<?= $currentPage === 'index.php' ? 'active' : '' ?>">Inicio</a></li>
       <li><a href="<?= $BASE ?>views/categorias.php" class="<?= $currentPage === 'categorias.php' ? 'active' : '' ?>">Categorías</a></li>
       <li><a href="<?= $BASE ?>views/catalogo.php" class="<?= $currentPage === 'catalogo.php' ? 'active' : '' ?>">Catálogo</a></li>
+      <li><a href="<?= $BASE ?>views/marcas.php" class="<?= $currentPage === 'marcas.php' ? 'active' : '' ?>">Marcas</a></li>
       <li><a href="<?= $BASE ?>views/blog.php" class="<?= $currentPage === 'blog.php' ? 'active' : '' ?>">Blog</a></li>
       <li><a href="<?= $BASE ?>views/contacto.php" class="<?= $currentPage === 'contacto.php' ? 'active' : '' ?>">Contacto</a></li>
-
     </ul>
 
     <!-- 🔹 Íconos (funcionales en escritorio y móvil) -->
@@ -285,18 +291,66 @@ window.addEventListener('load', () => {
 
 <!-- 🔹 Sidebar (modo móvil y también accesible en escritorio pequeño) -->
 <aside class="sidebar" id="sidebar">
-  <button id="theme-toggle" class="btn">🌙 Modo Oscuro</button>
+  <button
+    id="theme-toggle"
+    class="btn"
+    type="button"
+    data-icon-dark="<?= ls_menu_icon($BASE, 'modo obscuro-luna.png') ?>"
+    data-icon-light="<?= ls_menu_icon($BASE, 'modo-claro.png') ?>"
+  >
+    <img
+      src="<?= ls_menu_icon($BASE, 'modo obscuro-luna.png') ?>"
+      alt="Modo Oscuro"
+      class="menu-icon"
+      data-theme-icon
+    >
+    <span data-theme-text>Modo Oscuro</span>
+  </button>
 
-<a href="<?= $BASE ?>index.php"                class="btn <?= $currentPage === 'index.php' ? 'active' : '' ?>">🏠 <span class="t" data-i18n="nav.home"       data-i18n-es="Inicio">Inicio</span></a>
-<a href="<?= $BASE ?>views/categorias.php"     class="btn <?= $currentPage === 'categorias.php' ? 'active' : '' ?>">📂 <span class="t" data-i18n="nav.categories" data-i18n-es="Categorías">Categorías</span></a>
-<a href="<?= $BASE ?>views/catalogo.php"       class="btn <?= $currentPage === 'catalogo.php' ? 'active' : '' ?>">🛍 <span class="t" data-i18n="nav.catalog"    data-i18n-es="Catálogo">Catálogo</span></a>
-<a href="<?= $BASE ?>views/blog.php"           class="btn <?= $currentPage === 'blog.php' ? 'active' : '' ?>">📰 <span class="t" data-i18n="nav.blog"       data-i18n-es="Blog">Blog</span></a>
-<a href="<?= $BASE ?>views/contacto.php"       class="btn <?= $currentPage === 'contacto.php' ? 'active' : '' ?>">📞 <span class="t" data-i18n="nav.contact"    data-i18n-es="Contacto">Contacto</span></a>
-<a href="<?= $BASE ?>index/configuracion.html" class="btn <?= $currentPage === 'configuracion.html' ? 'active' : '' ?>">⚙️ <span class="t" data-i18n="nav.settings"   data-i18n-es="Ajustes">Ajustes</span></a>
-  <!-- Botón traductor debajo de Ajustes -->
-<button id="lang-toggle" class="btn" data-i18n="sidebar.lang" data-i18n-es="English">English</button>
+  <a href="<?= $BASE ?>index.php" class="btn <?= $currentPage === 'index.php' ? 'active' : '' ?>">
+    <img src="<?= ls_menu_icon($BASE, 'inicio.png') ?>" alt="Inicio" class="menu-icon">
+    <span class="t" data-i18n="nav.home" data-i18n-es="Inicio">Inicio</span>
+  </a>
+  <a href="<?= $BASE ?>views/categorias.php" class="btn <?= $currentPage === 'categorias.php' ? 'active' : '' ?>">
+    <img src="<?= ls_menu_icon($BASE, 'categorias.png') ?>" alt="Categorías" class="menu-icon">
+    <span class="t" data-i18n="nav.categories" data-i18n-es="Categorías">Categorías</span>
+  </a>
+  <a href="<?= $BASE ?>views/catalogo.php" class="btn <?= $currentPage === 'catalogo.php' ? 'active' : '' ?>">
+    <img src="<?= ls_menu_icon($BASE, 'catalogo.png') ?>" alt="Catálogo" class="menu-icon">
+    <span class="t" data-i18n="nav.catalog" data-i18n-es="Catálogo">Catálogo</span>
+  </a>
+  <a href="<?= $BASE ?>views/marcas.php" class="btn <?= $currentPage === 'marcas.php' ? 'active' : '' ?>">
+    <img src="<?= ls_menu_icon($BASE, 'marcas.png') ?>" alt="Marcas" class="menu-icon">
+    <span class="t" data-i18n="nav.brands" data-i18n-es="Marcas">Marcas</span>
+  </a>
+  <a href="<?= $BASE ?>views/blog.php" class="btn <?= $currentPage === 'blog.php' ? 'active' : '' ?>">
+    <img src="<?= ls_menu_icon($BASE, 'blog.png') ?>" alt="Blog" class="menu-icon">
+    <span class="t" data-i18n="nav.blog" data-i18n-es="Blog">Blog</span>
+  </a>
+  <a href="<?= $BASE ?>views/contacto.php" class="btn <?= $currentPage === 'contacto.php' ? 'active' : '' ?>">
+    <img src="<?= ls_menu_icon($BASE, 'contacto.png') ?>" alt="Contacto" class="menu-icon">
+    <span class="t" data-i18n="nav.contact" data-i18n-es="Contacto">Contacto</span>
+  </a>
+  <a href="<?= $BASE ?>index/configuracion.html" class="btn <?= $currentPage === 'configuracion.html' ? 'active' : '' ?>">
+    <img src="<?= ls_menu_icon($BASE, 'ajustes.png') ?>" alt="Ajustes" class="menu-icon">
+    <span class="t" data-i18n="nav.settings" data-i18n-es="Ajustes">Ajustes</span>
+  </a>
 
-
+  <button
+    id="lang-toggle"
+    class="btn"
+    type="button"
+    data-flag-es="<?= ls_menu_icon($BASE, 'bandera españa.png') ?>"
+    data-flag-en="<?= ls_menu_icon($BASE, 'bandera inglaterra.png') ?>"
+  >
+    <img
+      src="<?= ls_menu_icon($BASE, 'bandera españa.png') ?>"
+      alt="Bandera de España"
+      class="menu-icon"
+      data-lang-icon
+    >
+    <span class="btn-label" data-lang-label>Español</span>
+  </button>
 
   <hr>
 
@@ -304,8 +358,14 @@ window.addEventListener('load', () => {
     <p style="margin:10px 0; font-weight:bold;">👋 Hola, <?= htmlspecialchars($_SESSION['usuario_nombre'] ?? 'Usuario') ?></p>
     <a href="<?= $BASE ?>logout.php" class="btn">🚪 Cerrar Sesión</a>
   <?php else: ?>
-    <a href="<?= $BASE ?>views/login.php" class="btn">🔑 Iniciar Sesión</a>
-    <a href="<?= $BASE ?>views/register.php" class="btn">📝 Registrarse</a>
+    <a href="<?= $BASE ?>views/login.php" class="btn">
+      <img src="<?= ls_menu_icon($BASE, 'iniciar-sesion.png') ?>" alt="Iniciar Sesión" class="menu-icon">
+      <span>Iniciar Sesión</span>
+    </a>
+    <a href="<?= $BASE ?>views/register.php" class="btn">
+      <img src="<?= ls_menu_icon($BASE, 'registro.png') ?>" alt="Registrarse" class="menu-icon">
+      <span>Registrarse</span>
+    </a>
   <?php endif; ?>
 </aside>
 

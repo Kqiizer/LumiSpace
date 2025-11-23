@@ -63,9 +63,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // === 🌙 Modo Oscuro con persistencia ===
   if (themeToggle) {
+    const themeIcon = themeToggle.querySelector("[data-theme-icon]");
+    const themeText = themeToggle.querySelector("[data-theme-text]");
+    const iconDark = themeToggle.dataset.iconDark || "";
+    const iconLight = themeToggle.dataset.iconLight || "";
+
+    const syncThemeButton = (isDark) => {
+      const label = isDark ? "Modo Claro" : "Modo Oscuro";
+      if (themeText) themeText.textContent = label;
+      if (themeIcon) {
+        const nextIcon = isDark ? iconLight : iconDark;
+        if (nextIcon) themeIcon.src = nextIcon;
+        themeIcon.alt = label;
+      }
+    };
+
     const setTheme = (dark) => {
       document.body.classList.toggle("dark", dark);
-      themeToggle.innerHTML = dark ? "☀️ Modo Claro" : "🌙 Modo Oscuro";
+      syncThemeButton(dark);
       localStorage.setItem("theme", dark ? "dark" : "light");
     };
 
