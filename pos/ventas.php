@@ -313,6 +313,15 @@ start_pos_page('Facturación (Ventas)', $cajeroNombre, $cajaLabel);
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     });
+    
+    // Función helper para llamar a la API
+    const api = async (data) => {
+      const r = await fetch('api.php', {
+        method: 'POST',
+        body: new URLSearchParams(data)
+      });
+      return r.json();
+    };
 
     const tbody = $('#tbodyVentas');
     const lblPage = $('#lblPage');
@@ -327,9 +336,20 @@ start_pos_page('Facturación (Ventas)', $cajeroNombre, $cajaLabel);
     const fCajero = $('#fCajero');
     const frm = $('#filtros');
 
+    // Establecer fechas por defecto (últimos 30 días)
+    const hoy = new Date();
+    const hace30 = new Date(hoy);
+    hace30.setDate(hoy.getDate() - 30);
+    fDesde.value = hace30.toISOString().split('T')[0];
+    fHasta.value = hoy.toISOString().split('T')[0];
+
     // Prefill caja desde localStorage
     try {
       if (typeof getCajaLS === 'function') fCaja.value = getCajaLS();
+      else if (typeof localStorage !== 'undefined') {
+        const cajaLS = localStorage.getItem('pos_caja');
+        if (cajaLS) fCaja.value = cajaLS;
+      }
     } catch (e) {}
 
     let state = {
@@ -337,6 +357,8 @@ start_pos_page('Facturación (Ventas)', $cajeroNombre, $cajaLabel);
       per_page: 20,
       total: 0
     };
+    
+    let ventaActualId = null; // Guardar ID de venta actual para imprimir
 
     async function cargar() {
       const q = {
@@ -351,60 +373,63 @@ start_pos_page('Facturación (Ventas)', $cajeroNombre, $cajaLabel);
 
       tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--ink-light)">Cargando...</td></tr>';
 
-      const r = await fetch('api.php', {
-        method: 'POST',
-        body: new URLSearchParams(q)
-      }).then(x => x.json());
-      if (!r.ok) {
-        alert(r.error || 'Error');
+      try {
+        const r = await api(q);
+        if (!r.ok) {
+          alert(r.error || 'Error al cargar datos');
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--danger)">Error al cargar datos</td></tr>';
+          return;
+        }
+
+        // KPIs
+        $('#kEf').textContent = fmt(r.kpis.efectivo);
+        $('#kTj').textContent = fmt(r.kpis.tarjeta);
+        $('#kEc').textContent = fmt(r.kpis.ecommerce || 0);
+        $('#kCount').textContent = r.kpis.ventas;
+
+        // Tabla
+        tbody.innerHTML = '';
+        if (!r.data || !r.data.length) {
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--ink-light)">No se encontraron ventas</td></tr>';
+          lblInfo.textContent = 'Mostrando 0 ventas';
+        } else {
+          r.data.forEach((v, i) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td style="font-weight:600;color:var(--ink-muted)">${(r.page-1)*r.per_page + i + 1}</td>
+              <td style="font-size:13px">${v.fecha}</td>
+              <td>${v.cajero || '<span style="color:var(--ink-light)">—</span>'}</td>
+              <td>${v.caja_id || '<span style="color:var(--ink-light)">—</span>'}</td>
+              <td><span style="display:inline-block;padding:4px 12px;background:${v.metodo_principal==='efectivo'?'var(--ok)':'var(--brand)'};color:white;border-radius:20px;font-size:11px;font-weight:600;text-transform:uppercase">${v.metodo_principal || '-'}</span></td>
+              <td style="text-align:right;font-weight:700;font-size:15px">${fmt(v.total)}</td>
+              <td style="text-align:center;display:flex;gap:6px;justify-content:center">
+                <button class="btn btn-sm" data-ver="${v.id}">Ver detalle</button>
+                <button class="btn btn-sm btn-primary btn-ticket" data-id="${v.id}" data-imprimir="${v.id}" style="background:var(--brand);color:white;border:none" title="Imprimir ticket">
+                  🖨️ Imprimir
+                </button>
+              </td>
+            `;
+            tbody.appendChild(tr);
+          });
+
+          const inicio = (r.page - 1) * r.per_page + 1;
+          const fin = Math.min(r.page * r.per_page, r.total);
+          lblInfo.textContent = `Mostrando ${inicio}-${fin} de ${r.total} ventas`;
+        }
+
+        // Paginación
+        state.total = r.total;
+        state.page = r.page;
+        state.per_page = r.per_page;
+        const pages = Math.max(1, Math.ceil(state.total / state.per_page));
+        lblPage.textContent = `${state.page} / ${pages}`;
+        btnPrev.disabled = state.page <= 1;
+        btnNext.disabled = state.page >= pages;
+      } catch (error) {
+        console.error('Error:', error);
         tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--danger)">Error al cargar datos</td></tr>';
-        return;
+        alert('Error al cargar las ventas: ' + error.message);
       }
-
-      // KPIs
-      $('#kEf').textContent = fmt(r.kpis.efectivo);
-      $('#kTj').textContent = fmt(r.kpis.tarjeta);
-      $('#kEc').textContent = fmt(r.kpis.ecommerce || 0);
-      $('#kCount').textContent = r.kpis.ventas;
-
-      // Tabla
-      tbody.innerHTML = '';
-      if (!r.data || !r.data.length) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--ink-light)">No se encontraron ventas</td></tr>';
-        lblInfo.textContent = 'Mostrando 0 ventas';
-      } else {
-        r.data.forEach((v, i) => {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-          <td style="font-weight:600;color:var(--ink-muted)">${(r.page-1)*r.per_page + i + 1}</td>
-          <td style="font-size:13px">${v.fecha}</td>
-          <td>${v.cajero || '<span style="color:var(--ink-light)">—</span>'}</td>
-          <td>${v.caja_id || '<span style="color:var(--ink-light)">—</span>'}</td>
-          <td><span style="display:inline-block;padding:4px 12px;background:${v.metodo_principal==='efectivo'?'var(--ok)':'var(--brand)'};color:white;border-radius:20px;font-size:11px;font-weight:600;text-transform:uppercase">${v.metodo_principal}</span></td>
-          <td style="text-align:right;font-weight:700;font-size:15px">${fmt(v.total)}</td>
-          <td style="text-align:center;display:flex;gap:6px;justify-content:center">
-            <button class="btn btn-sm" data-ver="${v.id}">Ver detalle</button>
-            <button class="btn btn-sm btn-primary btn-ticket" data-id="${v.id}" data-imprimir="${v.id}" style="background:var(--brand);color:white;border:none" title="Imprimir ticket">
-              🖨️ Imprimir
-            </button>
-          </td>
-        `;
-          tbody.appendChild(tr);
-        });
-
-        const inicio = (r.page - 1) * r.per_page + 1;
-        const fin = Math.min(r.page * r.per_page, r.total);
-        lblInfo.textContent = `Mostrando ${inicio}-${fin} de ${r.total} ventas`;
-      }
-
-      // Paginación
-      state.total = r.total;
-      state.page = r.page;
-      state.per_page = r.per_page;
-      const pages = Math.max(1, Math.ceil(state.total / state.per_page));
-      lblPage.textContent = `${state.page} / ${pages}`;
-      btnPrev.disabled = state.page <= 1;
-      btnNext.disabled = state.page >= pages;
     }
 
     // Filtros
@@ -428,133 +453,114 @@ start_pos_page('Facturación (Ventas)', $cajeroNombre, $cajaLabel);
       }
     });
 
-    // Detalle
-    tbody.addEventListener('click', async (ev) => {
+    // Detalle - manejar clic en "Ver detalle"
+    tbody.addEventListener('click', async (ev)=>{
       const btn = ev.target.closest('[data-ver]');
-      if (!btn) return;
+      if(!btn) return;
       const venta_id = btn.getAttribute('data-ver');
-      const r = await fetch('api.php', {
-        method: 'POST',
-        body: new URLSearchParams({
-          action: 'venta_detalle',
-          venta_id
-        })
-      }).then(x => x.json());
-      if (!r.ok) {
-        alert(r.error || 'Error');
-        return;
+      ventaActualId = venta_id; // Guardar para imprimir
+      const r = await api({action:'venta_detalle', venta_id});
+      if(!r.ok){ alert(r.error||'Error'); return; }
+
+      const v = r.venta;
+      const d = $('#dlgVenta');
+      const items = r.items || [];
+      
+      // Actualizar contador de productos
+      const productCount = $('#saleProductCount');
+      if (productCount) {
+        productCount.textContent = `${items.length} ${items.length === 1 ? 'producto' : 'productos'}`;
       }
-
-  let ventaActualId = null; // Guardar ID de venta actual para imprimir
-
-  // Detalle - manejar clic en "Ver detalle"
-  tbody.addEventListener('click', async (ev)=>{
-    const btn = ev.target.closest('[data-ver]');
-    if(!btn) return;
-    const venta_id = btn.getAttribute('data-ver');
-    ventaActualId = venta_id; // Guardar para imprimir
-    const r = await fetch('api.php',{method:'POST',body:new URLSearchParams({action:'venta_detalle',venta_id})}).then(x=>x.json());
-    if(!r.ok){ alert(r.error||'Error'); return; }
-
-    const v = r.venta;
-    const d = $('#dlgVenta');
-    const items = r.items || [];
-    
-    // Actualizar contador de productos
-    const productCount = $('#saleProductCount');
-    if (productCount) {
-      productCount.textContent = `${items.length} ${items.length === 1 ? 'producto' : 'productos'}`;
-    }
-    
-    $('#ventaHeader').innerHTML = `
-      <div class="sale-info-item">
-        <svg class="sale-info-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2"/>
-        </svg>
-        <div class="sale-info-content">
-          <small class="sale-info-label">Folio</small>
-          <strong class="sale-info-value">#${v.id}</strong>
+      
+      $('#ventaHeader').innerHTML = `
+        <div class="sale-info-item">
+          <svg class="sale-info-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2"/>
+          </svg>
+          <div class="sale-info-content">
+            <small class="sale-info-label">Folio</small>
+            <strong class="sale-info-value">#${v.id}</strong>
+          </div>
         </div>
-      </div>
-      <div class="sale-info-item">
-        <svg class="sale-info-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-          <polyline points="12 6 12 12 16 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-        <div class="sale-info-content">
-          <small class="sale-info-label">Fecha</small>
-          <strong class="sale-info-value">${v.fecha}</strong>
+        <div class="sale-info-item">
+          <svg class="sale-info-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+            <polyline points="12 6 12 12 16 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <div class="sale-info-content">
+            <small class="sale-info-label">Fecha</small>
+            <strong class="sale-info-value">${v.fecha}</strong>
+          </div>
         </div>
-      </div>
-      <div class="sale-info-item">
-        <svg class="sale-info-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="2"/>
-          <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <div class="sale-info-content">
-          <small class="sale-info-label">Cajero</small>
-          <strong class="sale-info-value">${v.cajero || '—'}</strong>
+        <div class="sale-info-item">
+          <svg class="sale-info-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="2"/>
+            <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <div class="sale-info-content">
+            <small class="sale-info-label">Cajero</small>
+            <strong class="sale-info-value">${v.cajero || '—'}</strong>
+          </div>
         </div>
-      </div>
-      <div class="sale-info-item">
-        <svg class="sale-info-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect x="3" y="8" width="18" height="4" rx="1" stroke="currentColor" stroke-width="2"/>
-          <path d="M12 8v13M8 12H4a2 2 0 01-2-2V7a2 2 0 012-2h4M16 12h4a2 2 0 002-2V7a2 2 0 00-2-2h-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-        <div class="sale-info-content">
-          <small class="sale-info-label">Caja</small>
-          <strong class="sale-info-value">${v.caja_id || '—'}</strong>
+        <div class="sale-info-item">
+          <svg class="sale-info-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="3" y="8" width="18" height="4" rx="1" stroke="currentColor" stroke-width="2"/>
+            <path d="M12 8v13M8 12H4a2 2 0 01-2-2V7a2 2 0 012-2h4M16 12h4a2 2 0 002-2V7a2 2 0 00-2-2h-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <div class="sale-info-content">
+            <small class="sale-info-label">Caja</small>
+            <strong class="sale-info-value">${v.caja_id || '—'}</strong>
+          </div>
         </div>
-      </div>
-      <div class="sale-info-item">
-        <svg class="sale-info-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect x="1" y="4" width="22" height="16" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
-          <line x1="1" y1="10" x2="23" y2="10" stroke="currentColor" stroke-width="2"/>
-        </svg>
-        <div class="sale-info-content">
-          <small class="sale-info-label">Método</small>
-          <strong class="sale-info-value">${v.metodo_principal}</strong>
+        <div class="sale-info-item">
+          <svg class="sale-info-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="1" y="4" width="22" height="16" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
+            <line x1="1" y1="10" x2="23" y2="10" stroke="currentColor" stroke-width="2"/>
+          </svg>
+          <div class="sale-info-content">
+            <small class="sale-info-label">Método</small>
+            <strong class="sale-info-value">${v.metodo_principal || '—'}</strong>
+          </div>
         </div>
-      </div>
-      <div class="sale-info-item sale-info-total">
-        <svg class="sale-info-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <div class="sale-info-content">
-          <small class="sale-info-label">Total</small>
-          <strong class="sale-info-value-total">${fmt(v.total)}</strong>
-        </div>
-      </div>
-    `;
-    const tb = $('#ventaItems');
-    tb.innerHTML = '';
-    if (!items.length) {
-      tb.innerHTML = `
-        <div class="sale-empty">
-          <p>No hay productos en esta venta</p>
+        <div class="sale-info-item sale-info-total">
+          <svg class="sale-info-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <div class="sale-info-content">
+            <small class="sale-info-label">Total</small>
+            <strong class="sale-info-value-total">${fmt(v.total)}</strong>
+          </div>
         </div>
       `;
-    } else {
-      items.forEach(it => {
-        const itemDiv = document.createElement('div');
-        itemDiv.className = 'sale-item-row';
-        itemDiv.innerHTML = `
-          <div class="sale-item-col-name">
-            <strong>${it.nombre}</strong>
-          </div>
-          <div class="sale-item-col-price">${fmt(it.precio)}</div>
-          <div class="sale-item-col-qty">${it.cantidad}</div>
-          <div class="sale-item-col-total">
-            <strong>${fmt(it.total_linea)}</strong>
+      const tb = $('#ventaItems');
+      tb.innerHTML = '';
+      if (!items.length) {
+        tb.innerHTML = `
+          <div class="sale-empty">
+            <p>No hay productos en esta venta</p>
           </div>
         `;
-        tb.appendChild(itemDiv);
-      });
-    }
-    d.showModal();
-  });
+      } else {
+        items.forEach(it => {
+          const itemDiv = document.createElement('div');
+          itemDiv.className = 'sale-item-row';
+          itemDiv.innerHTML = `
+            <div class="sale-item-col-name">
+              <strong>${it.nombre}</strong>
+            </div>
+            <div class="sale-item-col-price">${fmt(it.precio)}</div>
+            <div class="sale-item-col-qty">${it.cantidad}</div>
+            <div class="sale-item-col-total">
+              <strong>${fmt(it.total_linea)}</strong>
+            </div>
+          `;
+          tb.appendChild(itemDiv);
+        });
+      }
+      d.showModal();
+    });
 
   // Imprimir desde tabla
   tbody.addEventListener('click', async (ev)=>{
@@ -574,10 +580,7 @@ start_pos_page('Facturación (Ventas)', $cajeroNombre, $cajaLabel);
   // Función para imprimir ticket
   async function imprimirTicket(venta_id) {
     try {
-      const r = await fetch('api.php', {
-        method: 'POST',
-        body: new URLSearchParams({action: 'venta_detalle', venta_id})
-      }).then(x => x.json());
+      const r = await api({action: 'venta_detalle', venta_id});
       
       if(!r.ok) {
         alert(r.error || 'Error al obtener datos del ticket');
@@ -704,8 +707,12 @@ start_pos_page('Facturación (Ventas)', $cajeroNombre, $cajaLabel);
   
   $('#btnCerrarDetalle').addEventListener('click', ()=> $('#dlgVenta').close());
 
-    // Carga inicial
-    cargar();
+    // Carga inicial cuando el DOM esté listo
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', cargar);
+    } else {
+      cargar();
+    }
   })();
 </script>
 

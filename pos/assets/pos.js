@@ -216,7 +216,7 @@ async function loadCorteCaja(){
   $('#kEf').textContent         = money(d.ventas_efectivo);
   $('#kTj').textContent         = money(d.ventas_tarjeta);
   $('#kSaldoAct').textContent   = money(d.saldo_actual);
-  $('#lblWindow').textContent = `${d.inicio} — ${d.fin || 'ahora'}`;+
+  $('#lblWindow').textContent = `${d.inicio} — ${d.fin || 'ahora'}`;
 
   renderMovs(d.movimientos || []);
 }
@@ -427,7 +427,6 @@ function renderCart() {
   
   if (!list) return;
   
-<<<<<<< HEAD
   // Calcular cantidad total
   const totalQty = cart.reduce((sum, it) => sum + it.qty, 0);
   
@@ -1010,7 +1009,6 @@ async function descargarTicket(venta_id){
   doc.save(`ticket_${v.id}.pdf`);
 }
 
-<<<<<<< HEAD
 // ===== Selector de Idioma =====
 document.addEventListener('DOMContentLoaded', () => {
   const langSelector = $('#languageSelector');
