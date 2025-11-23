@@ -1,7 +1,7 @@
 /* ==== STATISTICS SECTION ==== */
 .statistics {
   padding: 80px 0;
-  background: linear-gradient(135deg, #a0896b 0%, #8b7355 100%);
+  background: linear-gradient(135deg, #6D5A42 0%, #A0896B 100%);
   color: white;
   position: relative;
   overflow: hidden;
@@ -89,7 +89,7 @@
 .stat-plus {
   font-size: 36px;
   font-weight: bold;
-  color: #d4c4a8;
+  color: #d6c7b2;
   position: absolute;
   top: 0;
   right: -20px;
@@ -131,7 +131,7 @@ body.dark .stat-number {
 }
 
 body.dark .stat-plus {
-  color: #f2d38a;
+  color: #d7c6ac;
 }
 
 body.dark .stat-label {

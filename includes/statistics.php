@@ -66,7 +66,7 @@ if ($check_pedidos && $check_pedidos->num_rows > 0) {
     /* Sección de Estadísticas */
     .statistics {
       padding: 80px 0;
-      background: linear-gradient(135deg, #a1683a 0%, #8f5e4b 100%);
+      background: linear-gradient(135deg, #6D5A42 0%, #A0896B 100%);
       position: relative;
       overflow: hidden;
     }
