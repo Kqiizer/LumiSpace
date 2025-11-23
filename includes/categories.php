@@ -198,6 +198,26 @@ function getSubcategorias($subcats_data) {
       gap: 30px;
     }
 
+    /* Grid de 3 columnas para la página de inicio */
+    .products-grid.home-categories {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 30px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 1024px) {
+      .products-grid.home-categories {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .products-grid.home-categories {
+        grid-template-columns: 1fr;
+      }
+    }
+
     /* Tarjeta de categoría */
     .product-category {
       background: var(--card-bg);
@@ -667,14 +687,24 @@ function getSubcategorias($subcats_data) {
     </div>
 
     <?php
+      // Detectar si estamos en la página de inicio
+      $isHomePage = basename($_SERVER['SCRIPT_NAME']) === 'index.php';
+      
+      // Imágenes específicas para la página de inicio
       $homeCategoryImages = [
         $BASE . 'imagenes/lamparas/deco2.jpg',
         $BASE . 'imagenes/lamparas/deco3.jpg',
         $BASE . 'imagenes/lamparas/deco4.jpg',
       ];
+      
+      // Limitar a 3 categorías en la página de inicio
+      if ($isHomePage && is_array($categorias_db)) {
+        $categorias_db = array_slice($categorias_db, 0, 3);
+      }
+      
       $homeCategoryIndex = 0;
     ?>
-    <div class="products-grid" data-base="<?= htmlspecialchars($BASE) ?>">
+    <div class="products-grid <?= $isHomePage ? 'home-categories' : '' ?>" data-base="<?= htmlspecialchars($BASE) ?>">
 
       <?php if (!empty($categorias_db) && is_array($categorias_db)): ?>
         <?php foreach ($categorias_db as $cat): 
@@ -682,7 +712,9 @@ function getSubcategorias($subcats_data) {
           $nombre = htmlspecialchars($cat['nombre'] ?? 'Sin nombre');
           $descripcion = htmlspecialchars($cat['descripcion'] ?? 'Encuentra la mejor selección de productos');
           $imagen = getCategoryImage($cat['imagen'] ?? '', $BASE);
-          if (isset($homeCategoryImages[$homeCategoryIndex])) {
+          
+          // Asignar imágenes específicas solo en la página de inicio
+          if ($isHomePage && isset($homeCategoryImages[$homeCategoryIndex])) {
             $imagen = $homeCategoryImages[$homeCategoryIndex];
             $homeCategoryIndex++;
           }
@@ -702,7 +734,12 @@ function getSubcategorias($subcats_data) {
                 <?= $total_productos === 0 ? 'Sin productos' : number_format($total_productos) . ' producto' . ($total_productos !== 1 ? 's' : '') ?>
               </div>
               <div class="category-image skeleton" data-bg="<?= htmlspecialchars($imagen) ?>"
-                   style="background-image:url('<?= htmlspecialchars($imagen, ENT_QUOTES, 'UTF-8') ?>');"></div>
+                   style="background-image:url('<?= htmlspecialchars($imagen, ENT_QUOTES, 'UTF-8') ?>');">
+                <img src="<?= htmlspecialchars($imagen, ENT_QUOTES, 'UTF-8') ?>" 
+                     alt="<?= htmlspecialchars($nombre, ENT_QUOTES, 'UTF-8') ?>" 
+                     loading="lazy"
+                     style="width: 100%; height: 100%; object-fit: cover; display: block;">
+              </div>
             </div>
 
             <div class="category-header">
