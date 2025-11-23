@@ -66,6 +66,27 @@ $stats = [
     'clientes' => (int)($conn->query("SELECT COUNT(*) as total FROM usuarios WHERE rol!='admin'")->fetch_assoc()['total'] ?? 0),
 ];
 
+$heroPendents = [
+    [
+        'name' => 'Nordic Wood Dark Grey',
+        'size' => '22cm x 10cm',
+        'price' => '$44.99',
+        'image' => $BASE . 'imagenes/lamparas/deco2.jpg',
+    ],
+    [
+        'name' => 'Modern Metal Blue',
+        'size' => '18cm x 8cm',
+        'price' => '$34.99',
+        'image' => $BASE . 'imagenes/lamparas/deco3.jpg',
+    ],
+    [
+        'name' => 'Scandinavian Warm',
+        'size' => '20cm x 9cm',
+        'price' => '$29.99',
+        'image' => $BASE . 'imagenes/lamparas/deco4.jpg',
+    ],
+];
+
 // ==========================================
 // FUNCIÓN HELPER PARA IMÁGENES
 // ==========================================
@@ -305,6 +326,110 @@ function img_url($path, $BASE, $folder = 'productos') {
             opacity: 0.92;
             margin-bottom: 34px;
             color: rgba(255,255,255,0.9);
+        }
+
+        .hero-word {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(5rem, 18vw, 11rem);
+            font-weight: 800;
+            letter-spacing: -0.05em;
+            color: rgba(255,255,255,0.15);
+            text-transform: lowercase;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .hero-meta {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-bottom: 24px;
+            color: rgba(255,255,255,0.7);
+        }
+
+        .pendants-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+            gap: 24px;
+            margin-top: 10px;
+        }
+
+        .pendant-card {
+            position: relative;
+            padding: 40px 20px 28px;
+            border-radius: 26px;
+            background: rgba(255,255,255,0.12);
+            backdrop-filter: blur(8px);
+            box-shadow: 0 20px 40px rgba(15,10,5,0.15);
+        }
+
+        .pendant-line {
+            position: absolute;
+            top: -90px;
+            left: 50%;
+            width: 2px;
+            height: 90px;
+            background: rgba(255,255,255,0.25);
+            transform: translateX(-50%);
+        }
+
+        .pendant-image {
+            width: 110px;
+            height: 110px;
+            margin: 0 auto 18px;
+            background-size: cover;
+            background-position: center;
+            border-radius: 50%;
+            box-shadow: 0 25px 40px rgba(0,0,0,0.25);
+        }
+
+        .pendant-name {
+            font-weight: 700;
+            font-size: 1rem;
+            color: #fff;
+            margin-bottom: 6px;
+        }
+
+        .pendant-size {
+            font-size: 0.9rem;
+            color: rgba(255,255,255,0.75);
+        }
+
+        .pendant-price {
+            margin-top: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .hero-info-bar {
+            margin-top: 36px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 18px;
+            text-align: left;
+        }
+
+        .hero-info-item span {
+            display: block;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: rgba(255,255,255,0.7);
+        }
+
+        .hero-info-item strong {
+            display: block;
+            margin-top: 6px;
+            font-size: 1rem;
+            color: #fff;
         }
 
         .hero-stats {
@@ -932,25 +1057,48 @@ function img_url($path, $BASE, $folder = 'productos') {
 
         <!-- Hero Section -->
         <section class="catalog-hero">
+            <div class="hero-word">pendants</div>
             <div class="catalog-hero-content">
-                <h1>
-                    <i class="fas fa-store"></i>
-                    Catálogo Completo
-                </h1>
-                <p>Explora nuestra selección de <?= $stats['productos'] ?> productos en <?= $stats['categorias'] ?> categorías diferentes</p>
-                
-                <div class="hero-stats">
-                    <div class="hero-stat">
-                        <span class="hero-stat-number"><?= $stats['productos'] ?></span>
-                        <span class="hero-stat-label">Productos</span>
+                <div class="hero-meta">
+                    <span>Diseño</span>
+                    <span>Tamaño</span>
+                    <span>Color</span>
+                </div>
+                <h1>Curated lighting for modern living rooms</h1>
+                <p>Explora piezas colgantes con acabados nórdicos, colores suaves y materiales premium pensados para armonizar cualquier espacio.</p>
+
+                <div class="pendants-grid">
+                    <?php foreach ($heroPendents as $pendant): ?>
+                        <article class="pendant-card">
+                            <span class="pendant-line"></span>
+                            <div class="pendant-image" style="background-image:url('<?= htmlspecialchars($pendant['image'], ENT_QUOTES, 'UTF-8') ?>')"></div>
+                            <div class="pendant-name"><?= htmlspecialchars($pendant['name'], ENT_QUOTES, 'UTF-8') ?></div>
+                            <div class="pendant-size"><?= htmlspecialchars($pendant['size'], ENT_QUOTES, 'UTF-8') ?></div>
+                            <div class="pendant-price"><?= htmlspecialchars($pendant['price'], ENT_QUOTES, 'UTF-8') ?></div>
+                        </article>
+                    <?php endforeach; ?>
+                </div>
+
+                <div class="hero-info-bar">
+                    <div class="hero-info-item">
+                        <span>Material</span>
+                        <strong>Aerospace-grade PC</strong>
                     </div>
-                    <div class="hero-stat">
-                        <span class="hero-stat-number"><?= $stats['categorias'] ?></span>
-                        <span class="hero-stat-label">Categorías</span>
+                    <div class="hero-info-item">
+                        <span>Estructura</span>
+                        <strong>Nordic Wood</strong>
                     </div>
-                    <div class="hero-stat">
-                        <span class="hero-stat-number"><?= $stats['clientes'] ?></span>
-                        <span class="hero-stat-label">Clientes</span>
+                    <div class="hero-info-item">
+                        <span>Colores</span>
+                        <strong>9 variaciones</strong>
+                    </div>
+                    <div class="hero-info-item">
+                        <span>Volumen</span>
+                        <strong>18–22cm</strong>
+                    </div>
+                    <div class="hero-info-item">
+                        <span>Peso</span>
+                        <strong>3.1 kg</strong>
                     </div>
                 </div>
             </div>
