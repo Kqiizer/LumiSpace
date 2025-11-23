@@ -107,23 +107,23 @@ function img_url($path, $BASE, $folder = 'productos') {
            VARIABLES Y CONFIGURACIÓN BASE
            ========================================== */
         :root {
-            --primary-color: #a1683a;
-            --primary-dark: #8f5e4b;
-            --primary-light: #c2a98f;
-            --secondary-color: #ff6b6b;
-            --success-color: #51cf66;
-            --warning-color: #ffd43b;
-            --text-primary: #333;
-            --text-secondary: #666;
-            --text-muted: #999;
-            --bg-primary: #fafafa;
+            --primary-color: #6D5A42;
+            --primary-dark: #A0896B;
+            --primary-light: #d6c7b2;
+            --secondary-color: #c4ae95;
+            --success-color: #6ea37c;
+            --warning-color: #d9aa6a;
+            --text-primary: #32281c;
+            --text-secondary: #6b5b49;
+            --text-muted: #9a8b7a;
+            --bg-primary: #f9f4ed;
             --bg-white: #ffffff;
-            --bg-secondary: #f7f7f7;
-            --bg-image: #f0f0f0;
-            --border-color: #e0e0e0;
-            --shadow-sm: 0 2px 8px rgba(0,0,0,.1);
-            --shadow-md: 0 4px 12px rgba(0,0,0,.12);
-            --shadow-lg: 0 8px 18px rgba(0,0,0,.15);
+            --bg-secondary: #f2e7d9;
+            --bg-image: #e9dfd1;
+            --border-color: rgba(109, 90, 66, 0.25);
+            --shadow-sm: 0 2px 8px rgba(34, 23, 8, 0.08);
+            --shadow-md: 0 4px 14px rgba(34, 23, 8, 0.12);
+            --shadow-lg: 0 10px 26px rgba(34, 23, 8, 0.16);
             --radius-sm: 8px;
             --radius-md: 12px;
             --radius-lg: 16px;
@@ -134,21 +134,21 @@ function img_url($path, $BASE, $folder = 'productos') {
            MODO OSCURO - Compatible con reset.css
            ========================================== */
         body.dark {
-            --primary-color: #d4af7f;
-            --primary-dark: #c2a98f;
-            --primary-light: #8f7a5d;
-            --secondary-color: #ff8787;
-            --success-color: #69db7c;
-            --warning-color: #ffe066;
-            --text-primary: #f0f0f0;
-            --text-secondary: #b8b8b8;
-            --text-muted: #888888;
-            --bg-primary: #1e1e1e;
-            --bg-white: #2a2a2a;
-            --bg-secondary: #2b2b2b;
-            --bg-image: #2e2e2e;
-            --border-color: #404040;
-            --shadow-sm: 0 2px 8px rgba(0,0,0,.4);
+            --primary-color: #bea583;
+            --primary-dark: #d7c6ac;
+            --primary-light: #8d775d;
+            --secondary-color: #b89978;
+            --success-color: #80c091;
+            --warning-color: #edc082;
+            --text-primary: #f6f1e8;
+            --text-secondary: #d8ccbd;
+            --text-muted: #a69988;
+            --bg-primary: #1b1712;
+            --bg-white: #262018;
+            --bg-secondary: #2d261e;
+            --bg-image: #332a20;
+            --border-color: rgba(255,255,255,0.15);
+            --shadow-sm: 0 2px 8px rgba(0,0,0,.45);
             --shadow-md: 0 4px 12px rgba(0,0,0,.5);
             --shadow-lg: 0 8px 18px rgba(0,0,0,.6);
         }
@@ -247,42 +247,38 @@ function img_url($path, $BASE, $folder = 'productos') {
             padding: 80px 20px 60px;
             position: relative;
             overflow: hidden;
+            border-bottom-left-radius: 40px;
+            border-bottom-right-radius: 40px;
+            box-shadow: 0 18px 40px rgba(34, 23, 8, 0.2);
         }
 
         .catalog-hero::before {
             content: '';
             position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
-                        radial-gradient(circle at 80% 80%, rgba(255,255,255,0.08) 0%, transparent 50%);
-            pointer-events: none;
-        }
-
-        /* Modo oscuro - hero con menor opacidad */
-        body.dark .catalog-hero::before {
-            background: radial-gradient(circle at 20% 50%, rgba(255,255,255,0.05) 0%, transparent 50%),
-                        radial-gradient(circle at 80% 80%, rgba(255,255,255,0.03) 0%, transparent 50%);
+            inset: 0;
+            background: radial-gradient(circle at 20% 20%, rgba(255,255,255,0.18), transparent 55%);
+            opacity: 0.6;
         }
 
         .catalog-hero-content {
             position: relative;
             z-index: 1;
+            max-width: 820px;
+            margin: 0 auto;
         }
 
         .catalog-hero h1 {
-            font-size: 3rem;
-            font-weight: 700;
-            margin-bottom: 12px;
-            letter-spacing: -1px;
+            font-size: clamp(2.4rem, 4vw, 3.5rem);
+            font-weight: 800;
+            margin-bottom: 16px;
+            letter-spacing: -0.6px;
         }
 
         .catalog-hero p {
-            font-size: 1.2rem;
-            opacity: 0.95;
-            margin-bottom: 30px;
+            font-size: 1.1rem;
+            opacity: 0.92;
+            margin-bottom: 32px;
+            color: rgba(255,255,255,0.9);
         }
 
         .hero-stats {
@@ -915,7 +911,7 @@ function img_url($path, $BASE, $folder = 'productos') {
                     <i class="fas fa-store"></i>
                     Catálogo Completo
                 </h1>
-                <p>Explora nuestra selección de <?= $stats['productos'] ?> productos en <?= $stats['categorias'] ?> categorías diferentes</p>
+                <p>Explora nuestra selección de <?= $stats['productos'] ?> productos en <?= $stats['categorias'] ?> categorías diferentes.</p>
                 
                 <div class="hero-stats">
                     <div class="hero-stat">
@@ -967,9 +963,7 @@ function img_url($path, $BASE, $folder = 'productos') {
 
                 <!-- Botones de categorías -->
                 <?php foreach ($categorias_db as $cat): 
-                    $count = isset($productos_por_categoria[$cat['id']]['productos'])
-                            ? count($productos_por_categoria[$cat['id']]['productos'])
-                            : 0;
+                    $count = $productos_por_categoria[$cat['id']] ?? 0;
 
                     if ($count > 0): ?>
                         <button class="filter-chip" data-category="<?= $cat['id'] ?>">
@@ -1122,9 +1116,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
         <!-- Footer -->
-      <?php include __DIR__ . "/../includes/footer.php"; ?>
+        <?php include __DIR__ . "/../includes/footer.php"; ?>
 
     </div>
 
+    <script>
+        window.BASE_URL = "<?= $BASE ?>";
+    </script>
+    <script src="<?= $BASE ?>js/catalogo.js"></script>
 </body>
 </html>

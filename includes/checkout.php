@@ -6,6 +6,27 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 // ====================================
 require_once __DIR__ . '/../config/functions.php';
 require_once __DIR__ . '/../config/carrito-funciones.php';
+require_once __DIR__ . '/../config/stripe.php';
+
+if (!function_exists('computeTotals')) {
+    function computeTotals(array $carrito): array {
+        $subtotal = 0.0;
+        foreach ($carrito as $item) {
+            $precio = (float)($item['precio'] ?? 0);
+            $cantidad = max(1, (int)($item['cantidad'] ?? 1));
+            $subtotal += $precio * $cantidad;
+        }
+        $iva = $subtotal * 0.16;
+        $envio = $subtotal > 0 ? 50.0 : 0.0;
+        $total = $subtotal + $iva + $envio;
+        return [
+            'subtotal' => round($subtotal, 2),
+            'iva'      => round($iva, 2),
+            'envio'    => round($envio, 2),
+            'total'    => round($total, 2),
+        ];
+    }
+}
 
 // ====================================
 // ⚙️ VALIDAR CARRITO
@@ -24,6 +45,19 @@ $subtotal = $totals['subtotal'];
 $iva      = $totals['iva'];
 $envio    = $totals['envio'];
 $total    = $totals['total'];
+
+$stripePublishable = '';
+$stripeConfigError = '';
+try {
+    $stripeSettings = stripeConfig();
+    $stripePublishable = $stripeSettings['publishable_key'] ?? '';
+    if ($stripePublishable === '') {
+        $stripeConfigError = 'Configura STRIPE_PUBLISHABLE_KEY en tu archivo .env para habilitar los pagos.';
+    }
+} catch (Throwable $stripeException) {
+    $stripeConfigError = $stripeException->getMessage();
+}
+$stripeReady = $stripePublishable !== '' && $stripeConfigError === '';
 
 // ====================================
 // 📅 FECHA DE ENTREGA (5 días hábiles)
@@ -74,6 +108,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     <title>Finalizar Compra - LumiSpace</title>
     <link rel="stylesheet" href="../css/carrito.css?v=<?= time() ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://js.stripe.com/v3/"></script>
 </head>
 <body>
 <div class="container">
@@ -88,8 +123,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         </div>
     <?php endif; ?>
 
-    <form method="POST">
+    <?php if ($stripeConfigError): ?>
+        <div style="background:#fff4e5; color:#8a4c12; padding:12px 16px; border-radius:8px; margin-bottom:20px; border:1px solid #f7d7af;">
+            ⚠️ <?= htmlspecialchars($stripeConfigError) ?>
+        </div>
+    <?php endif; ?>
+
+    <form 
+        id="checkout-form" 
+        method="POST" 
+        data-stripe-key="<?= htmlspecialchars($stripePublishable) ?>" 
+        data-create-session="../api/stripe/create-checkout-session.php"
+    >
         <input type="hidden" name="action" value="confirmar_compra">
+        <input type="hidden" name="metodo_pago" value="Stripe - Tarjeta">
 
         <div class="checkout-grid">
             <!-- LEFT: Información del cliente y productos -->
@@ -154,23 +201,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     <div class="summary-row total"><span>Total</span><span>$<?= number_format($total, 2) ?></span></div>
 
                     <div class="info-field full-width" style="margin-top:15px;">
-                        <label>Método de pago *</label>
-                        <select name="metodo_pago" required>
-                            <option value="">Selecciona una opción</option>
-                            <option>Tarjeta</option>
-                            <option>PayPal</option>
-                            <option>Transferencia</option>
-                            <option>Efectivo</option>
-                        </select>
+                        <label>Pago seguro</label>
+                        <input type="text" value="Tarjeta (Stripe)" readonly>
+                        <small style="display:block;color:#7a6a58;margin-top:6px;">
+                            Se abrirá la ventana de Stripe para ingresar tus datos de tarjeta.
+                        </small>
                     </div>
 
-                    <button class="pay-button" type="submit">
-                        <i class="fas fa-lock"></i> Confirmar y Pagar
+                    <div id="stripe-error" style="display:none;background:#ffefef;color:#8b2131;padding:10px;border-radius:8px;margin-top:12px;"></div>
+
+                    <button 
+                        class="pay-button" 
+                        type="submit"
+                        id="stripe-pay-button"
+                        <?= $stripeReady ? '' : 'disabled' ?>
+                    >
+                        <i class="fas fa-lock"></i> Pagar con Stripe
                     </button>
+                    <?php if (!$stripeReady): ?>
+                        <small style="display:block;color:#a8322d;margin-top:6px;">
+                            Configura tus claves de Stripe para habilitar este botón.
+                        </small>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
     </form>
 </div>
+<script src="../js/checkout-stripe.js"></script>
 </body>
 </html>

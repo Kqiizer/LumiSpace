@@ -48,17 +48,33 @@ if ($categorias_db && is_array($categorias_db)) {
 
 /**
  * Obtiene la URL de la imagen de categoría
+ * Maneja diferentes formatos de rutas de imágenes
  */
 function getCategoryImage($imagen, $BASE) {
-  if (empty($imagen)) {
+  if (empty($imagen) || trim($imagen) === '') {
     return $BASE . 'images/categorias/default.jpg';
   }
-
+  
+  $imagen = trim($imagen);
+  
+  // Si ya es una URL completa (http o https), devolverla tal cual
   if (preg_match('#^https?://#i', $imagen)) {
     return $imagen;
   }
-
-  return $BASE . 'images/categorias/' . basename($imagen);
+  
+  // Si empieza con /, es una ruta absoluta desde la raíz
+  if (strpos($imagen, '/') === 0) {
+    return $BASE . ltrim($imagen, '/');
+  }
+  
+  // Si la imagen ya contiene una ruta relativa completa (ej: imagenes/lamparas/deco2.jpg)
+  // o empieza con imagenes/ o images/, usarla directamente
+  if (strpos($imagen, 'imagenes/') === 0 || strpos($imagen, 'images/') === 0) {
+    return $BASE . $imagen;
+  }
+  
+  // Si es solo un nombre de archivo, asumir que está en images/categorias/
+  return $BASE . 'images/categorias/' . $imagen;
 }
 
 /**
@@ -90,26 +106,31 @@ function getSubcategorias($subcats_data) {
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <style>
     :root {
-      --primary: #a1683a;
-      --primary-dark: #7d4e2a;
-      --primary-light: #c08552;
-      --accent: #d4a574;
-      --bg-light: #fafaf8;
-      --bg-dark: #0f0e0d;
-      --text-light: #1a1816;
-      --text-dark: #f8f7f5;
-      --text-muted: #6b6966;
-      --border-color: #e6e4e0;
+      --primary: #6D5A42;
+      --primary-dark: #4f4433;
+      --primary-light: #8A7458;
+      --accent: #A0896B;
+      --accent-light: #c4b59b;
+      --bg-light: #F7F2EA;
+      --bg-dark: #1e1912;
+      --text-light: #2b241b;
+      --text-dark: #fdfaf5;
+      --text-muted: #7a6b58;
+      --border-color: rgba(109, 90, 66, 0.15);
       --card-bg: #ffffff;
-      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
-      --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.08);
-      --shadow-lg: 0 10px 40px rgba(0, 0, 0, 0.12);
-      --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.16);
-      --radius-sm: 8px;
-      --radius-md: 16px;
-      --radius-lg: 24px;
-      --transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-      --transition-spring: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+      --glass: rgba(255, 255, 255, 0.7);
+      --shadow-sm: 0 4px 16px rgba(34, 23, 8, 0.08);
+      --shadow-md: 0 12px 30px rgba(34, 23, 8, 0.12);
+      --shadow-lg: 0 24px 60px rgba(34, 23, 8, 0.14);
+      --shadow-xl: 0 40px 80px rgba(34, 23, 8, 0.18);
+      --radius-sm: 10px;
+      --radius-md: 20px;
+      --radius-lg: 30px;
+      --transition-smooth: all 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-spring: all 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
+      --gradient-sand: linear-gradient(135deg, #fdf7f0 0%, #f3ebe0 40%, #efe4d7 100%);
+      --gradient-primary: linear-gradient(135deg, #6D5A42 0%, #A0896B 100%);
+      --gradient-dark: linear-gradient(135deg, rgba(109, 90, 66, 0.85), rgba(46, 37, 26, 0.95));
     }
 
     * {
@@ -120,7 +141,7 @@ function getSubcategorias($subcats_data) {
 
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', sans-serif;
-      background: var(--bg-light);
+      background: var(--gradient-sand);
       color: var(--text-light);
       line-height: 1.7;
       -webkit-font-smoothing: antialiased;
@@ -141,42 +162,76 @@ function getSubcategorias($subcats_data) {
     .section-header {
       text-align: center;
       margin-bottom: 60px;
+      position: relative;
+      padding: 20px 0 40px;
+    }
+
+    .section-header::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      margin: auto;
+      width: 260px;
+      height: 260px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(160, 137, 107, 0.12), transparent 65%);
+      filter: blur(8px);
+      z-index: -1;
     }
 
     .section-header h1 {
-      font-size: clamp(36px, 5vw, 48px);
+      font-size: clamp(36px, 5vw, 50px);
       font-weight: 800;
       color: var(--text-light);
-      margin-bottom: 16px;
+      margin-bottom: 18px;
       letter-spacing: -0.02em;
       position: relative;
-      display: inline-block;
+      display: inline-flex;
+      gap: 14px;
+      align-items: center;
     }
 
     .section-header h1::after {
       content: '';
-      position: absolute;
-      bottom: -8px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 60px;
-      height: 3px;
-      background: linear-gradient(90deg, var(--primary), var(--accent));
-      border-radius: 2px;
+      width: 90px;
+      height: 4px;
+      border-radius: 999px;
+      background: var(--gradient-primary);
+      display: inline-block;
     }
 
     .section-header p {
       font-size: 18px;
       color: var(--text-muted);
-      max-width: 600px;
+      max-width: 640px;
       margin: 0 auto;
-      margin-top: 24px;
+      margin-top: 18px;
     }
 
     .products-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
       gap: 30px;
+    }
+
+    /* Grid de 3 columnas para la página de inicio */
+    .products-grid.home-categories {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 30px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 1024px) {
+      .products-grid.home-categories {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .products-grid.home-categories {
+        grid-template-columns: 1fr;
+      }
     }
 
     /* Tarjeta de categoría */
@@ -191,12 +246,26 @@ function getSubcategorias($subcats_data) {
       flex-direction: column;
       position: relative;
       border: 1px solid var(--border-color);
+      backdrop-filter: blur(6px);
+    }
+
+    .product-category::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(160, 137, 107, 0.08), transparent 50%);
+      opacity: 0;
+      transition: var(--transition-smooth);
     }
 
     .product-category:hover {
-      transform: translateY(-8px);
+      transform: translateY(-10px) scale(1.01);
       box-shadow: var(--shadow-lg);
-      border-color: var(--primary-light);
+      border-color: rgba(160, 137, 107, 0.45);
+    }
+
+    .product-category:hover::before {
+      opacity: 1;
     }
 
     .product-category.no-products {
@@ -215,23 +284,23 @@ function getSubcategorias($subcats_data) {
       position: absolute;
       top: 20px;
       right: 20px;
-      background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(10px);
+      background: var(--glass);
+      backdrop-filter: blur(14px);
       padding: 10px 18px;
-      border-radius: 20px;
+      border-radius: 999px;
       font-size: 13px;
       font-weight: 600;
       color: var(--text-light);
       box-shadow: var(--shadow-md);
       z-index: 10;
-      border: 1px solid rgba(161, 104, 58, 0.2);
+      border: 1px solid rgba(109, 90, 66, 0.25);
       transition: var(--transition-smooth);
     }
 
     .product-category:hover .products-badge {
       background: var(--primary);
       color: white;
-      border-color: var(--primary);
+      border-color: transparent;
     }
 
     .products-badge.empty {
@@ -252,7 +321,7 @@ function getSubcategorias($subcats_data) {
       height: 260px;
       overflow: hidden;
       position: relative;
-      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      background: var(--gradient-dark);
     }
 
     .category-image {
@@ -260,7 +329,17 @@ function getSubcategorias($subcats_data) {
       height: 100%;
       background-size: cover;
       background-position: center;
+      background-repeat: no-repeat;
       transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    /* Clase lazy-bg para compatibilidad con la página de categorías */
+    .lazy-bg {
+      width: 100%;
+      height: 100%;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
     }
 
     .product-category:hover .category-image {
@@ -274,14 +353,14 @@ function getSubcategorias($subcats_data) {
       bottom: 0;
       left: 0;
       right: 0;
-      height: 60%;
+      height: 65%;
       background: linear-gradient(to top, rgba(0,0,0,0.5), transparent);
       pointer-events: none;
       transition: var(--transition-smooth);
     }
 
     .product-category:hover .category-image-wrapper::after {
-      background: linear-gradient(to top, rgba(161, 104, 58, 0.6), transparent);
+      background: linear-gradient(to top, rgba(160, 137, 107, 0.65), transparent);
     }
 
     /* Header de la categoría */
@@ -350,7 +429,7 @@ function getSubcategorias($subcats_data) {
     /* Footer de la categoría */
     .category-footer {
       padding: 24px 32px;
-      background: var(--bg-light);
+      background: rgba(247, 242, 234, 0.85);
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -359,24 +438,24 @@ function getSubcategorias($subcats_data) {
     }
 
     .product-category:hover .category-footer {
-      background: linear-gradient(135deg, rgba(161, 104, 58, 0.05), rgba(212, 165, 116, 0.05));
+      background: linear-gradient(135deg, rgba(109, 90, 66, 0.1), rgba(160, 137, 107, 0.12));
     }
 
     .view-products-btn {
       color: var(--primary);
       font-weight: 600;
-      font-size: 14px;
+      font-size: 13px;
       display: flex;
       align-items: center;
       gap: 10px;
       transition: var(--transition-smooth);
-      letter-spacing: 0.5px;
+      letter-spacing: 1px;
       text-transform: uppercase;
     }
 
     .product-category:hover .view-products-btn {
       color: var(--primary-dark);
-      gap: 14px;
+      gap: 16px;
     }
 
     .view-products-btn i {
@@ -633,14 +712,28 @@ function getSubcategorias($subcats_data) {
       <p>Explora nuestra amplia selección de productos</p>
     </div>
 
-    <div class="products-grid" data-base="<?= htmlspecialchars($BASE) ?>">
+    <?php
+      // Detectar si estamos en la página de inicio
+      $isHomePage = basename($_SERVER['SCRIPT_NAME']) === 'index.php';
+      
+      // Limitar a 3 categorías en la página de inicio
+      if ($isHomePage && is_array($categorias_db)) {
+        $categorias_db = array_slice($categorias_db, 0, 3);
+      }
+    ?>
+    <div class="products-grid <?= $isHomePage ? 'home-categories' : '' ?>" data-base="<?= htmlspecialchars($BASE) ?>">
 
       <?php if (!empty($categorias_db) && is_array($categorias_db)): ?>
         <?php foreach ($categorias_db as $cat): 
           $cat_id = (int)$cat['id'];
           $nombre = htmlspecialchars($cat['nombre'] ?? 'Sin nombre');
           $descripcion = htmlspecialchars($cat['descripcion'] ?? 'Encuentra la mejor selección de productos');
-          $imagen = getCategoryImage($cat['imagen'] ?? '', $BASE);
+          
+          // Obtener la imagen de la categoría (exactamente como en views/categorias.php)
+          // Usar 'imagen' o 'featured_image' según lo que exista en la BD
+          $categoryImage = $cat['imagen'] ?? $cat['featured_image'] ?? '';
+          $imagen = getCategoryImage($categoryImage, $BASE);
+          
           $total_productos = $productos_por_categoria[$cat_id] ?? 0;
           $subcats = getSubcategorias($cat['subcategorias'] ?? null);
         ?>
@@ -656,7 +749,9 @@ function getSubcategorias($subcats_data) {
               <div class="products-badge <?= $total_productos === 0 ? 'empty' : '' ?>">
                 <?= $total_productos === 0 ? 'Sin productos' : number_format($total_productos) . ' producto' . ($total_productos !== 1 ? 's' : '') ?>
               </div>
-              <div class="category-image skeleton" data-bg="<?= htmlspecialchars($imagen) ?>"></div>
+              <div class="category-image lazy-bg skeleton" 
+                   data-bg="<?= htmlspecialchars($imagen, ENT_QUOTES, 'UTF-8') ?>"
+                   style="background-image: url('<?= htmlspecialchars($imagen, ENT_QUOTES, 'UTF-8') ?>');"></div>
             </div>
 
             <div class="category-header">
@@ -815,8 +910,30 @@ function getSubcategorias($subcats_data) {
       rootMargin: '50px' // Cargar imágenes 50px antes de entrar en viewport
     });
 
-    document.querySelectorAll('.category-image').forEach(img => {
-      imageObserver.observe(img);
+    // Observar tanto .category-image como .lazy-bg
+    document.querySelectorAll('.category-image, .lazy-bg').forEach(img => {
+      // Si estamos en la página de inicio, cargar imágenes inmediatamente
+      const isHomePage = document.querySelector('.products-grid.home-categories') !== null;
+      if (isHomePage) {
+        const bgUrl = img.dataset.bg;
+        if (bgUrl) {
+          const testImg = new Image();
+          testImg.onload = () => {
+            img.style.backgroundImage = `url('${bgUrl}')`;
+            img.classList.remove('skeleton');
+          };
+          testImg.onerror = () => {
+            img.style.backgroundImage = `url('${BASE_URL}images/categorias/default.jpg')`;
+            img.classList.remove('skeleton');
+          };
+          testImg.src = bgUrl;
+        } else {
+          img.classList.remove('skeleton');
+        }
+      } else {
+        // En otras páginas, usar lazy loading
+        imageObserver.observe(img);
+      }
     });
   }
   

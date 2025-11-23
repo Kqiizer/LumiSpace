@@ -488,7 +488,7 @@ if ($q) {
         }
         const data = await res.json();
         if (!data.ok) throw new Error(data.msg||'Error');
-        if (data.in_wishlist) location.href = BASE + 'includes/favoritos.php';
+        if (data.in_wishlist) location.href = BASE + 'index/favoritos.php';
       } catch(e) {
         alert('No se pudo actualizar tu lista de favoritos.');
         console.error(e);
@@ -535,7 +535,7 @@ if ($q) {
           });
           const data = await res.json();
           if (!data.ok) throw new Error(data.msg||'Error');
-          if (data.in_wishlist) location.href = BASE + 'includes/favoritos.php';
+          if (data.in_wishlist) location.href = BASE + 'index/favoritos.php';
         } catch(e) {
           alert('No se pudo actualizar tu lista de favoritos.');
         } finally { wish.disabled = false; }

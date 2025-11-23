@@ -36,7 +36,8 @@ $featuredPost = !empty($posts) ? $posts[0] : null;
         <div class="container hero-content">
             <span class="hero-tag">Destacado</span>
             <h1 class="hero-title">
-                <?= $featuredPost ? htmlspecialchars($featuredPost['titulo']) : 'Bienvenido al Blog' ?></h1>
+                <?= $featuredPost ? htmlspecialchars($featuredPost['titulo']) : 'Bienvenido al Blog' ?>
+            </h1>
             <p class="hero-excerpt">
                 <?= $featuredPost ? substr(strip_tags($featuredPost['contenido']), 0, 150) . '...' : 'Explora las últimas tendencias en iluminación y diseño.' ?>
             </p>

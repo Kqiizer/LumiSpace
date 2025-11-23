@@ -560,9 +560,6 @@ function getProductosMasVendidosMes(int $limit = 10): array
 
 
 /* ============================================================
-   Funciones para el Dashboard Admin
-<?php
-/* ============================================================
    🔧 FUNCIONES ADMIN USUARIOS (Panel)
    ============================================================ */
 
@@ -1818,7 +1815,20 @@ function actualizarProveedor(int $id, string $nombre, ?string $contacto, ?string
 function getCategorias(): array
 {
     $conn = getDBConnection();
-    $sql = "SELECT id, nombre, descripcion FROM categorias ORDER BY nombre ASC";
+    // Verificar si existe la columna 'imagen' o 'featured_image'
+    $check_imagen = $conn->query("SHOW COLUMNS FROM categorias LIKE 'imagen'");
+    $check_featured = $conn->query("SHOW COLUMNS FROM categorias LIKE 'featured_image'");
+    $has_imagen = $check_imagen && $check_imagen->num_rows > 0;
+    $has_featured = $check_featured && $check_featured->num_rows > 0;
+    
+    $image_col = '';
+    if ($has_featured) {
+        $image_col = ', featured_image';
+    } elseif ($has_imagen) {
+        $image_col = ', imagen';
+    }
+    
+    $sql = "SELECT id, nombre, descripcion{$image_col} FROM categorias ORDER BY nombre ASC";
     $res = $conn->query($sql);
     return $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
 }
@@ -1867,6 +1877,113 @@ function eliminarCategoria(int $id): bool
     $stmt->bind_param("i", $id);
     return $stmt->execute();
 }
+
+function getBrandsOverview(): array {
+    $conn = getDBConnection();
+    $hasBrandsTable = tableExists($conn, 'marcas');
+    $brands = [];
+
+    $productosTieneMarcaId = columnExists($conn, 'productos', 'marca_id');
+    $productosTieneMarcaTexto = columnExists($conn, 'productos', 'marca');
+
+    if ($hasBrandsTable) {
+        $cols = [];
+        $res = $conn->query("SHOW COLUMNS FROM marcas");
+        if ($res) {
+            while ($row = $res->fetch_assoc()) {
+                $cols[$row['Field']] = true;
+            }
+        }
+
+        $selectFields = ["m.id", "m.nombre"];
+        $selectFields[] = isset($cols['descripcion']) ? "m.descripcion" : "'' AS descripcion";
+        $logoColumn = isset($cols['logo']) ? 'logo' : (isset($cols['imagen']) ? 'imagen' : null);
+        $selectFields[] = $logoColumn ? "m.$logoColumn AS logo_path" : "'' AS logo_path";
+        $selectFields[] = isset($cols['tagline']) ? "m.tagline" : "'' AS tagline";
+        $selectFields[] = isset($cols['campania']) ? "m.campania" : "'' AS campania";
+        $selectFields[] = isset($cols['color_acento']) ? "m.color_acento" : "NULL AS color_acento";
+        $selectFields[] = isset($cols['destacada']) ? "m.destacada" : (isset($cols['es_destacada']) ? "m.es_destacada AS destacada" : "0 AS destacada");
+
+        $join = '';
+        if ($productosTieneMarcaId) {
+            $join = "LEFT JOIN productos p ON p.marca_id = m.id";
+        } elseif ($productosTieneMarcaTexto) {
+            $join = "LEFT JOIN productos p ON LOWER(p.marca) = LOWER(m.nombre)";
+        }
+
+        if ($join !== '') {
+            $ventasCol = columnExists($conn, 'productos', 'ventas') ? 'p.ventas' : '0';
+            $selectFields[] = "COUNT(p.id) AS total_productos";
+            $selectFields[] = "COALESCE(SUM($ventasCol), 0) AS popularidad";
+        } else {
+            $selectFields[] = "0 AS total_productos";
+            $selectFields[] = "0 AS popularidad";
+        }
+
+        $sql = "SELECT " . implode(', ', $selectFields) . " FROM marcas m $join GROUP BY m.id ORDER BY m.nombre ASC";
+        $res = $conn->query($sql);
+        if ($res) {
+            while ($row = $res->fetch_assoc()) {
+                $brands[] = [
+                    'id'          => (int)$row['id'],
+                    'name'        => $row['nombre'] ?? 'Marca',
+                    'description' => $row['descripcion'] ?? '',
+                    'logo'        => publicImageUrl($row['logo_path'] ?? ''),
+                    'tagline'     => $row['tagline'] ?? '',
+                    'campaign'    => $row['campania'] ?? '',
+                    'accent'      => $row['color_acento'] ?? '',
+                    'featured'    => !empty($row['destacada']),
+                    'products'    => (int)($row['total_productos'] ?? 0),
+                    'popularity'  => (int)($row['popularidad'] ?? 0),
+                ];
+            }
+        }
+    }
+
+    if (!$hasBrandsTable || empty($brands)) {
+        if ($productosTieneMarcaTexto) {
+            $sql = "SELECT p.marca AS nombre, COUNT(*) AS total_productos FROM productos p WHERE p.marca IS NOT NULL AND p.marca <> '' GROUP BY p.marca ORDER BY nombre";
+            $res = $conn->query($sql);
+            if ($res) {
+                while ($row = $res->fetch_assoc()) {
+                    $brands[] = [
+                        'id'          => null,
+                        'name'        => $row['nombre'],
+                        'description' => '',
+                        'logo'        => publicImageUrl('images/default.png'),
+                        'tagline'     => '',
+                        'campaign'    => '',
+                        'accent'      => '',
+                        'featured'    => false,
+                        'products'    => (int)$row['total_productos'],
+                        'popularity'  => (int)$row['total_productos'],
+                    ];
+                }
+            }
+        }
+    }
+
+    usort($brands, static function ($a, $b) {
+        return $b['popularity'] <=> $a['popularity'];
+    });
+
+    if (!empty($brands)) {
+        $highlightCount = 0;
+        foreach ($brands as &$brand) {
+            if ($brand['featured']) {
+                continue;
+            }
+            if ($highlightCount < 3) {
+                $brand['featured'] = true;
+                $highlightCount++;
+            }
+        }
+        unset($brand);
+    }
+
+    return $brands;
+}
+
 function favoritosAvailable(): bool
 {
     $conn = getDBConnection();
@@ -1906,6 +2023,66 @@ function toggleFavorito(int $usuario_id, int $producto_id): bool
     }
 }
 
+/**
+ * Construye dinámicamente el SELECT y los JOIN necesarios para consultar productos
+ * considerando columnas opcionales (precio_original, descuento, etc.)
+ *
+ * @return array{select:string[],join:string}
+ */
+function lsFavoritesProductSelect(mysqli $conn, bool $withAddedAt = false): array {
+    static $cache = [];
+    $key = $withAddedAt ? 'with_added_at' : 'without_added_at';
+    if (isset($cache[$key])) {
+        return $cache[$key];
+    }
+
+    $cols = [];
+    $res = $conn->query("SHOW COLUMNS FROM productos");
+    if ($res) {
+        while ($row = $res->fetch_assoc()) {
+            $cols[$row['Field']] = true;
+        }
+    }
+
+    $select = [
+        "p.id",
+        "p.nombre",
+        isset($cols['descripcion']) ? "p.descripcion" : "'' AS descripcion",
+        isset($cols['precio']) ? "p.precio" : "0 AS precio",
+        isset($cols['precio_original']) ? "p.precio_original" : "NULL AS precio_original",
+        isset($cols['descuento']) ? "p.descuento" : "0 AS descuento",
+        isset($cols['stock']) ? "p.stock" : "0 AS stock",
+        isset($cols['imagen']) ? "p.imagen" : "'' AS imagen",
+    ];
+
+    if ($withAddedAt) {
+        $select[] = "f.creado_en AS agregado_en";
+    } else {
+        $select[] = "NULL AS agregado_en";
+    }
+
+    static $hasCategoriasTable = null;
+    if ($hasCategoriasTable === null) {
+        $hasCategoriasTable = tableExists($conn, 'categorias');
+    }
+
+    if (isset($cols['categoria_id']) && $hasCategoriasTable) {
+        $join = "LEFT JOIN categorias c ON p.categoria_id = c.id";
+        $select[] = "COALESCE(c.nombre, '') AS categoria";
+    } elseif (isset($cols['categoria'])) {
+        $join = "";
+        $select[] = "p.categoria AS categoria";
+    } else {
+        $join = "";
+        $select[] = "'' AS categoria";
+    }
+
+    return $cache[$key] = [
+        'select' => $select,
+        'join'   => $join,
+    ];
+}
+
 function getFavoritosCount(?int $usuario_id): int
 {
     if ($usuario_id && $usuario_id > 0 && favoritosAvailable()) {
@@ -1923,11 +2100,12 @@ function getFavoritos(?int $usuario_id): array
 {
     if ($usuario_id && $usuario_id > 0 && favoritosAvailable()) {
         $conn = getDBConnection();
+        $parts = lsFavoritesProductSelect($conn, true);
         $sql = "
-            SELECT p.id, p.nombre, p.descripcion, p.precio, p.imagen, c.nombre AS categoria
+            SELECT " . implode(", ", $parts['select']) . "
             FROM favoritos f
             JOIN productos p ON f.producto_id = p.id
-            LEFT JOIN categorias c ON p.categoria_id = c.id
+            {$parts['join']}
             WHERE f.usuario_id = ?
             ORDER BY f.creado_en DESC
         ";
@@ -1939,7 +2117,10 @@ function getFavoritos(?int $usuario_id): array
         $stmt->bind_param("i", $usuario_id);
         $stmt->execute();
         $res = $stmt->get_result();
-        return $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
+        $rows = $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
+        return array_map(static fn($row) => array_merge($row, [
+            'imagen' => publicImageUrl($row['imagen'] ?? ''),
+        ]), $rows);
     }
     // fallback sesión
     if (!isset($_SESSION))
@@ -1949,13 +2130,13 @@ function getFavoritos(?int $usuario_id): array
         return [];
 
     $conn = getDBConnection();
+    $parts = lsFavoritesProductSelect($conn, false);
     $placeholders = implode(',', array_fill(0, count($favoritos_ids), '?'));
-    $types = str_repeat('i', count($favoritos_ids));
-
+    $types = str_repeat('i', count($favoritos_ids) * 2);
     $sql = "
-        SELECT p.id, p.nombre, p.descripcion, p.precio, p.imagen, c.nombre AS categoria
+        SELECT " . implode(", ", $parts['select']) . "
         FROM productos p
-        LEFT JOIN categorias c ON p.categoria_id = c.id
+        {$parts['join']}
         WHERE p.id IN ($placeholders)
         ORDER BY FIELD(p.id, $placeholders)
     ";
@@ -1966,12 +2147,527 @@ function getFavoritos(?int $usuario_id): array
         return [];
     }
 
-    // Bind dinámico de parámetros
     $params = array_merge($favoritos_ids, $favoritos_ids);
-    $stmt->bind_param($types . $types, ...$params);
+    $stmt->bind_param($types, ...$params);
     $stmt->execute();
     $res = $stmt->get_result();
-    return $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
+    $rows = $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
+    return array_map(static fn($row) => array_merge($row, [
+        'imagen' => publicImageUrl($row['imagen'] ?? ''),
+    ]), $rows);
+}
+
+/**
+ * ============================================================
+ * BLOG / CONTENIDO
+ * ============================================================
+ */
+function getBlogPostsData(): array {
+    $conn = getDBConnection();
+    $hasBlogTable = tableExists($conn, 'blog_posts');
+    $posts = [];
+
+    if ($hasBlogTable) {
+        $columns = [];
+        $res = $conn->query("SHOW COLUMNS FROM blog_posts");
+        if ($res) {
+            while ($row = $res->fetch_assoc()) {
+                $columns[$row['Field']] = true;
+            }
+        }
+
+        $select = [
+            'id',
+            'titulo',
+            $columns['slug'] ?? false ? 'slug' : "'' AS slug",
+            $columns['categoria'] ?? false ? 'categoria' : ($columns['categoria_id'] ?? false ? 'categoria_id' : "'' AS categoria"),
+            $columns['tags'] ?? false ? 'tags' : "'' AS tags",
+            $columns['resumen'] ?? false ? 'resumen' : "SUBSTRING(contenido,1,180) AS resumen",
+            'contenido',
+            $columns['autor'] ?? false ? 'autor' : "'' AS autor",
+            $columns['imagen_destacada'] ?? false ? 'imagen_destacada' : ($columns['imagen'] ?? false ? 'imagen' : "'' AS imagen_destacada"),
+            $columns['publicado_en'] ?? false ? 'publicado_en' : ($columns['created_at'] ?? false ? 'created_at' : 'NOW() AS publicado_en'),
+            $columns['relacionados'] ?? false ? 'relacionados' : "'' AS relacionados",
+            $columns['destacado'] ?? false ? 'destacado' : "0 AS destacado",
+        ];
+
+        $sql = "SELECT " . implode(', ', $select) . " FROM blog_posts WHERE estado IS NULL OR estado = 'publicado' ORDER BY publicado_en DESC";
+        $res = $conn->query($sql);
+        if ($res) {
+            while ($row = $res->fetch_assoc()) {
+                $postTags = [];
+                if (!empty($row['tags'])) {
+                    $postTags = array_values(array_filter(array_map('trim', explode(',', $row['tags']))));
+                }
+                $related = [];
+                if (!empty($row['relacionados'])) {
+                    $related = array_values(array_filter(array_map('trim', explode(',', $row['relacionados']))));
+                }
+                $posts[] = [
+                    'id'          => (int)$row['id'],
+                    'title'       => $row['titulo'] ?? 'Artículo',
+                    'slug'        => $row['slug'] ?? '',
+                    'category'    => $row['categoria'] ?? ($row['categoria_id'] ?? 'General'),
+                    'tags'        => $postTags,
+                    'summary'     => $row['resumen'] ?? '',
+                    'content'     => $row['contenido'] ?? '',
+                    'author'      => $row['autor'] ?? 'Equipo LumiSpace',
+                    'image'       => publicImageUrl($row['imagen_destacada'] ?? ''),
+                    'published_at'=> $row['publicado_en'] ?? date('Y-m-d'),
+                    'related'     => $related,
+                    'featured'    => !empty($row['destacado']),
+                ];
+            }
+        }
+    }
+
+    if (empty($posts)) {
+        $posts = [
+            [
+                'id' => 1,
+                'title' => 'Tendencias de iluminación 2025',
+                'category' => 'Tendencias',
+                'tags' => ['Inspiración', 'Decoración'],
+                'summary' => 'Descubre cómo integrar iluminación inteligente y acabados cálidos para crear ambientes acogedores.',
+                'content' => 'La iluminación se convierte en protagonista con texturas naturales, domótica accesible y piezas escultóricas...',
+                'author' => 'Equipo LumiSpace',
+                'image' => publicImageUrl('images/blog/tendencias.jpg'),
+                'published_at' => date('Y-m-d', strtotime('-10 days')),
+                'related' => ['Lámpara Colgante Moderna Oslo', 'Lámpara de Techo Colgante'],
+                'featured' => true,
+            ],
+            [
+                'id' => 2,
+                'title' => 'Guía para iluminar tu home office',
+                'category' => 'Guías',
+                'tags' => ['Productividad', 'Tips'],
+                'summary' => 'Te contamos cómo equilibrar luz natural y artificial para evitar fatiga visual.',
+                'content' => 'Trabajar desde casa requiere un esquema de luz que combine tareas, ambiente y acentos...',
+                'author' => 'María Hernández',
+                'image' => publicImageUrl('images/blog/homeoffice.jpg'),
+                'published_at' => date('Y-m-d', strtotime('-20 days')),
+                'related' => ['Lámpara de Mesa Escandinava', 'Lámpara Mesa Smart RGB'],
+                'featured' => false,
+            ],
+            [
+                'id' => 3,
+                'title' => 'Cómo elegir focos eficientes',
+                'category' => 'Consejos',
+                'tags' => ['Sustentabilidad', 'Ahorro'],
+                'summary' => 'Revisamos temperatura de color, lúmenes y consumo para que hagas una compra inteligente.',
+                'content' => 'El LED sigue siendo el rey, pero hay matices importantes al momento de elegir...',
+                'author' => 'Equipo LumiSpace',
+                'image' => publicImageUrl('images/blog/eficientes.jpg'),
+                'published_at' => date('Y-m-d', strtotime('-30 days')),
+                'related' => ['Kit Bombillas LED vintage'],
+                'featured' => false,
+            ],
+        ];
+    }
+
+    $categories = [];
+    $tags = [];
+    foreach ($posts as $post) {
+        $category = $post['category'] ?: 'General';
+        $categories[$category] = ($categories[$category] ?? 0) + 1;
+        foreach ($post['tags'] as $tag) {
+            $tags[$tag] = ($tags[$tag] ?? 0) + 1;
+        }
+    }
+
+    usort($posts, static fn($a, $b) => strtotime($b['published_at']) <=> strtotime($a['published_at']));
+
+    return [
+        'posts'      => $posts,
+        'categories' => $categories,
+        'tags'       => $tags,
+    ];
+}
+
+/**
+ * ============================================================
+ * 🔍 Buscador avanzado
+ * ============================================================
+ */
+function lsGetProductColumnsMeta(): array {
+    static $meta = null;
+    if ($meta !== null) {
+        return $meta;
+    }
+
+    $conn = getDBConnection();
+    $cols = [];
+    $res = $conn->query("SHOW COLUMNS FROM productos");
+    if ($res) {
+        while ($row = $res->fetch_assoc()) {
+            $cols[$row['Field']] = true;
+        }
+    }
+
+    $meta = [
+        'has_precio'          => isset($cols['precio']),
+        'has_precio_original' => isset($cols['precio_original']),
+        'has_descuento'       => isset($cols['descuento']),
+        'has_stock'           => isset($cols['stock']) || isset($cols['existencia']),
+        'stock_column'        => isset($cols['stock']) ? 'stock' : (isset($cols['existencia']) ? 'existencia' : null),
+        'has_categoria_id'    => isset($cols['categoria_id']),
+        'has_categoria_text'  => isset($cols['categoria']),
+        'has_marca_id'        => isset($cols['marca_id']),
+        'has_proveedor_id'    => isset($cols['proveedor_id']),
+        'has_color'           => isset($cols['color']),
+        'has_talla'           => isset($cols['talla']) || isset($cols['tamano']),
+        'talla_column'        => isset($cols['talla']) ? 'talla' : (isset($cols['tamano']) ? 'tamano' : null),
+        'has_disponible'      => isset($cols['disponible']),
+        'has_popular'         => isset($cols['ventas']) ? 'ventas' : (isset($cols['visitas']) ? 'visitas' : null),
+        'has_rating'          => isset($cols['calificacion']),
+        'has_created'         => isset($cols['creado_en']) ? 'creado_en' : (isset($cols['created_at']) ? 'created_at' : null),
+    ];
+
+    return $meta;
+}
+
+function normalizeSearchProductRow(array $row): array {
+    return [
+        'id'             => (int)($row['id'] ?? 0),
+        'name'           => $row['nombre'] ?? 'Producto',
+        'description'    => $row['descripcion'] ?? '',
+        'category'       => $row['categoria'] ?? 'Otros',
+        'brand'          => $row['marca'] ?? ($row['proveedor'] ?? ''),
+        'price'          => isset($row['precio']) ? (float)$row['precio'] : 0.0,
+        'originalPrice'  => isset($row['precio_original']) && $row['precio_original'] !== null ? (float)$row['precio_original'] : null,
+        'discount'       => isset($row['descuento']) ? (float)$row['descuento'] : 0.0,
+        'stock'          => isset($row['stock']) ? (int)$row['stock'] : 0,
+        'availability'   => isset($row['disponible']) ? (bool)$row['disponible'] : (isset($row['stock']) ? ((int)$row['stock'] > 0) : true),
+        'color'          => $row['color'] ?? null,
+        'size'           => $row['talla'] ?? null,
+        'rating'         => isset($row['calificacion']) ? (float)$row['calificacion'] : null,
+        'image'          => publicImageUrl($row['imagen'] ?? ''),
+        'created_at'     => $row['creado_en'] ?? ($row['created_at'] ?? null),
+        'popularity'     => isset($row['popularity']) ? (int)$row['popularity'] : (isset($row['ventas']) ? (int)$row['ventas'] : (isset($row['visitas']) ? (int)$row['visitas'] : 0)),
+    ];
+}
+
+function searchProductos(array $options = []): array {
+    $conn = getDBConnection();
+    $meta = lsGetProductColumnsMeta();
+
+    $query      = trim((string)($options['q'] ?? ''));
+    $category   = trim((string)($options['category'] ?? ''));
+    $brand      = trim((string)($options['brand'] ?? ''));
+    $color      = trim((string)($options['color'] ?? ''));
+    $size       = trim((string)($options['size'] ?? ''));
+    $available  = isset($options['availability']) ? (string)$options['availability'] : '';
+    $minPrice   = isset($options['min_price']) ? (float)$options['min_price'] : null;
+    $maxPrice   = isset($options['max_price']) ? (float)$options['max_price'] : null;
+    $discountOnly = !empty($options['discount_only']);
+    $sort       = (string)($options['sort'] ?? 'relevance');
+    $page       = max(1, (int)($options['page'] ?? 1));
+    $perPage    = (int)($options['per_page'] ?? 12);
+    $perPage    = min(max($perPage, 6), 48);
+
+    $select = [
+        "p.id",
+        "p.nombre",
+        $meta['has_precio'] ? "p.precio" : "0 AS precio",
+        $meta['has_precio_original'] ? "p.precio_original" : "NULL AS precio_original",
+        $meta['has_descuento'] ? "p.descuento" : "0 AS descuento",
+        $meta['has_stock'] ? "p.{$meta['stock_column']} AS stock" : "0 AS stock",
+        $meta['has_disponible'] ? "p.disponible" : "NULL AS disponible",
+        $meta['has_color'] ? "p.color" : "NULL AS color",
+        $meta['has_talla'] ? "p.{$meta['talla_column']} AS talla" : "NULL AS talla",
+        $meta['has_rating'] ? "p.calificacion" : "NULL AS calificacion",
+        $meta['has_created'] ? "p.{$meta['has_created']} AS creado_en" : "NULL AS creado_en",
+        "p.descripcion",
+        "p.imagen",
+    ];
+
+    $joins = "";
+    if ($meta['has_categoria_id'] && tableExists($conn, 'categorias')) {
+        $joins .= " LEFT JOIN categorias c ON p.categoria_id = c.id";
+        $select[] = "COALESCE(c.nombre, 'Sin categoría') AS categoria";
+    } elseif ($meta['has_categoria_text']) {
+        $select[] = "p.categoria AS categoria";
+    } else {
+        $select[] = "'Otros' AS categoria";
+    }
+
+    $brandWhereAlias = null;
+    if ($meta['has_marca_id'] && tableExists($conn, 'marcas')) {
+        $joins .= " LEFT JOIN marcas m ON p.marca_id = m.id";
+        $select[] = "m.nombre AS marca";
+        $brandWhereAlias = "m.nombre";
+    } elseif ($meta['has_proveedor_id'] && tableExists($conn, 'proveedores')) {
+        $joins .= " LEFT JOIN proveedores pr ON p.proveedor_id = pr.id";
+        $select[] = "pr.nombre AS marca";
+        $brandWhereAlias = "pr.nombre";
+    } else {
+        $select[] = "'' AS marca";
+    }
+
+    $where = ["1=1"];
+    $params = [];
+    $types = "";
+
+    if ($query !== '') {
+        $like = '%' . $query . '%';
+        $whereParts = [
+            "p.nombre LIKE ?",
+            "p.descripcion LIKE ?"
+        ];
+        $params[] = $like; $types .= "s";
+        $params[] = $like; $types .= "s";
+
+        if ($meta['has_categoria_id']) {
+            $whereParts[] = "c.nombre LIKE ?";
+            $params[] = $like; $types .= "s";
+        } elseif ($meta['has_categoria_text']) {
+            $whereParts[] = "p.categoria LIKE ?";
+            $params[] = $like; $types .= "s";
+        }
+        $whereParts[] = "SOUNDEX(p.nombre) = SOUNDEX(?)";
+        $params[] = $query; $types .= "s";
+
+        $where[] = '(' . implode(' OR ', $whereParts) . ')';
+    }
+
+    if ($category !== '') {
+        if ($meta['has_categoria_id']) {
+            if (ctype_digit($category)) {
+                $where[] = "c.id = ?";
+                $params[] = (int)$category; $types .= "i";
+            } else {
+                $where[] = "LOWER(c.nombre) = ?";
+                $params[] = strtolower($category); $types .= "s";
+            }
+        } elseif ($meta['has_categoria_text']) {
+            $where[] = "LOWER(p.categoria) = ?";
+            $params[] = strtolower($category); $types .= "s";
+        }
+    }
+
+    if ($brand !== '' && $brandWhereAlias) {
+        $where[] = "LOWER($brandWhereAlias) = ?";
+        $params[] = strtolower($brand); $types .= "s";
+    }
+
+    if ($color !== '' && $meta['has_color']) {
+        $where[] = "LOWER(p.color) = ?";
+        $params[] = strtolower($color); $types .= "s";
+    }
+
+    if ($size !== '' && $meta['has_talla']) {
+        $where[] = "LOWER(p.{$meta['talla_column']}) = ?";
+        $params[] = strtolower($size); $types .= "s";
+    }
+
+    if ($available !== '') {
+        if ($available === 'in') {
+            if ($meta['has_disponible']) {
+                $where[] = "p.disponible = 1";
+            } elseif ($meta['has_stock']) {
+                $where[] = "p.{$meta['stock_column']} > 0";
+            }
+        } elseif ($available === 'out') {
+            if ($meta['has_disponible']) {
+                $where[] = "p.disponible = 0";
+            } elseif ($meta['has_stock']) {
+                $where[] = "p.{$meta['stock_column']} <= 0";
+            }
+        }
+    }
+
+    if ($minPrice !== null && $meta['has_precio']) {
+        $where[] = "p.precio >= ?";
+        $params[] = $minPrice; $types .= "d";
+    }
+
+    if ($maxPrice !== null && $meta['has_precio']) {
+        $where[] = "p.precio <= ?";
+        $params[] = $maxPrice; $types .= "d";
+    }
+
+    if ($discountOnly && $meta['has_descuento']) {
+        $where[] = "p.descuento > 0";
+    }
+
+    $whereSql = 'WHERE ' . implode(' AND ', $where);
+
+    $sql = "SELECT " . implode(', ', $select) . " FROM productos p {$joins} {$whereSql} LIMIT 500";
+    $stmt = $conn->prepare($sql);
+    if ($types !== '') {
+        $stmt->bind_param($types, ...$params);
+    }
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $rawRows = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
+
+    $normalized = array_map('normalizeSearchProductRow', $rawRows);
+
+    // Scoring for relevance
+    if ($query !== '') {
+        $queryLower = strtolower($query);
+        foreach ($normalized as &$item) {
+            $score = 0;
+            $nameLower = strtolower($item['name']);
+            similar_text($queryLower, $nameLower, $percent);
+            $score += $percent;
+            if (!empty($item['description'])) {
+                similar_text($queryLower, strtolower($item['description']), $descPercent);
+                $score += $descPercent / 4;
+            }
+            $lev = levenshtein($queryLower, $nameLower);
+            if ($lev <= max(3, strlen($queryLower) / 3)) {
+                $score += 20;
+            }
+            $item['_score'] = $score;
+        }
+        unset($item);
+    }
+
+    // Sorting
+    $sortKey = strtolower($sort);
+    usort($normalized, static function ($a, $b) use ($sortKey) {
+        switch ($sortKey) {
+            case 'price_asc':
+                return $a['price'] <=> $b['price'];
+            case 'price_desc':
+                return $b['price'] <=> $a['price'];
+            case 'popularity':
+                return ($b['popularity'] ?? 0) <=> ($a['popularity'] ?? 0);
+            case 'rating':
+                return ($b['rating'] ?? 0) <=> ($a['rating'] ?? 0);
+            case 'newest':
+                return strtotime($b['created_at'] ?? 'now') <=> strtotime($a['created_at'] ?? 'now');
+            default:
+                return ($b['_score'] ?? 0) <=> ($a['_score'] ?? 0);
+        }
+    });
+
+    $total = count($normalized);
+    $totalPages = (int)ceil($total / $perPage);
+    $offset = ($page - 1) * $perPage;
+    $pageItems = array_slice($normalized, $offset, $perPage);
+
+    // Flag productos que ya están en favoritos para el usuario autenticado
+    $userFavSet = [];
+    $userId = $_SESSION['usuario_id'] ?? 0;
+    if ($userId && tableExists($conn, 'favoritos')) {
+        $stmtFav = $conn->prepare("SELECT producto_id FROM favoritos WHERE usuario_id=?");
+        if ($stmtFav) {
+            $stmtFav->bind_param("i", $userId);
+            $stmtFav->execute();
+            $favRes = $stmtFav->get_result();
+            if ($favRes) {
+                $ids = array_map('intval', array_column($favRes->fetch_all(MYSQLI_ASSOC), 'producto_id'));
+                foreach ($ids as $favId) {
+                    $userFavSet[$favId] = true;
+                }
+            }
+            $stmtFav->close();
+        }
+    }
+
+    foreach ($pageItems as &$item) {
+        $item['in_wishlist'] = isset($userFavSet[$item['id']]);
+    }
+    unset($item);
+
+    // Facets
+    $facets = [
+        'categories'    => [],
+        'brands'        => [],
+        'colors'        => [],
+        'sizes'         => [],
+        'availability'  => ['in_stock' => 0, 'out_of_stock' => 0],
+        'price'         => ['min' => null, 'max' => null],
+    ];
+
+    foreach ($normalized as $item) {
+        $cat = $item['category'] ?? 'Otros';
+        $facets['categories'][$cat] = ($facets['categories'][$cat] ?? 0) + 1;
+
+        if (!empty($item['brand'])) {
+            $facets['brands'][$item['brand']] = ($facets['brands'][$item['brand']] ?? 0) + 1;
+        }
+        if (!empty($item['color'])) {
+            $facets['colors'][$item['color']] = ($facets['colors'][$item['color']] ?? 0) + 1;
+        }
+        if (!empty($item['size'])) {
+            $facets['sizes'][$item['size']] = ($facets['sizes'][$item['size']] ?? 0) + 1;
+        }
+        if (!empty($item['availability'])) {
+            $facets['availability']['in_stock'] += 1;
+        } else {
+            $facets['availability']['out_of_stock'] += 1;
+        }
+        $facets['price']['min'] = $facets['price']['min'] === null ? $item['price'] : min($facets['price']['min'], $item['price']);
+        $facets['price']['max'] = $facets['price']['max'] === null ? $item['price'] : max($facets['price']['max'], $item['price']);
+    }
+
+    // Clean temp keys
+    foreach ($pageItems as &$item) {
+        unset($item['_score']);
+    }
+    unset($item);
+
+    return [
+        'results' => $pageItems,
+        'total'   => $total,
+        'page'    => $page,
+        'per_page'=> $perPage,
+        'total_pages' => $totalPages,
+        'facets'  => $facets,
+    ];
+}
+
+function getSearchSuggestions(string $term, int $limit = 8): array {
+    $term = trim($term);
+    if ($term === '') {
+        return [];
+    }
+    $conn = getDBConnection();
+    $like = '%' . $term . '%';
+    $stmt = $conn->prepare("SELECT DISTINCT p.nombre FROM productos p WHERE p.nombre LIKE ? ORDER BY p.nombre ASC LIMIT ?");
+    $stmt->bind_param("si", $like, $limit * 3);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    $names = $res ? array_column($res->fetch_all(MYSQLI_ASSOC), 'nombre') : [];
+
+    // Sort by similarity
+    $termLower = strtolower($term);
+    usort($names, static function ($a, $b) use ($termLower) {
+        similar_text($termLower, strtolower($a), $aScore);
+        similar_text($termLower, strtolower($b), $bScore);
+        return $bScore <=> $aScore;
+    });
+
+    return array_slice($names, 0, $limit);
+}
+
+function logSearchQuery(?int $usuario_id, string $query, array $filters = [], int $resultsCount = 0): void {
+    $query = trim($query);
+    if ($query === '') {
+        return;
+    }
+    $conn = getDBConnection();
+    static $tableChecked = false;
+    if (!$tableChecked) {
+        $sql = "CREATE TABLE IF NOT EXISTS busquedas (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            usuario_id INT NULL,
+            termino VARCHAR(255) NOT NULL,
+            filtros TEXT NULL,
+            resultados INT DEFAULT 0,
+            creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+        $conn->query($sql);
+        $tableChecked = true;
+    }
+    $stmt = $conn->prepare("INSERT INTO busquedas (usuario_id, termino, filtros, resultados) VALUES (?, ?, ?, ?)");
+    $filtersJson = json_encode($filters, JSON_UNESCAPED_UNICODE);
+    $uid = $usuario_id ?: null;
+    $stmt->bind_param("issi", $uid, $query, $filtersJson, $resultsCount);
+    $stmt->execute();
 }
 
 /* ============================================================
