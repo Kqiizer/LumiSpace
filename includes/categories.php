@@ -313,7 +313,17 @@ function getSubcategorias($subcats_data) {
       height: 100%;
       background-size: cover;
       background-position: center;
+      background-repeat: no-repeat;
       transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    /* Clase lazy-bg para compatibilidad con la página de categorías */
+    .lazy-bg {
+      width: 100%;
+      height: 100%;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
     }
 
     .product-category:hover .category-image {
@@ -733,13 +743,7 @@ function getSubcategorias($subcats_data) {
               <div class="products-badge <?= $total_productos === 0 ? 'empty' : '' ?>">
                 <?= $total_productos === 0 ? 'Sin productos' : number_format($total_productos) . ' producto' . ($total_productos !== 1 ? 's' : '') ?>
               </div>
-              <div class="category-image skeleton" data-bg="<?= htmlspecialchars($imagen) ?>"
-                   style="background-image:url('<?= htmlspecialchars($imagen, ENT_QUOTES, 'UTF-8') ?>');">
-                <img src="<?= htmlspecialchars($imagen, ENT_QUOTES, 'UTF-8') ?>" 
-                     alt="<?= htmlspecialchars($nombre, ENT_QUOTES, 'UTF-8') ?>" 
-                     loading="lazy"
-                     style="width: 100%; height: 100%; object-fit: cover; display: block;">
-              </div>
+              <div class="category-image lazy-bg skeleton" data-bg="<?= htmlspecialchars($imagen, ENT_QUOTES, 'UTF-8') ?>"></div>
             </div>
 
             <div class="category-header">
@@ -898,8 +902,30 @@ function getSubcategorias($subcats_data) {
       rootMargin: '50px' // Cargar imágenes 50px antes de entrar en viewport
     });
 
-    document.querySelectorAll('.category-image').forEach(img => {
-      imageObserver.observe(img);
+    // Observar tanto .category-image como .lazy-bg
+    document.querySelectorAll('.category-image, .lazy-bg').forEach(img => {
+      // Si estamos en la página de inicio, cargar imágenes inmediatamente
+      const isHomePage = document.querySelector('.products-grid.home-categories') !== null;
+      if (isHomePage) {
+        const bgUrl = img.dataset.bg;
+        if (bgUrl) {
+          const testImg = new Image();
+          testImg.onload = () => {
+            img.style.backgroundImage = `url('${bgUrl}')`;
+            img.classList.remove('skeleton');
+          };
+          testImg.onerror = () => {
+            img.style.backgroundImage = `url('${BASE_URL}images/categorias/default.jpg')`;
+            img.classList.remove('skeleton');
+          };
+          testImg.src = bgUrl;
+        } else {
+          img.classList.remove('skeleton');
+        }
+      } else {
+        // En otras páginas, usar lazy loading
+        imageObserver.observe(img);
+      }
     });
   }
   
