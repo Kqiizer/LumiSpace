@@ -66,6 +66,33 @@ $stats = [
     'clientes' => (int)($conn->query("SELECT COUNT(*) as total FROM usuarios WHERE rol!='admin'")->fetch_assoc()['total'] ?? 0),
 ];
 
+$featuredCatalog = [
+    [
+        'nombre' => 'Colgante Nordic Beige',
+        'descripcion' => 'Textura suave y difusor cálido para comedores íntimos.',
+        'imagen' => $BASE . 'imagenes/lamparas/deco2.jpg',
+        'precio' => '$129.00'
+    ],
+    [
+        'nombre' => 'Lámpara Studio Azul',
+        'descripcion' => 'Aluminio satinado con acabado mate y cable textil.',
+        'imagen' => $BASE . 'imagenes/lamparas/deco3.jpg',
+        'precio' => '$149.00'
+    ],
+    [
+        'nombre' => 'Pared Verde Olivo',
+        'descripcion' => 'Ideal para crear acentos en salas y pasillos.',
+        'imagen' => $BASE . 'imagenes/lamparas/deco4.jpg',
+        'precio' => '$89.00'
+    ],
+    [
+        'nombre' => 'Colgante Arena Duo',
+        'descripcion' => 'Diseño doble que mezcla madera clara y metal.',
+        'imagen' => $BASE . 'imagenes/lamparas/lamp larga.jpg',
+        'precio' => '$159.00'
+    ],
+];
+
 // ==========================================
 // FUNCIÓN HELPER PARA IMÁGENES
 // ==========================================
@@ -306,6 +333,106 @@ function img_url($path, $BASE, $folder = 'productos') {
             letter-spacing: 2px;
             opacity: 0.85;
             margin-top: 6px;
+        }
+
+        /* ==========================================
+           CATÁLOGO DESTACADO
+           ========================================== */
+        .catalog-showcase {
+            padding: 70px 0;
+            background: linear-gradient(120deg, rgba(255,255,255,0.9), rgba(244, 236, 225, 0.9));
+        }
+
+        .catalog-showcase .showcase-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(280px, 1fr));
+            gap: 32px;
+        }
+
+        .showcase-card {
+            background: var(--bg-white);
+            border-radius: 30px;
+            padding: 28px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border-color);
+        }
+
+        .showcase-card:nth-child(even) {
+            direction: rtl;
+        }
+
+        .showcase-card:nth-child(even) .showcase-media,
+        .showcase-card:nth-child(even) .showcase-content {
+            direction: ltr;
+        }
+
+        .showcase-media {
+            background: var(--bg-secondary);
+            border-radius: 22px;
+            padding: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .showcase-media img {
+            width: 100%;
+            height: 220px;
+            object-fit: contain;
+        }
+
+        .showcase-content h3 {
+            font-size: 1.45rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 10px;
+        }
+
+        .showcase-content p {
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .showcase-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 20px;
+            border-radius: 999px;
+            border: 1.5px solid var(--primary-color);
+            color: var(--primary-color);
+            font-weight: 600;
+            text-decoration: none;
+            transition: var(--transition);
+        }
+
+        .showcase-action i {
+            font-size: 0.9rem;
+        }
+
+        .showcase-action:hover {
+            background: var(--primary-color);
+            color: #fff;
+            box-shadow: var(--shadow-sm);
+        }
+
+        @media (max-width: 992px) {
+            .catalog-showcase .showcase-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .showcase-card {
+                grid-template-columns: 1fr;
+            }
+
+            .showcase-card:nth-child(even) {
+                direction: ltr;
+            }
         }
 
         .hero-stats {
@@ -953,6 +1080,36 @@ function img_url($path, $BASE, $folder = 'productos') {
                         <span class="hero-stat-number"><?= $stats['clientes'] ?></span>
                         <span class="hero-stat-label">Clientes</span>
                     </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Catálogo Destacado -->
+        <section class="catalog-showcase">
+            <div class="container">
+                <div class="section-header" style="margin-bottom: 45px;">
+                    <span class="section-label">Destacados del mes</span>
+                    <h2 class="section-title">Selección minimalista para tus espacios</h2>
+                    <p class="section-description">Mezclamos tonos beige, grises suaves y madera para lograr una colección equilibrada que ilumina con elegancia.</p>
+                </div>
+                <div class="showcase-grid">
+                    <?php foreach ($featuredCatalog as $item): ?>
+                        <article class="showcase-card">
+                            <div class="showcase-media">
+                                <img src="<?= htmlspecialchars($item['imagen'], ENT_QUOTES, 'UTF-8') ?>"
+                                     alt="<?= htmlspecialchars($item['nombre'], ENT_QUOTES, 'UTF-8') ?>"
+                                     loading="lazy">
+                            </div>
+                            <div class="showcase-content">
+                                <h3><?= htmlspecialchars($item['nombre'], ENT_QUOTES, 'UTF-8') ?></h3>
+                                <p><?= htmlspecialchars($item['descripcion'], ENT_QUOTES, 'UTF-8') ?></p>
+                                <a href="<?= $BASE ?>views/catalogo.php" class="showcase-action">
+                                    <?= htmlspecialchars($item['precio'], ENT_QUOTES, 'UTF-8') ?>
+                                    <i class="fas fa-arrow-right"></i>
+                                </a>
+                            </div>
+                        </article>
+                    <?php endforeach; ?>
                 </div>
             </div>
         </section>
