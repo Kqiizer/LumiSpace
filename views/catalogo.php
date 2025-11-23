@@ -963,9 +963,7 @@ function img_url($path, $BASE, $folder = 'productos') {
 
                 <!-- Botones de categorías -->
                 <?php foreach ($categorias_db as $cat): 
-                    $count = isset($productos_por_categoria[$cat['id']]['productos'])
-                            ? count($productos_por_categoria[$cat['id']]['productos'])
-                            : 0;
+                    $count = $productos_por_categoria[$cat['id']] ?? 0;
 
                     if ($count > 0): ?>
                         <button class="filter-chip" data-category="<?= $cat['id'] ?>">
@@ -1118,9 +1116,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
         <!-- Footer -->
-      <?php include __DIR__ . "/../includes/footer.php"; ?>
+        <?php include __DIR__ . "/../includes/footer.php"; ?>
 
     </div>
 
+    <script>
+        window.BASE_URL = "<?= $BASE ?>";
+    </script>
+    <script src="<?= $BASE ?>js/catalogo.js"></script>
 </body>
 </html>

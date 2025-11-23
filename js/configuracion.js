@@ -1,16 +1,21 @@
+const RAW_BASE_PATH = window.APP_BASE_PATH || '/LumiSpace';
+const APP_BASE_PATH = (RAW_BASE_PATH || '').replace(/\/+$/, '') || '';
+const SESSION_STATUS_ENDPOINT = `${APP_BASE_PATH}/api/auth/session-status.php`;
+
+let sessionState = {
+    checked: false,
+    loggedIn: false,
+    error: false
+};
+
 let userSettings = {
-    addresses: [],
-    paymentMethods: [],
-    account: {
-        email: 'usuario@lumispace.com',
-        phone: '',
-        name: 'Usuario LumiSpace'
-    }
+    paymentMethods: []
 };
 
 // Inicialización
 document.addEventListener('DOMContentLoaded', function() {
     initializeApp();
+    checkSessionState();
 });
 
 function initializeApp() {
@@ -33,12 +38,56 @@ function saveSettings() {
     localStorage.setItem('lumispace_settings', JSON.stringify(userSettings));
 }
 
+async function checkSessionState(forceRefresh = false) {
+    if (sessionState.checked && !forceRefresh) {
+        return sessionState;
+    }
+
+    try {
+        const response = await fetch(SESSION_STATUS_ENDPOINT, {
+            credentials: 'include',
+            cache: 'no-store',
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Estado HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        sessionState = {
+            checked: true,
+            loggedIn: Boolean(data.loggedIn),
+            error: false
+        };
+    } catch (error) {
+        console.warn('No se pudo verificar el estado de la sesión', error);
+        sessionState = {
+            checked: true,
+            loggedIn: false,
+            error: true
+        };
+    }
+
+    updateLogoutButtonState(sessionState.loggedIn && !sessionState.error);
+    return sessionState;
+}
+
+function updateLogoutButtonState(isActive) {
+    const logoutBtn = document.querySelector('.logout-button');
+    if (!logoutBtn) return;
+
+    logoutBtn.classList.toggle('logout-button--disabled', !isActive);
+    logoutBtn.setAttribute('aria-disabled', String(!isActive));
+    logoutBtn.setAttribute('title', isActive ? 'Cerrar sesión' : 'Para cerrar sesión, primero debes iniciar sesión');
+}
+
 // Navegación
 function navigate(section) {
     const pages = {
-        'addresses': showAddresses,
         'payment': showPaymentMethods,
-        'manage': showManageAccount,
         'currency': showCurrencySelector,
         'privacy': showPrivacyPolicy,
         'terms': showTermsConditions,
@@ -48,185 +97,6 @@ function navigate(section) {
     
     if (pages[section]) {
         pages[section]();
-    }
-}
-
-//Direcciones
-function showAddresses() {
-    const addresses = userSettings.addresses;
-    
-    let addressesHTML = '';
-    if (addresses.length === 0) {
-        addressesHTML = `
-            <div class="empty-state">
-                <div class="empty-icon">📍</div>
-                <p class="empty-text">No tienes direcciones guardadas</p>
-            </div>
-        `;
-    } else {
-        addressesHTML = addresses.map((addr, index) => `
-            <div class="address-item">
-                <div class="address-header">
-                    <span class="address-name">${addr.name}</span>
-                    ${addr.isDefault ? '<span class="address-badge">Predeterminada</span>' : ''}
-                </div>
-                <div class="address-details">
-                    ${addr.street}<br>
-                    ${addr.city}, ${addr.state} ${addr.zipCode}<br>
-                    ${addr.country}
-                </div>
-                <div class="address-phone">📞 ${addr.phone}</div>
-                <div class="action-buttons">
-                    <button class="btn-secondary" onclick="editAddress(${index})">
-                        Editar
-                    </button>
-                    <button class="btn-danger" onclick="deleteAddress(${index})">
-                        Eliminar
-                    </button>
-                </div>
-            </div>
-        `).join('');
-    }
-    
-    const content = `
-        <div class="modal-body">
-            ${addressesHTML}
-            <button class="btn-primary" onclick="addNewAddress()">
-                + Agregar Nueva Dirección
-            </button>
-        </div>
-    `;
-    showModal('Mi Libreta de Direcciones', content);
-}
-
-function addNewAddress() {
-    const content = `
-        <div class="modal-body">
-            <form onsubmit="saveNewAddress(event)">
-                <div class="form-group">
-                    <label class="form-label">Nombre completo</label>
-                    <input type="text" class="form-input" id="addrName" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Teléfono</label>
-                    <input type="tel" class="form-input" id="addrPhone" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Calle y número</label>
-                    <input type="text" class="form-input" id="addrStreet" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Ciudad</label>
-                    <input type="text" class="form-input" id="addrCity" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Estado</label>
-                    <input type="text" class="form-input" id="addrState" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Código Postal</label>
-                    <input type="text" class="form-input" id="addrZip" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">País</label>
-                    <input type="text" class="form-input" id="addrCountry" value="México" required>
-                </div>
-                <button type="submit" class="btn-primary">Guardar</button>
-                <button type="button" class="btn-secondary" onclick="showAddresses()">
-                    Cancelar
-                </button>
-            </form>
-        </div>
-    `;
-    showModal('Nueva Dirección', content);
-}
-
-function saveNewAddress(event) {
-    event.preventDefault();
-    const newAddress = {
-        name: document.getElementById('addrName').value,
-        phone: document.getElementById('addrPhone').value,
-        street: document.getElementById('addrStreet').value,
-        city: document.getElementById('addrCity').value,
-        state: document.getElementById('addrState').value,
-        zipCode: document.getElementById('addrZip').value,
-        country: document.getElementById('addrCountry').value,
-        isDefault: userSettings.addresses.length === 0
-    };
-    
-    userSettings.addresses.push(newAddress);
-    saveSettings();
-    showSuccessMessage('Dirección guardada exitosamente');
-    showAddresses();
-}
-
-function editAddress(index) {
-    const addr = userSettings.addresses[index];
-    const content = `
-        <div class="modal-body">
-            <form onsubmit="updateAddress(event, ${index})">
-                <div class="form-group">
-                    <label class="form-label">Nombre completo</label>
-                    <input type="text" class="form-input" id="addrName" value="${addr.name}" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Teléfono</label>
-                    <input type="tel" class="form-input" id="addrPhone" value="${addr.phone}" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Calle y número</label>
-                    <input type="text" class="form-input" id="addrStreet" value="${addr.street}" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Ciudad</label>
-                    <input type="text" class="form-input" id="addrCity" value="${addr.city}" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Estado</label>
-                    <input type="text" class="form-input" id="addrState" value="${addr.state}" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Código Postal</label>
-                    <input type="text" class="form-input" id="addrZip" value="${addr.zipCode}" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">País</label>
-                    <input type="text" class="form-input" id="addrCountry" value="${addr.country}" required>
-                </div>
-                <button type="submit" class="btn-primary">Guardar</button>
-                <button type="button" class="btn-secondary" onclick="showAddresses()">
-                    Cancelar
-                </button>
-            </form>
-        </div>
-    `;
-    showModal('Editar Dirección', content);
-}
-
-function updateAddress(event, index) {
-    event.preventDefault();
-    userSettings.addresses[index] = {
-        ...userSettings.addresses[index],
-        name: document.getElementById('addrName').value,
-        phone: document.getElementById('addrPhone').value,
-        street: document.getElementById('addrStreet').value,
-        city: document.getElementById('addrCity').value,
-        state: document.getElementById('addrState').value,
-        zipCode: document.getElementById('addrZip').value,
-        country: document.getElementById('addrCountry').value
-    };
-    
-    saveSettings();
-    showSuccessMessage('Dirección actualizada exitosamente');
-    showAddresses();
-}
-
-function deleteAddress(index) {
-    if (confirm('¿Estás seguro de eliminar esta dirección?')) {
-        userSettings.addresses.splice(index, 1);
-        saveSettings();
-        showSuccessMessage('Dirección eliminada');
-        showAddresses();
     }
 }
 
@@ -346,69 +216,6 @@ function deletePayment(index) {
     }
 }
 
-//Gestionar Cuenta
-function showManageAccount() {
-    const account = userSettings.account;
-    
-    const content = `
-        <div class="modal-body">
-            <form onsubmit="updateAccount(event)">
-                <div class="form-group">
-                    <label class="form-label">Nombre completo</label>
-                    <input type="text" class="form-input" id="accountName" 
-                           value="${account.name}" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Email</label>
-                    <input type="email" class="form-input" id="accountEmail" 
-                           value="${account.email}" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Teléfono</label>
-                    <input type="tel" class="form-input" id="accountPhone" 
-                           value="${account.phone}" placeholder="Añadir número">
-                </div>
-                <button type="submit" class="btn-primary">Guardar Cambios</button>
-            </form>
-            
-            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
-                <h3 style="font-size: 16px; margin-bottom: 15px;">Seguridad</h3>
-                <button class="btn-secondary" onclick="changePassword()">
-                    Cambiar Contraseña
-                </button>
-                <button class="btn-danger" onclick="deleteAccount()">
-                    Eliminar Cuenta
-                </button>
-            </div>
-        </div>
-    `;
-    showModal('Gestionar Mi Cuenta', content);
-}
-
-function updateAccount(event) {
-    event.preventDefault();
-    userSettings.account = {
-        name: document.getElementById('accountName').value,
-        email: document.getElementById('accountEmail').value,
-        phone: document.getElementById('accountPhone').value
-    };
-    saveSettings();
-    showSuccessMessage('Cuenta actualizada exitosamente');
-    closeModal();
-}
-
-function changePassword() {
-    alert('Función de cambio de contraseña disponible próximamente');
-}
-
-function deleteAccount() {
-    if (confirm('¿Estás seguro de que deseas eliminar tu cuenta? Esta acción no se puede deshacer.')) {
-        alert('Tu cuenta ha sido eliminada');
-        localStorage.clear();
-      
-    }
-}
-
 // Moneda
 function showCurrencySelector() {
     const currencies = [
@@ -450,7 +257,7 @@ function showPrivacyPolicy() {
     const content = `
         <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
             <div style="background: #f5f5f5; padding: 15px; border-radius: 12px; margin-bottom: 20px;">
-                <strong>Fecha de entrada en vigor: 25 de Diciembre de 2025</strong>
+                <strong>Fecha de entrada en vigor: 27 de noviembre de 2025</strong>
             </div>
             
             <h3 style="font-size: 16px; margin-bottom: 15px;">Política de Privacidad de LumiSpace</h3>
@@ -507,7 +314,7 @@ function showTermsConditions() {
     const content = `
         <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
             <div style="background: #f5f5f5; padding: 15px; border-radius: 12px; margin-bottom: 20px;">
-                <strong>FECHA DE VIGENCIA: 25 de Diciembre de 2025</strong>
+                <strong>FECHA DE VIGENCIA: 27 de noviembre de 2025</strong>
             </div>
             
             <h3 style="font-size: 16px; margin-bottom: 15px;">Términos y Condiciones de Uso - LumiSpace</h3>
@@ -574,19 +381,22 @@ function showContactUs() {
             name: 'Instagram',
             handle: 'lumi_space0',
             url: 'https://www.instagram.com/lumi_space0',
-            desc: 'Síguenos para novedades y ofertas'
+            desc: 'Síguenos para novedades y ofertas',
+            icon: '../imagenes/instagram.png'
         },
         {
             name: 'X (Twitter)',
             handle: 'LumiSapce_',
             url: 'https://twitter.com/LumiSapce_',
-            desc: 'Actualizaciones en tiempo real'
+            desc: 'Actualizaciones en tiempo real',
+            icon: '../imagenes/x.png'
         },
         {
             name: 'YouTube',
             handle: 'lumispace0',
             url: 'https://youtube.com/@lumispace0',
-            desc: 'Reviews de productos'
+            desc: 'Reviews de productos',
+            icon: '../imagenes/youtube.png'
         }
     ];
     
@@ -600,7 +410,9 @@ function showContactUs() {
             ${socials.map(social => `
                 <div class="social-card">
                     <div class="social-header">
-                        <div class="social-icon" style="background: #333;"></div>
+                        <div class="social-icon">
+                            <img src="${social.icon}" alt="${social.name}">
+                        </div>
                         <div>
                             <strong style="font-size: 16px;">${social.name}</strong>
                             <div style="font-size: 12px; color: #666;">@${social.handle}</div>
@@ -697,12 +509,21 @@ function closeModal() {
     }, 300);
 }
 
-function showSuccessMessage(message) {
+function showSuccessMessage(message, type = 'success') {
     const existingMessage = document.querySelector('.success-message');
     if (existingMessage) {
         existingMessage.remove();
     }
     
+    const palette = {
+        success: { background: '#d4edda', color: '#155724', border: '#c3e6cb' },
+        warning: { background: '#fff4e5', color: '#8a4d00', border: '#ffe0b3' },
+        error: { background: '#fdecea', color: '#b71c1c', border: '#f5c2c7' },
+        info: { background: '#e8f4fd', color: '#0b5394', border: '#b6d9ff' }
+    };
+
+    const colors = palette[type] || palette.success;
+
     const successDiv = document.createElement('div');
     successDiv.className = 'success-message';
     successDiv.textContent = message;
@@ -713,6 +534,9 @@ function showSuccessMessage(message) {
     successDiv.style.zIndex = '10000';
     successDiv.style.minWidth = '300px';
     successDiv.style.animation = 'slideDown 0.3s ease';
+    successDiv.style.background = colors.background;
+    successDiv.style.color = colors.color;
+    successDiv.style.border = `1px solid ${colors.border}`;
     
     document.body.appendChild(successDiv);
     
@@ -723,20 +547,128 @@ function showSuccessMessage(message) {
 }
 
 function goBack() {
-    if (confirm('¿Volver a la pantalla anterior?')) {
-        window.history.back();
+    showConfirmModal(
+        '¿Volver a la pantalla anterior?',
+        '',
+        () => {
+            window.history.back();
+        }
+    );
+}
+
+async function logout() {
+    try {
+        // Verificar si hay sesión activa
+        const response = await fetch('../api/check-session.php');
+        const data = await response.json();
+        
+        // Si no hay sesión activa, mostrar mensaje y no hacer nada
+        if (!data.hasSession) {
+            showInfoModal(
+                'Sesión no iniciada',
+                'Para cerrar sesión, primero debes iniciar sesión.'
+            );
+            return;
+        }
+        
+        // Si hay sesión activa, confirmar y proceder con el cierre
+        showConfirmModal(
+            '¿Cerrar sesión?',
+            'Se cerrará tu sesión y serás redirigido al inicio de sesión.',
+            () => {
+                // Redirigir a logout.php que destruye la sesión completamente
+                window.location.href = '../logout.php';
+            }
+        );
+    } catch (error) {
+        console.error('Error al verificar sesión:', error);
+        showInfoModal(
+            'Error',
+            'Error al verificar la sesión. Por favor, intenta nuevamente.'
+        );
     }
 }
 
-function logout() {
-    if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
-        showSuccessMessage('Sesión cerrada exitosamente');
-        
-        setTimeout(() => {
-            window.location.href = '/LumiSpace/views/login.php';
-            alert('Redirigiendo a página de inicio de sesión...');
-        }, 1000);
-    }
+// Modal de Confirmación
+function showConfirmModal(title, message, onConfirm) {
+    const modal = document.getElementById('confirmModal');
+    const modalTitle = document.getElementById('confirmModalTitle');
+    const modalMessage = document.getElementById('confirmModalMessage');
+    const confirmBtn = document.getElementById('confirmModalConfirm');
+    const cancelBtn = document.getElementById('confirmModalCancel');
+    
+    modalTitle.textContent = title;
+    modalMessage.textContent = message;
+    
+    // Remover listeners anteriores
+    const newConfirmBtn = confirmBtn.cloneNode(true);
+    const newCancelBtn = cancelBtn.cloneNode(true);
+    confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+    cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+    
+    // Agregar nuevos listeners
+    newConfirmBtn.addEventListener('click', () => {
+        closeConfirmModal();
+        if (onConfirm) onConfirm();
+    });
+    
+    newCancelBtn.addEventListener('click', closeConfirmModal);
+    
+    // Mostrar modal
+    modal.classList.add('active');
+    
+    // Cerrar al hacer clic fuera
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            closeConfirmModal();
+        }
+    });
+}
+
+function closeConfirmModal() {
+    const modal = document.getElementById('confirmModal');
+    modal.classList.remove('active');
+}
+
+// Modal de Información
+function showInfoModal(title, message) {
+    const modal = document.getElementById('confirmModal');
+    const modalTitle = document.getElementById('confirmModalTitle');
+    const modalMessage = document.getElementById('confirmModalMessage');
+    const confirmBtn = document.getElementById('confirmModalConfirm');
+    const cancelBtn = document.getElementById('confirmModalCancel');
+    
+    modalTitle.textContent = title;
+    modalMessage.textContent = message;
+    
+    // Ocultar botón cancelar y cambiar texto del confirmar
+    cancelBtn.style.display = 'none';
+    
+    // Remover listeners anteriores
+    const newConfirmBtn = confirmBtn.cloneNode(true);
+    confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+    
+    // Cambiar texto del botón
+    newConfirmBtn.textContent = 'Entendido';
+    
+    // Agregar nuevo listener
+    newConfirmBtn.addEventListener('click', () => {
+        cancelBtn.style.display = 'flex';
+        closeConfirmModal();
+    });
+    
+    // Mostrar modal
+    modal.classList.add('active');
+    
+    // Cerrar al hacer clic fuera
+    const closeHandler = function(e) {
+        if (e.target === modal) {
+            cancelBtn.style.display = 'flex';
+            modal.removeEventListener('click', closeHandler);
+            closeConfirmModal();
+        }
+    };
+    modal.addEventListener('click', closeHandler);
 }
 
 const style = document.createElement('style');

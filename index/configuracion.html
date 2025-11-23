@@ -25,22 +25,6 @@
             <div class="settings-section">
                 <div class="section-title">Cuenta</div>
                 
-                <div class="settings-item" onclick="navigate('addresses')">
-                    <div class="item-content">
-                        <div class="item-icon">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                                <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                        </div>
-                        <span class="item-label" data-translate="address_book">Mi Libreta de Direcciones</span>
-                    </div>
-                    <svg class="chevron" width="20" height="20" viewBox="0 0 24 24" fill="none">
-                        <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </div>
-
                 <div class="settings-item" onclick="navigate('payment')">
                     <div class="item-content">
                         <div class="item-icon">
@@ -50,21 +34,6 @@
                             </svg>
                         </div>
                         <span class="item-label" data-translate="payment_options">Mis Opciones de Pago</span>
-                    </div>
-                    <svg class="chevron" width="20" height="20" viewBox="0 0 24 24" fill="none">
-                        <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </div>
-
-                <div class="settings-item" onclick="navigate('manage')">
-                    <div class="item-content">
-                        <div class="item-icon">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-                                <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
-                            </svg>
-                        </div>
-                        <span class="item-label" data-translate="manage_account">Gestionar Mi Cuenta</span>
                     </div>
                     <svg class="chevron" width="20" height="20" viewBox="0 0 24 24" fill="none">
                         <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -174,6 +143,24 @@
 
    
     <div id="modalContainer" class="modal"></div>
+    
+    <!-- Modal de Confirmación -->
+    <div id="confirmModal" class="confirm-modal">
+        <div class="confirm-modal-content">
+            <div class="confirm-modal-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                    <path d="M12 8V12M12 16H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+            </div>
+            <h3 class="confirm-modal-title" id="confirmModalTitle">Confirmar acción</h3>
+            <p class="confirm-modal-message" id="confirmModalMessage">¿Estás seguro de realizar esta acción?</p>
+            <div class="confirm-modal-buttons">
+                <button class="confirm-btn confirm-btn-cancel" id="confirmModalCancel">Cancelar</button>
+                <button class="confirm-btn confirm-btn-confirm" id="confirmModalConfirm">Confirmar</button>
+            </div>
+        </div>
+    </div>
 
     <script src="..//js/configuracion.js"></script>
 </body>
