@@ -25,7 +25,7 @@ function redirSegunRol(string $rol): never {
             header("Location: ../views/dashboard-admin.php"); 
             break;
         case 'gestor':
-            header("Location: ../views/dashboard-gestor.php"); 
+            header("Location: ../pos/pos.php"); 
             break;
         case 'cajero':
             header("Location: ../views/pos.php"); 

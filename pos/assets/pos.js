@@ -80,13 +80,13 @@ async function showAperturaIfNeeded() {
 
       setCajaLS(sess.caja_id);
 
-      // Bloqueo de salida/retroceso deshabilitado para permitir navegación libre
-      // window.onbeforeunload = (e) => { e.preventDefault(); return '¿Estás seguro de salir? Tienes un turno abierto.'; };
-      // history.pushState(null, '', location.href);
-      // window.onpopstate = () => {
-      //   history.pushState(null, '', location.href);
-      //   alert('No puedes salir mientras tengas un turno abierto. Cierra el turno primero.');
-      // };
+      // bloquear salida/retroceso
+      window.onbeforeunload = (e) => { e.preventDefault(); return '¿Estás seguro de salir? Tienes un turno abierto.'; };
+      history.pushState(null, '', location.href);
+      window.onpopstate = () => {
+        history.pushState(null, '', location.href);
+        alert('No puedes salir mientras tengas un turno abierto. Cierra el turno primero.');
+      };
       return;
     } else {
       clearTurnoSession();
@@ -302,7 +302,14 @@ function toggleTicketPanel() {
 if (btnCarrito) {
   btnCarrito.addEventListener('click', (e) => {
     e.stopPropagation();
-    toggleTicketPanel();
+    // Si existe el panel moderno, usarlo
+    if (ticketPanel && ticketOverlay) {
+      toggleTicketPanel();
+    } else {
+      // Fallback al diálogo antiguo
+      const dlg = $('#dlgCarrito');
+      if (dlg) dlg.showModal();
+    }
   });
 }
 
@@ -348,6 +355,15 @@ if (metodoRadios.length) {
   };
   metodoRadios.forEach(radio => radio.addEventListener('change', syncMetodoHighlight));
   syncMetodoHighlight();
+}
+
+// Compatibilidad: también manejar dlgCarrito si existe (versión antigua)
+const btnCerrarCarrito = $('#btnCerrarCarrito');
+if (btnCerrarCarrito) {
+  btnCerrarCarrito.addEventListener('click', () => {
+    const dlg = $('#dlgCarrito');
+    if (dlg) dlg.close();
+  });
 }
 
 // Cargar monto inicial de la caja
@@ -411,6 +427,7 @@ function renderCart() {
   
   if (!list) return;
   
+<<<<<<< HEAD
   // Calcular cantidad total
   const totalQty = cart.reduce((sum, it) => sum + it.qty, 0);
   
@@ -444,38 +461,60 @@ function renderCart() {
     return;
   }
 
-  list.innerHTML = cart.map((it, i) => `
-    <div class="checkout-item-modern">
-      <div class="checkout-item-content">
-        <div class="checkout-item-main">
-          <h5 class="checkout-item-name">${it.nombre}</h5>
-          <div class="checkout-item-price">$${it.precio.toFixed(2)}</div>
+  // Determinar qué HTML usar basado en qué elementos existen en el DOM
+  const useModernUI = $('#ticketPanel') || list.classList.contains('checkout-list-modern');
+  
+  if (useModernUI) {
+    // UI moderna con checkout-item-modern
+    list.innerHTML = cart.map((it, i) => `
+      <div class="checkout-item-modern">
+        <div class="checkout-item-content">
+          <div class="checkout-item-main">
+            <h5 class="checkout-item-name">${it.nombre}</h5>
+            <div class="checkout-item-price">$${it.precio.toFixed(2)}</div>
+          </div>
+          <div class="checkout-item-qty-modern">
+            <button data-i="${i}" class="qty-btn qty-dec btnDec" aria-label="Decrementar">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </button>
+            <span class="qty-value">${it.qty}</span>
+            <button data-i="${i}" class="qty-btn qty-inc btnInc" aria-label="Incrementar">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </button>
+          </div>
+          <div class="checkout-item-total">
+            <span class="item-total-label">Subtotal</span>
+            <strong class="item-total-value">$${(it.precio * it.qty).toFixed(2)}</strong>
+          </div>
         </div>
-        <div class="checkout-item-qty-modern">
-          <button data-i="${i}" class="qty-btn qty-dec btnDec" aria-label="Decrementar">
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-          </button>
-          <span class="qty-value">${it.qty}</span>
-          <button data-i="${i}" class="qty-btn qty-inc btnInc" aria-label="Incrementar">
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-          </button>
-        </div>
-        <div class="checkout-item-total">
-          <span class="item-total-label">Subtotal</span>
-          <strong class="item-total-value">$${(it.precio * it.qty).toFixed(2)}</strong>
-        </div>
+        <button data-i="${i}" class="checkout-item-remove cart-item-remove" aria-label="Eliminar">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
       </div>
-      <button data-i="${i}" class="checkout-item-remove cart-item-remove" aria-label="Eliminar">
-        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-      </button>
-    </div>
-  `).join('');
+    `).join('');
+  } else {
+    // UI simple con cart-item (compatibilidad)
+    list.innerHTML = cart.map((it, i) => `
+      <div class="cart-item">
+        <div class="cart-item-info">
+          <div class="cart-item-name">${it.nombre}</div>
+          <div class="cart-item-price">$${it.precio.toFixed(2)}</div>
+        </div>
+        <div class="cart-item-qty">
+          <button data-i="${i}" class="btnDec">−</button>
+          <span>${it.qty}</span>
+          <button data-i="${i}" class="btnInc">+</button>
+        </div>
+        <button data-i="${i}" class="cart-item-remove">×</button>
+      </div>
+    `).join('');
+  }
 
   // Actualizar badge del botón flotante
   if (badge) {
@@ -587,6 +626,13 @@ async function pagar() {
           renderCart();
           cargarProductos();
           dlg.close();
+          // Cerrar también el modal del carrito si existe (compatibilidad)
+          const dlgCarrito = $('#dlgCarrito');
+          if (dlgCarrito) dlgCarrito.close();
+          // Cerrar también el panel de ticket si existe
+          if (ticketPanel && ticketPanel.classList.contains('active')) {
+            toggleTicketPanel();
+          }
         } finally {
           btnOk.disabled = false;
         }
@@ -611,6 +657,13 @@ async function pagar() {
     cart = [];
     renderCart();
     cargarProductos();
+    // Cerrar también el modal del carrito si existe (compatibilidad)
+    const dlgCarrito = $('#dlgCarrito');
+    if (dlgCarrito) dlgCarrito.close();
+    // Cerrar también el panel de ticket si existe
+    if (ticketPanel && ticketPanel.classList.contains('active')) {
+      toggleTicketPanel();
+    }
 
   } catch (e) {
     alert(e?.message || 'Abre un turno para continuar.');
@@ -957,6 +1010,7 @@ async function descargarTicket(venta_id){
   doc.save(`ticket_${v.id}.pdf`);
 }
 
+<<<<<<< HEAD
 // ===== Selector de Idioma =====
 document.addEventListener('DOMContentLoaded', () => {
   const langSelector = $('#languageSelector');
@@ -1043,4 +1097,3 @@ document.addEventListener('DOMContentLoaded', () => {
     e.stopPropagation();
   });
 });
-

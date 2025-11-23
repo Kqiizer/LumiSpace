@@ -286,5 +286,4 @@ start_pos_page('Punto de Venta');
     </div>
   </form>
 </dialog>
-
 <?php end_pos_page(); ?>

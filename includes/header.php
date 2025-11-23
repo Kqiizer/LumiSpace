@@ -2,12 +2,17 @@
 if (session_status() === PHP_SESSION_NONE) session_start();
 require_once __DIR__ . '/../config/functions.php';
 
+if (!function_exists('ls_menu_icon')) {
+    function ls_menu_icon(string $base, string $filename): string {
+        return htmlspecialchars($base . 'images/menu-iconos/' . rawurlencode($filename), ENT_QUOTES, 'UTF-8');
+    }
+}
+
 /* ============================================================
    🔹 BASE dinámica: detecta el nivel de carpeta automáticamente
    ============================================================ */
-$scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME']));
-$depth = substr_count($scriptDir, '/');
-$BASE = ($depth > 1) ? str_repeat('../', $depth - 1) : './';
+$root = rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'] ?? '/')), '/');
+$BASE = ($root === '' || $root === '/') ? '/' : $root . '/';
 
 /* Página actual */
 $currentPage = basename($_SERVER['PHP_SELF']);
@@ -42,6 +47,7 @@ if (!empty($_SESSION['usuario_id'])) {
   <!-- ✅ Estilos globales -->
   <link rel="stylesheet" href="<?= $BASE ?>css/styles/header.css">
   <link rel="stylesheet" href="<?= $BASE ?>css/styles/sidebar.css">
+  <link rel="stylesheet" href="<?= $BASE ?>css/search-overlay.css">
 </head>
 
 <body data-base="<?= htmlspecialchars($BASE) ?>">
@@ -49,14 +55,191 @@ if (!empty($_SESSION['usuario_id'])) {
 <!-- 🔹 Top Bar -->
 <div class="top-bar">
   <div class="container">
-    <span>📞 +52 123 456 7890 | ✉ contacto@lumispace.com</span>
+    <!-- Mensaje rotativo -->
+    <span id="dynamic-message">
+      <i class="fas fa-phone-alt"></i> +52 313 118 1746 | 
+      <i class="fas fa-envelope"></i> lumispace0@gmail.com
+    </span>
+    
     <div class="social-icons">
-      <a href="#"><i class="fab fa-facebook-f"></i></a>
-      <a href="#"><i class="fab fa-twitter"></i></a>
-      <a href="#"><i class="fab fa-instagram"></i></a>
+      <!-- Facebook -->
+      <a href="https://facebook.com/tu_pagina" target="_blank" data-social="facebook">
+        <i class="fab fa-facebook-f"></i>
+        <span class="tooltip">Facebook</span>
+      </a>
+
+      <!-- Twitter/X -->
+      <a href="https://twitter.com/@LumiSpace_" target="_blank" data-social="twitter">
+        <i class="fab fa-twitter"></i>
+        <span class="tooltip">Twitter</span>
+      </a>
+
+      <!-- Instagram -->
+      <a href="https://instagram.com/lumi_space0" target="_blank" data-social="instagram">
+        <i class="fab fa-instagram"></i>
+        <span class="tooltip">Instagram</span>
+      </a>
+
+
+      <!-- WhatsApp -->
+      <a href="https://wa.me/3131181746" target="_blank" data-social="whatsapp">
+        <i class="fab fa-whatsapp"></i>
+        <span class="tooltip">WhatsApp</span>
+      </a>
     </div>
   </div>
 </div>
+
+<script>
+// Mensajes rotativos dinámicos
+const messages = [
+  '<i class="fas fa-phone-alt"></i> +52 123 456 7890 | <i class="fas fa-envelope"></i> lumi_space0@gmail.com',
+  '<i class="fas fa-clock"></i> Lun - Vie: 9:00 AM - 6:00 PM',
+  '<i class="fas fa-shipping-fast"></i> ¡Envíos gratis en compras mayores a $500!',
+  '<i class="fas fa-star"></i> ¡Síguenos en redes sociales para promociones exclusivas!',
+  '<i class="fas fa-headset"></i> Soporte 24/7 disponible'
+];
+
+let currentMessageIndex = 0;
+const messageElement = document.getElementById('dynamic-message');
+
+// Cambiar mensaje cada 4 segundos
+function rotateMessages() {
+  messageElement.style.opacity = '0';
+  
+  setTimeout(() => {
+    currentMessageIndex = (currentMessageIndex + 1) % messages.length;
+    messageElement.innerHTML = messages[currentMessageIndex];
+    messageElement.style.opacity = '1';
+  }, 500);
+}
+
+setInterval(rotateMessages, 4000);
+
+// Hacer clic en teléfono/email cuando se muestra ese mensaje
+messageElement.addEventListener('click', function() {
+  if (currentMessageIndex === 0) {
+    // Si está mostrando contacto, copiar email al portapapeles
+    navigator.clipboard.writeText('lumispace0@gmail.com').then(() => {
+      const originalMessage = messageElement.innerHTML;
+      messageElement.innerHTML = '<i class="fas fa-check"></i> ¡Email copiado al portapapeles!';
+      setTimeout(() => {
+        messageElement.innerHTML = originalMessage;
+      }, 2000);
+    });
+  }
+});
+
+// Contador de clics en redes sociales (analytics básico)
+const socialLinks = document.querySelectorAll('[data-social]');
+socialLinks.forEach(link => {
+  link.addEventListener('click', function(e) {
+    const social = this.getAttribute('data-social');
+    console.log(`Clic en ${social} - ${new Date().toLocaleString()}`);
+    
+    // Opcional: Enviar a Google Analytics o tu sistema de tracking
+    // gtag('event', 'social_click', { 'social_network': social });
+  });
+});
+
+// Animación suave al hacer scroll
+let lastScroll = 0;
+const topBar = document.querySelector('.top-bar');
+
+window.addEventListener('scroll', () => {
+  const currentScroll = window.pageYOffset;
+  
+  if (currentScroll > lastScroll && currentScroll > 100) {
+    // Scrolling down
+    topBar.style.transform = 'translateY(-100%)';
+  } else {
+    // Scrolling up
+    topBar.style.transform = 'translateY(0)';
+  }
+  
+  lastScroll = currentScroll;
+});
+
+// Detectar si el usuario está en móvil
+function isMobile() {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+
+// Si es móvil, convertir el teléfono en enlace clickeable automáticamente
+if (isMobile()) {
+  messageElement.addEventListener('click', function() {
+    if (currentMessageIndex === 0) {
+      window.location.href = 'tel:+521234567890';
+    }
+  });
+}
+
+// Mostrar hora actual en tiempo real (opcional)
+function showCurrentTime() {
+  const now = new Date();
+  const timeString = now.toLocaleTimeString('es-MX', { 
+    hour: '2-digit', 
+    minute: '2-digit',
+    timeZone: 'America/Mexico_City'
+  });
+  
+  // Reemplazar el mensaje de horario con la hora actual
+  messages[1] = `<i class="fas fa-clock"></i> ${timeString} - Lun - Vie: 9:00 AM - 6:00 PM`;
+}
+
+// Actualizar hora cada minuto
+showCurrentTime();
+setInterval(showCurrentTime, 60000);
+
+// Animación de entrada inicial
+window.addEventListener('load', () => {
+  topBar.style.transition = 'all 0.3s ease';
+  messageElement.style.transition = 'opacity 0.5s ease';
+});
+</script>
+
+<style>
+/* Solo estilos mínimos para las nuevas funciones */
+.top-bar {
+  transition: transform 0.3s ease;
+}
+
+#dynamic-message {
+  cursor: pointer;
+  transition: opacity 0.5s ease;
+  display: inline-block;
+}
+
+#dynamic-message:hover {
+  opacity: 0.8;
+}
+
+.tooltip {
+  visibility: hidden;
+  position: absolute;
+  background: rgba(0,0,0,0.8);
+  color: white;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  bottom: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+
+.social-icons a {
+  position: relative;
+}
+
+.social-icons a:hover .tooltip {
+  visibility: visible;
+  opacity: 1;
+}
+</style>
 
 <!-- 🔹 Header principal -->
 <header class="header">
@@ -72,20 +255,19 @@ if (!empty($_SESSION['usuario_id'])) {
     <ul class="nav-menu">
       <li><a href="<?= $BASE ?>index.php" class="<?= $currentPage === 'index.php' ? 'active' : '' ?>">Inicio</a></li>
       <li><a href="<?= $BASE ?>views/categorias.php" class="<?= $currentPage === 'categorias.php' ? 'active' : '' ?>">Categorías</a></li>
-      <li><a href="<?= $BASE ?>views/marcas.php" class="<?= $currentPage === 'marcas.php' ? 'active' : '' ?>">Marcas</a></li>
       <li><a href="<?= $BASE ?>views/catalogo.php" class="<?= $currentPage === 'catalogo.php' ? 'active' : '' ?>">Catálogo</a></li>
+      <li><a href="<?= $BASE ?>views/marcas.php" class="<?= $currentPage === 'marcas.php' ? 'active' : '' ?>">Marcas</a></li>
       <li><a href="<?= $BASE ?>views/blog.php" class="<?= $currentPage === 'blog.php' ? 'active' : '' ?>">Blog</a></li>
       <li><a href="<?= $BASE ?>views/contacto.php" class="<?= $currentPage === 'contacto.php' ? 'active' : '' ?>">Contacto</a></li>
-
     </ul>
 
     <!-- 🔹 Íconos (funcionales en escritorio y móvil) -->
     <div class="header-icons">
-      <a href="<?= $BASE ?>views/search.php" class="icon-btn <?= $currentPage === 'search.php' ? 'active' : '' ?>">
+      <button type="button" class="icon-btn" id="openSearchPanel" aria-label="Buscar productos">
         <i class="fas fa-search"></i>
-      </a>
+      </button>
 
-
+      <a href="<?= $BASE ?>index/favoritos.php" class="icon-btn <?= $currentPage === 'favoritos.php' ? 'active' : '' ?>">
         <i class="fas fa-heart"></i>
         <span class="badge" id="fav-badge" style="<?= $favoritosCount ? '' : 'display:none;' ?>"><?= $favoritosCount ?></span>
       </a>
@@ -108,17 +290,165 @@ if (!empty($_SESSION['usuario_id'])) {
 <!-- 🔹 Overlay para fondo oscuro al abrir sidebar -->
 <div class="overlay" id="overlay"></div>
 
+<!-- 🔍 Buscador avanzado -->
+<div class="global-search" id="globalSearch" aria-hidden="true">
+  <div class="global-search__panel" role="dialog" aria-modal="true" aria-labelledby="globalSearchTitle">
+    <div class="global-search__header">
+      <h2 id="globalSearchTitle">Buscador avanzado</h2>
+      <div class="global-search__input-wrapper">
+        <i class="fas fa-search"></i>
+        <input
+          type="search"
+          id="globalSearchInput"
+          placeholder="Buscar lámparas, categorías, marcas..."
+          autocomplete="off"
+        />
+        <button type="button" class="ghost-btn" data-search-clear aria-label="Limpiar búsqueda">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="global-search__meta">
+        <select id="globalSearchSort">
+          <option value="relevance">Relevancia</option>
+          <option value="price_asc">Precio: menor a mayor</option>
+          <option value="price_desc">Precio: mayor a menor</option>
+          <option value="popularity">Popularidad</option>
+          <option value="rating">Mejor calificación</option>
+          <option value="newest">Novedades</option>
+        </select>
+        <span id="globalSearchStats">Resultados listos</span>
+        <button type="button" class="ghost-btn" data-search-close aria-label="Cerrar buscador">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="global-search__body">
+      <aside class="global-search__filters">
+        <div class="filters-section">
+          <h4>Filtros rápidos</h4>
+          <label class="filter-label">Categoría
+            <select id="filterCategory"></select>
+          </label>
+          <label class="filter-label">Marca
+            <select id="filterBrand"></select>
+          </label>
+          <label class="filter-label">Color
+            <select id="filterColor"></select>
+          </label>
+          <label class="filter-label">Talla / Tamaño
+            <select id="filterSize"></select>
+          </label>
+        </div>
+
+        <div class="filters-section">
+          <h4>Precio</h4>
+          <div class="filter-price">
+            <input type="number" id="filterPriceMin" placeholder="Mín" min="0">
+            <span>-</span>
+            <input type="number" id="filterPriceMax" placeholder="Máx" min="0">
+          </div>
+        </div>
+
+        <div class="filters-section">
+          <h4>Disponibilidad</h4>
+          <label class="filter-checkbox">
+            <input type="checkbox" id="filterAvailabilityIn" value="in">
+            <span>En stock</span>
+          </label>
+          <label class="filter-checkbox">
+            <input type="checkbox" id="filterAvailabilityOut" value="out">
+            <span>Agotado</span>
+          </label>
+          <label class="filter-checkbox">
+            <input type="checkbox" id="filterDiscountOnly">
+            <span>Solo con descuento</span>
+          </label>
+        </div>
+
+        <button type="button" class="btn-reset" id="resetFiltersBtn">
+          <i class="fas fa-undo"></i> Restablecer filtros
+        </button>
+      </aside>
+
+      <section class="global-search__results">
+        <div class="suggestions-panel">
+          <h4>Sugerencias</h4>
+          <ul id="searchSuggestions" class="suggestions-list"></ul>
+        </div>
+
+        <div id="searchResults" class="results-grid"></div>
+        <div id="searchEmptyState" class="search-empty hidden">
+          <i class="fas fa-search"></i>
+          <p>No se encontraron productos. Ajusta los filtros o intenta con otro término.</p>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
 <!-- 🔹 Sidebar (modo móvil y también accesible en escritorio pequeño) -->
 <aside class="sidebar" id="sidebar">
-  <button id="theme-toggle" class="btn">🌙 Modo Oscuro</button>
+  <button
+    id="theme-toggle"
+    class="btn"
+    type="button"
+    data-icon-dark="<?= ls_menu_icon($BASE, 'modo obscuro-luna.png') ?>"
+    data-icon-light="<?= ls_menu_icon($BASE, 'modo-claro.png') ?>"
+  >
+    <img
+      src="<?= ls_menu_icon($BASE, 'modo obscuro-luna.png') ?>"
+      alt="Modo Oscuro"
+      class="menu-icon"
+      data-theme-icon
+    >
+    <span data-theme-text>Modo Oscuro</span>
+  </button>
 
-  <a href="<?= $BASE ?>index.php" class="btn <?= $currentPage === 'index.php' ? 'active' : '' ?>">🏠 Inicio</a>
-  <a href="<?= $BASE ?>views/categorias.php" class="btn <?= $currentPage === 'categorias.php' ? 'active' : '' ?>">📂 Categorías</a>
-  <a href="<?= $BASE ?>views/marcas.php" class="btn <?= $currentPage === 'marcas.php' ? 'active' : '' ?>">🏷 Marcas</a>
-  <a href="<?= $BASE ?>views/catalogo.php" class="btn <?= $currentPage === 'catalogo.php' ? 'active' : '' ?>">🛍 Catálogo</a>
-  <a href="<?= $BASE ?>views/blog.php" class="btn <?= $currentPage === 'blog.php' ? 'active' : '' ?>">📰 Blog</a>
-  <a href="<?= $BASE ?>views/contacto.php" class="btn <?= $currentPage === 'contacto.php' ? 'active' : '' ?>">📞 Contacto</a>
-      <li><a href="<?= $BASE ?>index/configuracion.html" class="<?= $currentPage === 'configuracion.html' ? 'active' : '' ?>">Ajustes</a></li>
+  <a href="<?= $BASE ?>index.php" class="btn <?= $currentPage === 'index.php' ? 'active' : '' ?>">
+    <img src="<?= ls_menu_icon($BASE, 'inicio.png') ?>" alt="Inicio" class="menu-icon">
+    <span class="t" data-i18n="nav.home" data-i18n-es="Inicio">Inicio</span>
+  </a>
+  <a href="<?= $BASE ?>views/categorias.php" class="btn <?= $currentPage === 'categorias.php' ? 'active' : '' ?>">
+    <img src="<?= ls_menu_icon($BASE, 'categorias.png') ?>" alt="Categorías" class="menu-icon">
+    <span class="t" data-i18n="nav.categories" data-i18n-es="Categorías">Categorías</span>
+  </a>
+  <a href="<?= $BASE ?>views/catalogo.php" class="btn <?= $currentPage === 'catalogo.php' ? 'active' : '' ?>">
+    <img src="<?= ls_menu_icon($BASE, 'catalogo.png') ?>" alt="Catálogo" class="menu-icon">
+    <span class="t" data-i18n="nav.catalog" data-i18n-es="Catálogo">Catálogo</span>
+  </a>
+  <a href="<?= $BASE ?>views/marcas.php" class="btn <?= $currentPage === 'marcas.php' ? 'active' : '' ?>">
+    <img src="<?= ls_menu_icon($BASE, 'marcas.png') ?>" alt="Marcas" class="menu-icon">
+    <span class="t" data-i18n="nav.brands" data-i18n-es="Marcas">Marcas</span>
+  </a>
+  <a href="<?= $BASE ?>views/blog.php" class="btn <?= $currentPage === 'blog.php' ? 'active' : '' ?>">
+    <img src="<?= ls_menu_icon($BASE, 'blog.png') ?>" alt="Blog" class="menu-icon">
+    <span class="t" data-i18n="nav.blog" data-i18n-es="Blog">Blog</span>
+  </a>
+  <a href="<?= $BASE ?>views/contacto.php" class="btn <?= $currentPage === 'contacto.php' ? 'active' : '' ?>">
+    <img src="<?= ls_menu_icon($BASE, 'contacto.png') ?>" alt="Contacto" class="menu-icon">
+    <span class="t" data-i18n="nav.contact" data-i18n-es="Contacto">Contacto</span>
+  </a>
+  <a href="<?= $BASE ?>index/configuracion.html" class="btn <?= $currentPage === 'configuracion.html' ? 'active' : '' ?>">
+    <img src="<?= ls_menu_icon($BASE, 'ajustes.png') ?>" alt="Ajustes" class="menu-icon">
+    <span class="t" data-i18n="nav.settings" data-i18n-es="Ajustes">Ajustes</span>
+  </a>
+
+  <button
+    id="lang-toggle"
+    class="btn"
+    type="button"
+    data-flag-es="<?= ls_menu_icon($BASE, 'bandera españa.png') ?>"
+    data-flag-en="<?= ls_menu_icon($BASE, 'bandera inglaterra.png') ?>"
+  >
+    <img
+      src="<?= ls_menu_icon($BASE, 'bandera españa.png') ?>"
+      alt="Bandera de España"
+      class="menu-icon"
+      data-lang-icon
+    >
+    <span class="btn-label" data-lang-label>Español</span>
+  </button>
 
   <hr>
 
@@ -126,12 +456,20 @@ if (!empty($_SESSION['usuario_id'])) {
     <p style="margin:10px 0; font-weight:bold;">👋 Hola, <?= htmlspecialchars($_SESSION['usuario_nombre'] ?? 'Usuario') ?></p>
     <a href="<?= $BASE ?>logout.php" class="btn">🚪 Cerrar Sesión</a>
   <?php else: ?>
-    <a href="<?= $BASE ?>views/login.php" class="btn">🔑 Iniciar Sesión</a>
-    <a href="<?= $BASE ?>views/register.php" class="btn">📝 Registrarse</a>
+    <a href="<?= $BASE ?>views/login.php" class="btn">
+      <img src="<?= ls_menu_icon($BASE, 'iniciar-sesion.png') ?>" alt="Iniciar Sesión" class="menu-icon">
+      <span>Iniciar Sesión</span>
+    </a>
+    <a href="<?= $BASE ?>views/register.php" class="btn">
+      <img src="<?= ls_menu_icon($BASE, 'registro.png') ?>" alt="Registrarse" class="menu-icon">
+      <span>Registrarse</span>
+    </a>
   <?php endif; ?>
 </aside>
 
 <!-- ✅ Script (controla menú, overlay y animaciones) -->
 <script src="<?= $BASE ?>js/header.js" defer></script>
+<script src="<?= $BASE ?>js/translator.js" defer></script>
+<script src="<?= $BASE ?>js/search-overlay.js" defer></script>
 </body>
 </html>

@@ -8,7 +8,9 @@ $iniciales = strtoupper(substr($usuarioNombre, 0, 2));
 
 // 🔹 Asegúrate de definir BASE_URL globalmente en config.php
 if (!defined('BASE_URL')) {
-    define('BASE_URL', '/LumiSpace/');
+    define('BASE_URL', '/');
+    $BASE = rtrim(BASE_URL, '/') . '/';
+
 }
 ?>
 <header class="topbar">
@@ -32,8 +34,8 @@ if (!defined('BASE_URL')) {
       </button>
       <div class="user-menu hidden" id="userMenu">
         <p class="user-name"><?= htmlspecialchars($usuarioNombre) ?></p>
-        <a href="<?= BASE_URL ?>views/perfil.php">👤 Perfil</a>
-        <a href="<?= BASE_URL ?>logout.php">🚪 Cerrar sesión</a>
+        <a href="<?= $BASE ?>views/perfil.php">👤 Perfil</a>
+        <a href="<?= $BASE ?>logout.php">🚪 Cerrar sesión</a>
       </div>
     </div>
   </div>

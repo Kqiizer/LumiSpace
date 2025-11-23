@@ -161,6 +161,7 @@ function end_pos_page(): void {
     <!-- DIALOGOS GLOBALES -->
 
     <!-- Popup apertura de turno -->
+<<<<<<< HEAD
     <dialog id="dlgTurno" class="dlg dlg-open-shift">
       <form method="dialog" id="frmTurno" class="dlg-body" onsubmit="return false;">
         <div class="dlg-header-open">
@@ -231,6 +232,7 @@ function end_pos_page(): void {
     </dialog>
 
     <!-- Cerrar turno -->
+<<<<<<< HEAD
     <dialog id="dlgCerrarTurno" class="dlg dlg-close-shift">
       <form method="dialog" id="frmCerrarTurno" class="dlg-body" onsubmit="return false;">
         <div class="dlg-header-close">

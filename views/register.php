@@ -28,19 +28,17 @@ if ($isGoogle && isset($_SESSION['google_user'])) {
     $googleUser = $_SESSION['google_user']; 
     $nombre = trim($googleUser['name'] ?? '');
     $email  = strtolower(trim($googleUser['email'] ?? ''));
-    $rol    = "usuario"; // siempre usuario
+    $rol    = "usuario";
 
     if ($nombre !== '' && $email !== '') {
         $user = obtenerUsuarioPorEmail($email);
 
         if ($user) {
-            // ✅ Ya existe → iniciar sesión
             $_SESSION['usuario_id']     = $user['id'];
             $_SESSION['usuario_rol']    = $user['rol'];
             $_SESSION['usuario_nombre'] = $user['nombre'];
             $_SESSION['usuario_email']  = $user['email'];
         } else {
-            // ✅ Crear nuevo usuario
             $res = registrarUsuario($nombre, $email, null, $rol);
             if ($res !== false) {
                 $_SESSION['usuario_id']     = $res;
@@ -48,7 +46,6 @@ if ($isGoogle && isset($_SESSION['google_user'])) {
                 $_SESSION['usuario_nombre'] = $nombre;
                 $_SESSION['usuario_email']  = $email;
 
-                // Correo de bienvenida
                 $subject = "¡Bienvenido/a a LumiSpace!";
                 $body = "
                     <div style='font-family:Arial,Helvetica,sans-serif;line-height:1.5'>
@@ -64,7 +61,6 @@ if ($isGoogle && isset($_SESSION['google_user'])) {
             }
         }
 
-        // Si todo fue bien → redirigir al index
         if (empty($error)) {
             header("Location: ../index.php");
             exit();
@@ -82,7 +78,6 @@ function field(string $name): string {
 $prefillNombre = field('nombre');
 $prefillEmail  = field('email');
 
-// Límite de intentos (para registro manual)
 $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
 if (!isset($_SESSION['register_attempts'][$ip])) {
     $_SESSION['register_attempts'][$ip] = 0;
@@ -100,8 +95,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !$error && !$isGoogle) {
         $email     = strtolower(trim($_POST['email'] ?? ''));
         $password  = (string)($_POST['password'] ?? '');
         $rol       = "usuario"; 
+        $acepto    = isset($_POST['acepto']); // 🔒 NUEVO
 
-        if ($nombre === '' || $email === '' || $password === '') {
+        if (!$acepto) {
+            $error = "⚠️ Debes aceptar los Términos y Condiciones antes de registrarte.";
+        } elseif ($nombre === '' || $email === '' || $password === '') {
             $error = "Completa todos los campos.";
         } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $error = "El correo no es válido.";
@@ -116,7 +114,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !$error && !$isGoogle) {
                 $_SESSION['usuario_rol']    = $rol;
                 $_SESSION['usuario_nombre'] = $nombre;
                 $_SESSION['usuario_email']  = $email;
-
                 header("Location: ../index.php");
                 exit();
             } else {
@@ -127,7 +124,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !$error && !$isGoogle) {
     $_SESSION['register_attempts'][$ip]++;
 }
 
-// Google OAuth URL (para botón de login con Google)
+// Google OAuth URL
 $googleAuthUrl = '';
 if (isset($google_client) && $google_client instanceof Google_Client) {
     $_SESSION['oauth2_state'] = bin2hex(random_bytes(16));
@@ -141,9 +138,13 @@ if (isset($google_client) && $google_client instanceof Google_Client) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Registro - POS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../css/auth.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <style>
+    body, input, button, label, a, p, h2 { font-family: "Poppins", sans-serif; }
     .error { background:#ffe6e6; color:#b10000; padding:.75rem 1rem; border-radius:.5rem; margin:.5rem 0; animation:fadeIn .4s; }
     .divider { display:flex; align-items:center; text-align:center; margin:1rem 0; }
     .divider::before, .divider::after { content:''; flex:1; border-bottom:1px solid #ccc; }
@@ -152,6 +153,18 @@ if (isset($google_client) && $google_client instanceof Google_Client) {
     .social-btn { display:flex; align-items:center; justify-content:center; gap:10px; background:#fff; border:1px solid #ccc; padding:.6rem 1rem; border-radius:6px; text-decoration:none; color:#333; font-weight:500; transition:.2s; }
     .social-btn:hover { background:#f1f1f1; }
     .social-btn img { width:18px; height:18px; }
+    .terms-check {
+      margin-top: .8rem;
+      font-size: .85rem;
+      color: #555;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .terms-check a {
+      color: #0b5394;
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
@@ -165,9 +178,8 @@ if (isset($google_client) && $google_client instanceof Google_Client) {
         <div class="error"><?= $error ?></div>
       <?php endif; ?>
 
-      <!-- 🔹 El formulario solo se muestra si NO es Google -->
       <?php if (!$isGoogle): ?>
-      <form method="POST" novalidate>
+      <form method="POST" onsubmit="return validarTerminos();" novalidate>
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8') ?>">
         <input type="hidden" name="rol" value="usuario">
 
@@ -189,6 +201,16 @@ if (isset($google_client) && $google_client instanceof Google_Client) {
           <i class="fa-solid fa-lock icon"></i>
         </div>
 
+        <!-- 🔒 NUEVO: Aceptar términos -->
+        <div class="terms-check">
+          <input type="checkbox" id="acepto" name="acepto" required>
+          <label for="acepto">
+            Acepto los 
+            <a href="../docs/terminos-condiciones.html" target="_blank">Términos y Condiciones</a> y la 
+            <a href="../docs/politica-privacidad.html" target="_blank">Política de Privacidad</a>.
+          </label>
+        </div>
+
         <button type="submit" class="btn-login">Crear cuenta</button>
       </form>
       <?php endif; ?>
@@ -204,5 +226,17 @@ if (isset($google_client) && $google_client instanceof Google_Client) {
       <?php endif; ?>
     </div>
   </div>
+
+  <script>
+    // 🔒 Evita envío si no acepta
+    function validarTerminos(){
+      const check = document.getElementById("acepto");
+      if(!check.checked){
+        alert("Debes aceptar los Términos y Condiciones antes de registrarte.");
+        return false;
+      }
+      return true;
+    }
+  </script>
 </body>
 </html>

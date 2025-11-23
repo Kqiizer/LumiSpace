@@ -107,7 +107,7 @@ $_SESSION['usuario_rol']    = $rol;
 $rutas = [
     'admin'   => '../views/dashboard-admin.php',
     'usuario' => '../views/index.php',
-    'gestor'  => '../views/dashboard-gestor.php',
+    'gestor'  => '../pos/pos.php',
     'cajero'   => '../views/pos.php'
 ];
 
