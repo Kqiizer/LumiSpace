@@ -48,12 +48,33 @@ if ($categorias_db && is_array($categorias_db)) {
 
 /**
  * Obtiene la URL de la imagen de categoría
- * Misma función que en views/categorias.php para consistencia
+ * Maneja rutas completas, relativas y nombres de archivo
  */
 function getCategoryImage($imagen, $BASE) {
-  if (empty($imagen)) return $BASE . 'images/categorias/default.jpg';
-  if (preg_match('#^https?://#i', $imagen)) return $imagen;
-  if (strpos($imagen, '/') === 0) return $BASE . ltrim($imagen, '/');
+  // Si está vacía, devolver imagen por defecto
+  if (empty($imagen) || trim($imagen) === '') {
+    return $BASE . 'images/categorias/default.jpg';
+  }
+  
+  $imagen = trim($imagen);
+  
+  // Si ya es una URL completa (http o https), devolverla tal cual
+  if (preg_match('#^https?://#i', $imagen)) {
+    return $imagen;
+  }
+  
+  // Si empieza con /, es una ruta absoluta desde la raíz
+  if (strpos($imagen, '/') === 0) {
+    return $BASE . ltrim($imagen, '/');
+  }
+  
+  // Si la imagen ya contiene una ruta relativa completa (ej: imagenes/lamparas/deco2.jpg)
+  // o empieza con imagenes/ o images/, usarla directamente
+  if (strpos($imagen, 'imagenes/') === 0 || strpos($imagen, 'images/') === 0) {
+    return $BASE . $imagen;
+  }
+  
+  // Si es solo un nombre de archivo, asumir que está en images/categorias/
   return $BASE . 'images/categorias/' . $imagen;
 }
 
