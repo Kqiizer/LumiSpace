@@ -349,7 +349,7 @@ function img_url($path, $BASE, $folder = 'productos') {
 
         .pendant-card {
             position: relative;
-            padding: 40px 10px 10px;
+            padding: 55px 10px 10px;
             border-radius: 0;
             background: transparent;
             text-align: center;
@@ -357,25 +357,25 @@ function img_url($path, $BASE, $folder = 'productos') {
 
         .pendant-line {
             position: absolute;
-            top: -90px;
+            top: -120px;
             left: 50%;
-            width: 1px;
-            height: 90px;
-            background: rgba(255,255,255,0.4);
+            width: 2px;
+            height: 120px;
+            background: rgba(255,255,255,0.35);
             transform: translateX(-50%);
         }
 
         .pendant-image {
-            width: 100%;
-            height: 170px;
+            width: 130px;
+            height: 190px;
             object-fit: contain;
-            mix-blend-mode: multiply;
-            filter: drop-shadow(0 12px 25px rgba(0,0,0,0.25));
-            background: transparent;
+            display: block;
+            margin: 0 auto 12px;
+            filter: drop-shadow(0 18px 30px rgba(0,0,0,0.25));
         }
 
         .pendant-price {
-            margin-top: 8px;
+            margin-top: 4px;
             font-size: 1.05rem;
             font-weight: 600;
             color: #fff;
@@ -1029,7 +1029,8 @@ function img_url($path, $BASE, $folder = 'productos') {
                             <span class="pendant-line"></span>
                             <img class="pendant-image"
                                  src="<?= htmlspecialchars($pendant['image'], ENT_QUOTES, 'UTF-8') ?>"
-                                 alt="Lámpara decorativa">
+                                 alt="Lámpara decorativa"
+                                 loading="lazy">
                             <div class="pendant-price"><?= htmlspecialchars($pendant['price'], ENT_QUOTES, 'UTF-8') ?></div>
                         </article>
                     <?php endforeach; ?>
