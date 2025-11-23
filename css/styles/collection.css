@@ -22,7 +22,7 @@
 }
 
 .section-subtitle {
-  color: #d4c4a8;
+  color: #d6c7b2;
   font-size: 16px;
   margin-bottom: 10px;
   font-weight: 600;
@@ -32,7 +32,7 @@
 .section-title {
   font-size: 36px;
   font-weight: bold;
-  color: #8b7355;
+  color: #6D5A42;
   margin-bottom: 30px;
 }
 
@@ -47,9 +47,9 @@
 
 .filter-tab {
   padding: 12px 25px;
-  border: 2px solid #d4c4a8;
+  border: 2px solid #d6c7b2;
   background: transparent;
-  color: #8b7355;
+  color: #6D5A42;
   border-radius: 25px;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -57,15 +57,15 @@
 }
 
 .filter-tab.active {
-  background-color: #a0896b;
+  background-color: #6D5A42;
   color: #fff;
-  border-color: #a0896b;
+  border-color: #6D5A42;
 }
 
 .filter-tab:hover {
-  background-color: #8b7355;
+  background-color: #A0896B;
   color: #fff;
-  border-color: #8b7355;
+  border-color: #A0896B;
 }
 
 /* ==== GRID DE PRODUCTOS ==== */
@@ -80,20 +80,20 @@
   background: #fff;
   border-radius: 15px;
   overflow: hidden;
-  box-shadow: 0 5px 20px rgba(139, 115, 85, 0.1);
+  box-shadow: 0 5px 20px rgba(109, 90, 66, 0.1);
   position: relative;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .product-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 10px 25px rgba(139, 115, 85, 0.2);
+  box-shadow: 0 10px 25px rgba(109, 90, 66, 0.2);
 }
 
 /* ==== IMAGEN DEL PRODUCTO ==== */
 .product-image {
   height: 250px;
-  background: linear-gradient(45deg, #e8ddd4, #d4c4a8);
+  background: linear-gradient(45deg, #f2e7d9, #e9dfd1);
   position: relative;
 }
 
@@ -114,7 +114,7 @@
   position: absolute;
   top: 15px;
   left: 15px;
-  background-color: #a0896b;
+  background-color: #6D5A42;
   color: #fff;
   padding: 5px 12px;
   border-radius: 15px;
@@ -137,17 +137,17 @@
   background: #fff;
   border: none;
   border-radius: 50%;
-  box-shadow: 0 2px 10px rgba(139, 115, 85, 0.2);
+  box-shadow: 0 2px 10px rgba(109, 90, 66, 0.2);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #8b7355;
+  color: #6D5A42;
   transition: background 0.3s, color 0.3s, transform 0.3s;
 }
 
 .action-btn:hover {
-  background: #a0896b;
+  background: #6D5A42;
   color: #fff;
   transform: scale(1.1);
 }
@@ -162,7 +162,7 @@
 }
 
 .countdown-item {
-  background: rgba(160, 137, 107, 0.9);
+  background: rgba(109, 90, 66, 0.9);
   color: #fff;
   padding: 8px;
   border-radius: 8px;
@@ -185,7 +185,7 @@
 }
 
 .product-brand {
-  color: #a0896b;
+  color: #A0896B;
   font-size: 12px;
   margin-bottom: 5px;
   text-transform: uppercase;
@@ -195,7 +195,7 @@
 .product-name {
   font-size: 16px;
   font-weight: bold;
-  color: #8b7355;
+  color: #6D5A42;
   margin-bottom: 10px;
 }
 
@@ -207,12 +207,12 @@
 }
 
 .stars {
-  color: #d4c4a8;
+  color: #d6c7b2;
 }
 
 .rating-number {
   font-weight: bold;
-  color: #8b7355;
+  color: #6D5A42;
 }
 
 .product-price {
@@ -224,12 +224,12 @@
 .current-price {
   font-size: 18px;
   font-weight: bold;
-  color: #8b7355;
+  color: #6D5A42;
 }
 
 .original-price {
   font-size: 14px;
-  color: #a0896b;
+  color: #A0896B;
   text-decoration: line-through;
 }
 
@@ -239,19 +239,19 @@ body.dark .collection {
 }
 
 body.dark .section-title {
-  color: #f0e6d6;
+  color: #f6f1e8;
 }
 
 body.dark .filter-tab {
-  border-color: #6e5b43;
-  color: #f0e6d6;
+  border-color: #8d775d;
+  color: #f6f1e8;
 }
 
 body.dark .filter-tab.active,
 body.dark .filter-tab:hover {
-  background-color: #8b7355;
+  background-color: #bea583;
   color: #fff;
-  border-color: #8b7355;
+  border-color: #bea583;
 }
 
 body.dark .product-card {
@@ -260,15 +260,15 @@ body.dark .product-card {
 }
 
 body.dark .product-brand {
-  color: #cbbba0;
+  color: #d7c6ac;
 }
 
 body.dark .product-name,
 body.dark .rating-number,
 body.dark .current-price {
-  color: #f0e6d6;
+  color: #f6f1e8;
 }
 
 body.dark .original-price {
-  color: #9c8b74;
+  color: #a69988;
 }
