@@ -666,6 +666,13 @@ function getSubcategorias($subcats_data) {
       <p>Explora nuestra amplia selección de productos</p>
     </div>
 
+    <?php
+      $homeCategoryImages = [
+        $BASE . 'imagenes/lamparas/deco2.jpg',
+        $BASE . 'imagenes/lamparas/deco3.jpg',
+        $BASE . 'imagenes/lamparas/deco4.jpg',
+      ];
+    ?>
     <div class="products-grid" data-base="<?= htmlspecialchars($BASE) ?>">
 
       <?php if (!empty($categorias_db) && is_array($categorias_db)): ?>
@@ -674,6 +681,9 @@ function getSubcategorias($subcats_data) {
           $nombre = htmlspecialchars($cat['nombre'] ?? 'Sin nombre');
           $descripcion = htmlspecialchars($cat['descripcion'] ?? 'Encuentra la mejor selección de productos');
           $imagen = getCategoryImage($cat['imagen'] ?? '', $BASE);
+          if (!empty($homeCategoryImages)) {
+            $imagen = array_shift($homeCategoryImages);
+          }
           $total_productos = $productos_por_categoria[$cat_id] ?? 0;
           $subcats = getSubcategorias($cat['subcategorias'] ?? null);
         ?>
