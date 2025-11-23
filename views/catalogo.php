@@ -68,19 +68,16 @@ $stats = [
 
 $heroPendents = [
     [
-        'name' => 'Nordic Wood Dark Grey',
         'size' => '22cm x 10cm',
         'price' => '$44.99',
         'image' => $BASE . 'imagenes/lamparas/deco2.jpg',
     ],
     [
-        'name' => 'Modern Metal Blue',
         'size' => '18cm x 8cm',
         'price' => '$34.99',
         'image' => $BASE . 'imagenes/lamparas/deco3.jpg',
     ],
     [
-        'name' => 'Scandinavian Warm',
         'size' => '20cm x 9cm',
         'price' => '$29.99',
         'image' => $BASE . 'imagenes/lamparas/deco4.jpg',
@@ -265,12 +262,12 @@ function img_url($path, $BASE, $folder = 'productos') {
             background: linear-gradient(120deg, #6D5A42 0%, #A0896B 60%, #f4ede2 100%);
             color: #fff;
             text-align: center;
-            padding: 90px 20px 70px;
+            padding: 80px 20px 60px;
             position: relative;
             overflow: hidden;
             isolation: isolate;
-            border-bottom-left-radius: 60px;
-            border-bottom-right-radius: 60px;
+            border-bottom-left-radius: 48px;
+            border-bottom-right-radius: 48px;
             box-shadow: 0 25px 60px rgba(34, 23, 8, 0.25);
         }
 
@@ -315,16 +312,16 @@ function img_url($path, $BASE, $folder = 'productos') {
         }
 
         .catalog-hero h1 {
-            font-size: clamp(2.5rem, 4vw, 3.6rem);
+            font-size: clamp(2.2rem, 3.8vw, 3.3rem);
             font-weight: 800;
-            margin-bottom: 16px;
-            letter-spacing: -1px;
+            margin-bottom: 14px;
+            letter-spacing: -0.8px;
         }
 
         .catalog-hero p {
-            font-size: 1.15rem;
+            font-size: 1.05rem;
             opacity: 0.92;
-            margin-bottom: 34px;
+            margin-bottom: 28px;
             color: rgba(255,255,255,0.9);
         }
 
@@ -343,93 +340,66 @@ function img_url($path, $BASE, $folder = 'productos') {
             z-index: 0;
         }
 
-        .hero-meta {
-            display: flex;
-            justify-content: center;
-            gap: 30px;
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 3px;
-            margin-bottom: 24px;
-            color: rgba(255,255,255,0.7);
-        }
-
         .pendants-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-            gap: 24px;
-            margin-top: 10px;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 22px;
+            margin-top: 5px;
         }
 
         .pendant-card {
             position: relative;
-            padding: 40px 20px 28px;
-            border-radius: 26px;
-            background: rgba(255,255,255,0.12);
-            backdrop-filter: blur(8px);
-            box-shadow: 0 20px 40px rgba(15,10,5,0.15);
+            padding: 46px 18px 24px;
+            border-radius: 24px;
+            background: rgba(255,255,255,0.10);
+            backdrop-filter: blur(12px);
+            box-shadow: 0 18px 38px rgba(15,10,5,0.18);
         }
 
         .pendant-line {
             position: absolute;
-            top: -90px;
+            top: -110px;
             left: 50%;
             width: 2px;
-            height: 90px;
+            height: 110px;
             background: rgba(255,255,255,0.25);
             transform: translateX(-50%);
         }
 
         .pendant-image {
-            width: 110px;
-            height: 110px;
-            margin: 0 auto 18px;
+            width: 100%;
+            aspect-ratio: 3 / 4;
+            margin: 0 auto 14px;
             background-size: cover;
             background-position: center;
-            border-radius: 50%;
+            border-radius: 20px;
             box-shadow: 0 25px 40px rgba(0,0,0,0.25);
         }
 
-        .pendant-name {
-            font-weight: 700;
-            font-size: 1rem;
-            color: #fff;
-            margin-bottom: 6px;
-        }
-
-        .pendant-size {
+        .pendant-details {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             font-size: 0.9rem;
-            color: rgba(255,255,255,0.75);
+            color: rgba(255,255,255,0.85);
         }
 
         .pendant-price {
-            margin-top: 12px;
             font-size: 1rem;
             font-weight: 600;
             color: #fff;
         }
 
-        .hero-info-bar {
-            margin-top: 36px;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-            gap: 18px;
-            text-align: left;
-        }
+        @media (max-width: 768px) {
+            .catalog-hero {
+                border-radius: 0 0 36px 36px;
+                padding-bottom: 40px;
+            }
 
-        .hero-info-item span {
-            display: block;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            color: rgba(255,255,255,0.7);
-        }
-
-        .hero-info-item strong {
-            display: block;
-            margin-top: 6px;
-            font-size: 1rem;
-            color: #fff;
+            .pendant-line {
+                height: 80px;
+                top: -80px;
+            }
         }
 
         .hero-stats {
@@ -1059,11 +1029,6 @@ function img_url($path, $BASE, $folder = 'productos') {
         <section class="catalog-hero">
             <div class="hero-word">pendants</div>
             <div class="catalog-hero-content">
-                <div class="hero-meta">
-                    <span>Diseño</span>
-                    <span>Tamaño</span>
-                    <span>Color</span>
-                </div>
                 <h1>Curated lighting for modern living rooms</h1>
                 <p>Explora piezas colgantes con acabados nórdicos, colores suaves y materiales premium pensados para armonizar cualquier espacio.</p>
 
@@ -1072,34 +1037,12 @@ function img_url($path, $BASE, $folder = 'productos') {
                         <article class="pendant-card">
                             <span class="pendant-line"></span>
                             <div class="pendant-image" style="background-image:url('<?= htmlspecialchars($pendant['image'], ENT_QUOTES, 'UTF-8') ?>')"></div>
-                            <div class="pendant-name"><?= htmlspecialchars($pendant['name'], ENT_QUOTES, 'UTF-8') ?></div>
-                            <div class="pendant-size"><?= htmlspecialchars($pendant['size'], ENT_QUOTES, 'UTF-8') ?></div>
-                            <div class="pendant-price"><?= htmlspecialchars($pendant['price'], ENT_QUOTES, 'UTF-8') ?></div>
+                            <div class="pendant-details">
+                                <span><?= htmlspecialchars($pendant['size'], ENT_QUOTES, 'UTF-8') ?></span>
+                                <span class="pendant-price"><?= htmlspecialchars($pendant['price'], ENT_QUOTES, 'UTF-8') ?></span>
+                            </div>
                         </article>
                     <?php endforeach; ?>
-                </div>
-
-                <div class="hero-info-bar">
-                    <div class="hero-info-item">
-                        <span>Material</span>
-                        <strong>Aerospace-grade PC</strong>
-                    </div>
-                    <div class="hero-info-item">
-                        <span>Estructura</span>
-                        <strong>Nordic Wood</strong>
-                    </div>
-                    <div class="hero-info-item">
-                        <span>Colores</span>
-                        <strong>9 variaciones</strong>
-                    </div>
-                    <div class="hero-info-item">
-                        <span>Volumen</span>
-                        <strong>18–22cm</strong>
-                    </div>
-                    <div class="hero-info-item">
-                        <span>Peso</span>
-                        <strong>3.1 kg</strong>
-                    </div>
                 </div>
             </div>
         </section>
