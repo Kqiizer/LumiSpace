@@ -426,6 +426,7 @@ function getCategoryImage($imagen, $BASE) {
     /* STATS */
     .statistics {
       padding: 70px 0 90px;
+      background: linear-gradient(135deg, rgba(109, 90, 66, 0.12) 0%, rgba(160, 137, 107, 0.08) 100%);
     }
 
     .stats-grid {
@@ -435,11 +436,11 @@ function getCategoryImage($imagen, $BASE) {
     }
 
     .stat-item {
-      background: white;
+      background: var(--brand-white);
       border-radius: 24px;
       padding: 28px;
       box-shadow: var(--shadow);
-      border: 1px solid rgba(109,90,66,0.08);
+      border: 1px solid rgba(109, 90, 66, 0.15);
       text-align: center;
     }
 
@@ -451,7 +452,7 @@ function getCategoryImage($imagen, $BASE) {
       display: flex;
       align-items: center;
       justify-content: center;
-      background: rgba(160, 137, 107, 0.12);
+      background: rgba(109, 90, 66, 0.12);
       color: var(--brand-primary);
       font-size: 20px;
     }
