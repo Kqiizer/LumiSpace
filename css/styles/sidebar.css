@@ -37,6 +37,14 @@
   position: relative;
 }
 
+.sidebar .btn .menu-icon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
 /* Hover */
 .sidebar a.btn:hover {
   color: #a0896b;
