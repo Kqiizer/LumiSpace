@@ -10,6 +10,10 @@
   const LS_CACHE = 'lumispace_cache_v1';    // { en: { 'texto ES': 'texto EN' } }
 
   const btn      = document.getElementById('lang-toggle');
+  const btnLabel = btn?.querySelector('[data-lang-label]');
+  const btnIcon  = btn?.querySelector('[data-lang-icon]');
+  const flagEs   = btn?.dataset.flagEs || '';
+  const flagEn   = btn?.dataset.flagEn || '';
   const base     = document.body.getAttribute('data-base') || './';
   const endpoint = (base.endsWith('/') ? base : base + '/') + 'azure/api.php';
 
@@ -38,7 +42,16 @@
     catch { return {}; }
   };
   const setCache = (c) => localStorage.setItem(LS_CACHE, JSON.stringify(c));
-  const setBtnLabel = (lang) => { if (btn) btn.textContent = (lang === 'es') ? 'English' : 'Español'; };
+  const setBtnLabel = (lang) => {
+    if (!btn || !btnLabel) return;
+    const isSpanish = lang === 'es';
+    btnLabel.textContent = isSpanish ? 'Español' : 'English';
+    if (btnIcon) {
+      const flag = isSpanish ? flagEs : flagEn;
+      if (flag) btnIcon.src = flag;
+      btnIcon.alt = isSpanish ? 'Bandera de España' : 'Bandera de Inglaterra';
+    }
+  };
 
   // Helpers de selección
   const getScopes = () => {
