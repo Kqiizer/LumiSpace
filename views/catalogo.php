@@ -107,23 +107,23 @@ function img_url($path, $BASE, $folder = 'productos') {
            VARIABLES Y CONFIGURACIÓN BASE
            ========================================== */
         :root {
-            --primary-color: #a1683a;
-            --primary-dark: #8f5e4b;
-            --primary-light: #c2a98f;
-            --secondary-color: #ff6b6b;
-            --success-color: #51cf66;
-            --warning-color: #ffd43b;
-            --text-primary: #333;
-            --text-secondary: #666;
-            --text-muted: #999;
-            --bg-primary: #fafafa;
+            --primary-color: #6D5A42;
+            --primary-dark: #A0896B;
+            --primary-light: #d5c4ac;
+            --secondary-color: #C9B59A;
+            --success-color: #7ca380;
+            --warning-color: #d5a05c;
+            --text-primary: #2f261c;
+            --text-secondary: #5b4c3b;
+            --text-muted: #8c7a65;
+            --bg-primary: #fbf6ef;
             --bg-white: #ffffff;
-            --bg-secondary: #f7f7f7;
-            --bg-image: #f0f0f0;
-            --border-color: #e0e0e0;
-            --shadow-sm: 0 2px 8px rgba(0,0,0,.1);
-            --shadow-md: 0 4px 12px rgba(0,0,0,.12);
-            --shadow-lg: 0 8px 18px rgba(0,0,0,.15);
+            --bg-secondary: #f3ece2;
+            --bg-image: #ede2d5;
+            --border-color: rgba(109, 90, 66, 0.2);
+            --shadow-sm: 0 2px 10px rgba(27, 15, 5, 0.08);
+            --shadow-md: 0 6px 18px rgba(27, 15, 5, 0.12);
+            --shadow-lg: 0 14px 32px rgba(27, 15, 5, 0.16);
             --radius-sm: 8px;
             --radius-md: 12px;
             --radius-lg: 16px;
@@ -134,23 +134,23 @@ function img_url($path, $BASE, $folder = 'productos') {
            MODO OSCURO - Compatible con reset.css
            ========================================== */
         body.dark {
-            --primary-color: #d4af7f;
-            --primary-dark: #c2a98f;
-            --primary-light: #8f7a5d;
-            --secondary-color: #ff8787;
-            --success-color: #69db7c;
-            --warning-color: #ffe066;
-            --text-primary: #f0f0f0;
-            --text-secondary: #b8b8b8;
-            --text-muted: #888888;
-            --bg-primary: #1e1e1e;
-            --bg-white: #2a2a2a;
-            --bg-secondary: #2b2b2b;
-            --bg-image: #2e2e2e;
-            --border-color: #404040;
-            --shadow-sm: 0 2px 8px rgba(0,0,0,.4);
-            --shadow-md: 0 4px 12px rgba(0,0,0,.5);
-            --shadow-lg: 0 8px 18px rgba(0,0,0,.6);
+            --primary-color: #b2926e;
+            --primary-dark: #d6c2a8;
+            --primary-light: #8a755e;
+            --secondary-color: #c2a37f;
+            --success-color: #8bc29a;
+            --warning-color: #e3b56f;
+            --text-primary: #f7f2ea;
+            --text-secondary: #d9cfc3;
+            --text-muted: #ab9e90;
+            --bg-primary: #1a140f;
+            --bg-white: #261f18;
+            --bg-secondary: #2d251d;
+            --bg-image: #312920;
+            --border-color: rgba(255,255,255,0.2);
+            --shadow-sm: 0 2px 8px rgba(0,0,0,.5);
+            --shadow-md: 0 4px 14px rgba(0,0,0,.55);
+            --shadow-lg: 0 10px 22px rgba(0,0,0,.6);
         }
 
         /* Transición suave al cambiar tema */
