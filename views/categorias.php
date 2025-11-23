@@ -152,14 +152,15 @@ function getCategoryImage($imagen, $BASE) {
 
     .section-label {
       display: inline-block;
-      padding: 8px 20px;
-      background: rgba(161, 104, 58, 0.1);
-      color: #a1683a;
+      padding: 10px 26px;
+      background: rgba(109, 90, 66, 0.12);
+      color: #6D5A42;
       border-radius: 50px;
-      font-weight: 700;
-      font-size: 14px;
-      letter-spacing: 1px;
-      text-transform: uppercase;
+      font-family: inherit;
+      font-weight: 600;
+      font-size: 16px;
+      letter-spacing: 0.5px;
+      text-transform: none;
       margin-bottom: 16px;
     }
 
