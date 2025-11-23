@@ -422,11 +422,16 @@ function updateUI() {
 }
 
 function goBack() {
+    const fallbackUrl = (typeof window.BASE_URL === 'string' ? window.BASE_URL : '/LumiSpace/') + 'index.php';
     showConfirmModal(
         '¿Volver a la pantalla anterior?',
-        '',
+        'Se cerrará la vista de favoritos y regresarás a la pantalla anterior.',
         () => {
-            window.history.back();
+            if (window.history.length > 1) {
+                window.history.back();
+            } else {
+                window.location.href = fallbackUrl;
+            }
         }
     );
 }

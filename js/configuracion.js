@@ -1,3 +1,13 @@
+const RAW_BASE_PATH = window.APP_BASE_PATH || '/LumiSpace';
+const APP_BASE_PATH = (RAW_BASE_PATH || '').replace(/\/+$/, '') || '';
+const SESSION_STATUS_ENDPOINT = `${APP_BASE_PATH}/api/auth/session-status.php`;
+
+let sessionState = {
+    checked: false,
+    loggedIn: false,
+    error: false
+};
+
 let userSettings = {
     paymentMethods: []
 };
@@ -5,6 +15,7 @@ let userSettings = {
 // Inicialización
 document.addEventListener('DOMContentLoaded', function() {
     initializeApp();
+    checkSessionState();
 });
 
 function initializeApp() {
@@ -25,6 +36,52 @@ function initializeApp() {
 // Guardar configuraciones
 function saveSettings() {
     localStorage.setItem('lumispace_settings', JSON.stringify(userSettings));
+}
+
+async function checkSessionState(forceRefresh = false) {
+    if (sessionState.checked && !forceRefresh) {
+        return sessionState;
+    }
+
+    try {
+        const response = await fetch(SESSION_STATUS_ENDPOINT, {
+            credentials: 'include',
+            cache: 'no-store',
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Estado HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        sessionState = {
+            checked: true,
+            loggedIn: Boolean(data.loggedIn),
+            error: false
+        };
+    } catch (error) {
+        console.warn('No se pudo verificar el estado de la sesión', error);
+        sessionState = {
+            checked: true,
+            loggedIn: false,
+            error: true
+        };
+    }
+
+    updateLogoutButtonState(sessionState.loggedIn && !sessionState.error);
+    return sessionState;
+}
+
+function updateLogoutButtonState(isActive) {
+    const logoutBtn = document.querySelector('.logout-button');
+    if (!logoutBtn) return;
+
+    logoutBtn.classList.toggle('logout-button--disabled', !isActive);
+    logoutBtn.setAttribute('aria-disabled', String(!isActive));
+    logoutBtn.setAttribute('title', isActive ? 'Cerrar sesión' : 'Para cerrar sesión, primero debes iniciar sesión');
 }
 
 // Navegación
@@ -200,7 +257,7 @@ function showPrivacyPolicy() {
     const content = `
         <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
             <div style="background: #f5f5f5; padding: 15px; border-radius: 12px; margin-bottom: 20px;">
-                <strong>Fecha de entrada en vigor: 25 de Diciembre de 2025</strong>
+                <strong>Fecha de entrada en vigor: 27 de noviembre de 2025</strong>
             </div>
             
             <h3 style="font-size: 16px; margin-bottom: 15px;">Política de Privacidad de LumiSpace</h3>
@@ -257,7 +314,7 @@ function showTermsConditions() {
     const content = `
         <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
             <div style="background: #f5f5f5; padding: 15px; border-radius: 12px; margin-bottom: 20px;">
-                <strong>FECHA DE VIGENCIA: 25 de Diciembre de 2025</strong>
+                <strong>FECHA DE VIGENCIA: 27 de noviembre de 2025</strong>
             </div>
             
             <h3 style="font-size: 16px; margin-bottom: 15px;">Términos y Condiciones de Uso - LumiSpace</h3>
@@ -324,19 +381,22 @@ function showContactUs() {
             name: 'Instagram',
             handle: 'lumi_space0',
             url: 'https://www.instagram.com/lumi_space0',
-            desc: 'Síguenos para novedades y ofertas'
+            desc: 'Síguenos para novedades y ofertas',
+            icon: '../imagenes/instagram.png'
         },
         {
             name: 'X (Twitter)',
             handle: 'LumiSapce_',
             url: 'https://twitter.com/LumiSapce_',
-            desc: 'Actualizaciones en tiempo real'
+            desc: 'Actualizaciones en tiempo real',
+            icon: '../imagenes/x.png'
         },
         {
             name: 'YouTube',
             handle: 'lumispace0',
             url: 'https://youtube.com/@lumispace0',
-            desc: 'Reviews de productos'
+            desc: 'Reviews de productos',
+            icon: '../imagenes/youtube.png'
         }
     ];
     
@@ -350,7 +410,9 @@ function showContactUs() {
             ${socials.map(social => `
                 <div class="social-card">
                     <div class="social-header">
-                        <div class="social-icon" style="background: #333;"></div>
+                        <div class="social-icon">
+                            <img src="${social.icon}" alt="${social.name}">
+                        </div>
                         <div>
                             <strong style="font-size: 16px;">${social.name}</strong>
                             <div style="font-size: 12px; color: #666;">@${social.handle}</div>
@@ -447,12 +509,21 @@ function closeModal() {
     }, 300);
 }
 
-function showSuccessMessage(message) {
+function showSuccessMessage(message, type = 'success') {
     const existingMessage = document.querySelector('.success-message');
     if (existingMessage) {
         existingMessage.remove();
     }
     
+    const palette = {
+        success: { background: '#d4edda', color: '#155724', border: '#c3e6cb' },
+        warning: { background: '#fff4e5', color: '#8a4d00', border: '#ffe0b3' },
+        error: { background: '#fdecea', color: '#b71c1c', border: '#f5c2c7' },
+        info: { background: '#e8f4fd', color: '#0b5394', border: '#b6d9ff' }
+    };
+
+    const colors = palette[type] || palette.success;
+
     const successDiv = document.createElement('div');
     successDiv.className = 'success-message';
     successDiv.textContent = message;
@@ -463,6 +534,9 @@ function showSuccessMessage(message) {
     successDiv.style.zIndex = '10000';
     successDiv.style.minWidth = '300px';
     successDiv.style.animation = 'slideDown 0.3s ease';
+    successDiv.style.background = colors.background;
+    successDiv.style.color = colors.color;
+    successDiv.style.border = `1px solid ${colors.border}`;
     
     document.body.appendChild(successDiv);
     

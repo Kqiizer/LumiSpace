@@ -15,26 +15,6 @@ $stats = [
     'categorias' => count($categorias),
     'clientes'   => (int)($conn->query("SELECT COUNT(*) AS total FROM usuarios WHERE rol!='admin'")->fetch_assoc()['total'] ?? 0),
 ];
-<<<<<<< HEAD
-=======
-
-// ==========================================
-// FUNCIÓN HELPER PARA IMÁGENES
-// ==========================================
-function img_url($path, $BASE, $folder = 'productos') {
-    $path = trim((string)$path);
-
-    if ($path === '') 
-        return $BASE . "images/default.png";
-
-    // Si es URL absoluta
-    if (preg_match('#^https?://#i', $path)) 
-        return $path;
-
-    // 🔥 Ruta fija y correcta aunque estés dentro de /views/
-    return $BASE . "images/{$folder}/" . basename($path);
-}
->>>>>>> f8f2e030 (Configuraciones, Favoritos, Buscador)
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -587,6 +567,109 @@ function img_url($path, $BASE, $folder = 'productos') {
             color: white;
         }
 
+        .catalog-wishlist-btn {
+            border: 1px solid var(--primary-color);
+            background: transparent;
+            color: var(--primary-color);
+            padding: 8px 16px;
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .catalog-wishlist-btn i {
+            font-size: 1rem;
+        }
+
+        .catalog-wishlist-btn:hover:not([disabled]) {
+            background: var(--primary-color);
+            color: #fff;
+        }
+
+        .catalog-wishlist-btn.active {
+            background: var(--primary-color);
+            color: #fff;
+        }
+
+        .catalog-wishlist-btn[disabled] {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .product-cta {
+            margin-top: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .product-detail-btn {
+            background: var(--primary-color);
+            color: #fff;
+            padding: 10px 18px;
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+            text-decoration: none;
+            transition: var(--transition);
+        }
+
+        .product-detail-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(161, 104, 58, 0.25);
+        }
+
+        .catalog-toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--bg-white);
+            color: var(--text-primary);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-lg);
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-left: 4px solid var(--primary-color);
+            animation: toastIn 0.3s ease;
+            z-index: 2000;
+        }
+
+        body.dark .catalog-toast {
+            background: var(--bg-white);
+            color: var(--text-primary);
+        }
+
+        .catalog-toast.hide {
+            animation: toastOut 0.3s ease forwards;
+        }
+
+        .catalog-toast.success {
+            border-left-color: #28a745;
+        }
+
+        .catalog-toast.error {
+            border-left-color: #dc3545;
+        }
+
+        .catalog-toast.warning {
+            border-left-color: #ffc107;
+        }
+
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes toastOut {
+            to { opacity: 0; transform: translateY(-10px); }
+        }
+
         .product-info {
             padding: 20px;
             flex: 1;
@@ -848,7 +931,8 @@ function img_url($path, $BASE, $folder = 'productos') {
         }
     </style>
 </head>
-<body class="catalog-page">
+
+<body>
     <div class="page-wrapper">
         <!-- Botón de Toggle Tema -->
         <button class="theme-toggle" id="themeToggle" aria-label="Cambiar tema">
@@ -884,7 +968,6 @@ function img_url($path, $BASE, $folder = 'productos') {
             </div>
         </section>
 
-<<<<<<< HEAD
     <section class="catalog-layout">
         <aside class="filters-panel">
             <h3>Filtrar por</h3>
@@ -969,41 +1052,105 @@ function img_url($path, $BASE, $folder = 'productos') {
             <div id="catalogPagination" class="pagination"></div>
         </section>
     </section>
-=======
-        <!-- Barra de Filtros y Búsqueda -->
-        <div class="filters-bar">
-    <div class="filters-container">
-        
-        <!-- Búsqueda -->
-        <div class="search-bar">
-            <div class="search-input-wrapper">
-                <input type="text" 
-                       class="search-input" 
-                       id="searchInput" 
-                       placeholder="Buscar productos por nombre...">
-                <i class="fas fa-search search-icon"></i>
+
+    <section class="catalog-layout">
+        <aside class="filters-panel">
+            <h3>Filtrar por</h3>
+
+            <div class="filter-group">
+                <label>Categorías</label>
+                <div id="catalogCategories" class="categories-list">
+                    <div class="category-item active" data-category="">
+                        <span>Todos</span>
+                        <small><?= $stats['productos'] ?></small>
+                    </div>
+                    <?php foreach ($categorias as $categoria): ?>
+                        <div class="category-item" data-category="<?= htmlspecialchars($categoria['nombre']) ?>">
+                            <span><?= htmlspecialchars($categoria['nombre']) ?></span>
+                            <small><?= (int)($categoria['total'] ?? 0) ?></small>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
             </div>
-            <div class="search-actions">
-                <button class="btn-icon" id="btnClearFilters" title="Limpiar filtros">
-                    <i class="fas fa-times"></i>
-                    <span>Limpiar</span>
-                </button>
+
+            <div class="filter-group">
+                <label for="filterBrand">Marca</label>
+                <select id="filterBrand" data-placeholder="Todas las marcas">
+                    <option value="">Todas</option>
+                </select>
             </div>
-        </div>
-    </div>
->>>>>>> f8f2e030 (Configuraciones, Favoritos, Buscador)
+
+            <div class="filter-group">
+                <label for="filterColor">Color</label>
+                <select id="filterColor" data-placeholder="Todos los colores">
+                    <option value="">Todos</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="filterSize">Talla / Tamaño</label>
+                <select id="filterSize" data-placeholder="Todas las tallas">
+                    <option value="">Todos</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label>Precio</label>
+                <input type="number" id="filterPriceMin" placeholder="Desde $" min="0">
+                <input type="number" id="filterPriceMax" placeholder="Hasta $" min="0" style="margin-top:8px;">
+            </div>
+
+            <div class="filter-group">
+                <label for="filterAvailability">Disponibilidad</label>
+                <select id="filterAvailability">
+                    <option value="">Todos</option>
+                    <option value="in">En stock</option>
+                    <option value="out">Agotado</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label>
+                    <input type="checkbox" id="filterDiscount">
+                    Solo productos con descuento
+                </label>
+            </div>
+        </aside>
+
+        <section class="catalog-results">
+            <header class="results-header">
+                <div id="resultsInfo">Mostrando productos...</div>
+                <div class="catalog-sort">
+                    <label for="catalogSort">Ordenar:</label>
+                    <select id="catalogSort">
+                        <option value="relevance">Relevancia</option>
+                        <option value="price_asc">Precio: menor a mayor</option>
+                        <option value="price_desc">Precio: mayor a menor</option>
+                        <option value="popularity">Popularidad</option>
+                        <option value="rating">Mejor calificación</option>
+                        <option value="newest">Novedades</option>
+                    </select>
+                </div>
+            </header>
+
+            <div id="productGrid" class="product-grid"></div>
+            <div id="catalogPagination" class="pagination"></div>
+        </section>
+    </section>
+>>>>>>> ed0f8909 (Configuraciones, Favoritos, Buscador)
 
         <!-- Footer -->
         <?php include __DIR__ . "/../includes/footer.php"; ?>
     </div>
 <<<<<<< HEAD
+<<<<<<< HEAD
 
     <script>
         window.BASE_URL = "<?= $BASE ?>";
+        window.USER_LOGGED = <?= isset($_SESSION['usuario_id']) ? 'true' : 'false' ?>;
+        window.LOGIN_URL = "<?= $BASE ?>views/login.php";
     </script>
     <script src="<?= $BASE ?>js/catalogo.js"></script>
-=======
->>>>>>> f8f2e030 (Configuraciones, Favoritos, Buscador)
 </body>
 </html>
 

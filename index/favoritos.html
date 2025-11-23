@@ -3,160 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mis Favoritos - Luminarias</title>
-    <link rel="stylesheet" href="../css/styles/favoritos.css">
+    <title>Redirigiendo a Favoritos</title>
+    <meta http-equiv="refresh" content="0;url=favoritos.php">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: #faf7f2;
+            color: #6d5a42;
+            text-align: center;
+        }
+    </style>
 </head>
 <body>
-    
-    <div id="notification" class="notification hidden">
-        <svg class="notification-icon" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-        </svg>
-        <span id="notificationMessage"></span>
+    <div>
+        <p>Redirigiendo al nuevo apartado de favoritos...</p>
+        <p><a href="favoritos.php">Haz clic aquí si no eres redirigido automáticamente.</a></p>
     </div>
-
-    
-    <div id="shareModal" class="modal hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Compartir Favoritos</h3>
-                <button class="modal-close" onclick="closeShareModal()">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                </button>
-            </div>
-            <div class="modal-body">
-                <button class="share-btn share-btn-primary">Copiar enlace</button>
-                <button class="share-btn share-btn-secondary">Compartir por WhatsApp</button>
-                <button class="share-btn share-btn-tertiary">Enviar por correo</button>
-            </div>
-        </div>
-    </div>
-
-    
-    <header class="header">
-        <div class="container">
-            <div class="header-content">
-                <button class="back-button" onclick="goBack()">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                        <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </button>
-                <div class="header-left">
-                    <h1 class="header-title">
-                        <svg class="header-icon" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-                        </svg>
-                        Mis Favoritos
-                    </h1>
-                    <p class="header-subtitle">
-                        <span id="favoritesCount">0</span> productos guardados
-                    </p>
-                </div>
-                <div class="header-right">
-                    <button class="header-btn" onclick="openShareModal()">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="18" cy="5" r="3"></circle>
-                            <circle cx="6" cy="12" r="3"></circle>
-                            <circle cx="18" cy="19" r="3"></circle>
-                            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
-                            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
-                        </svg>
-                        Compartir
-                    </button>
-                    <button class="header-btn" id="cartBtn">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="9" cy="21" r="1"></circle>
-                            <circle cx="20" cy="21" r="1"></circle>
-                            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
-                        </svg>
-                        Carrito
-                        <span id="cartCount" class="cart-badge hidden">0</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </header>
-
-   
-    <main class="main">
-        <div class="container">
-           
-            <div class="filters-section">
-                <div class="search-sort-container">
-                    
-                    <div class="search-wrapper">
-                        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="11" cy="11" r="8"></circle>
-                            <path d="m21 21-4.35-4.35"></path>
-                        </svg>
-                        <input 
-                            type="text" 
-                            id="searchInput" 
-                            class="search-input" 
-                            placeholder="Buscar en favoritos..."
-                        >
-                    </div>
-
-                   
-                    <select id="sortSelect" class="sort-select">
-                        <option value="recent">Más recientes</option>
-                        <option value="price-low">Menor precio</option>
-                        <option value="price-high">Mayor precio</option>
-                        <option value="discount">Mayor descuento</option>
-                    </select>
-                </div>
-
-                
-                <div class="categories" id="categories">
-                   
-                </div>
-            </div>
-
-            
-            <div id="productsGrid" class="products-grid">
-                
-            </div>
-
-            
-            <div id="emptyState" class="empty-state hidden">
-                <svg class="empty-icon" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-                </svg>
-                <h2 class="empty-title">Aún no tienes favoritos</h2>
-                <p class="empty-text">Comienza a explorar y guarda tus luminarias favoritas</p>
-            </div>
-
-            
-            <div class="explore-section">
-                <h2 class="explore-title">Explorar más productos</h2>
-                <div id="exploreGrid" class="explore-grid">
-                 
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <!-- Modal de Confirmación -->
-    <div id="confirmModal" class="confirm-modal">
-        <div class="confirm-modal-content">
-            <div class="confirm-modal-icon">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
-                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-                    <path d="M12 8V12M12 16H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                </svg>
-            </div>
-            <h3 class="confirm-modal-title" id="confirmModalTitle">Confirmar acción</h3>
-            <p class="confirm-modal-message" id="confirmModalMessage">¿Estás seguro de realizar esta acción?</p>
-            <div class="confirm-modal-buttons">
-                <button class="confirm-btn confirm-btn-cancel" id="confirmModalCancel">Cancelar</button>
-                <button class="confirm-btn confirm-btn-confirm" id="confirmModalConfirm">Confirmar</button>
-            </div>
-        </div>
-    </div>
-
-    <script src="../js/favoritos.js"></script>
+    <script>
+        window.location.replace('favoritos.php');
+    </script>
 </body>
 </html>

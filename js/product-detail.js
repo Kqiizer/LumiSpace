@@ -311,7 +311,7 @@
       if (!data.ok) throw new Error(data.msg || 'Error');
       if (data.in_wishlist) {
         bumpBadge('.fa-heart .cart-badge', 1);
-        location.href = `${BASE}includes/favoritos.php`;
+        location.href = `${BASE}index/favoritos.php`;
       } else {
         bumpBadge('.fa-heart .cart-badge', -1);
       }
@@ -350,7 +350,7 @@
         body: JSON.stringify({ producto_id: parseInt(w.dataset.id || '0', 10) })
       });
       const data = await res.json();
-      if (data.in_wishlist) location.href = `${BASE}includes/favoritos.php`;
+      if (data.in_wishlist) location.href = `${BASE}index/favoritos.php`;
     } catch {/* ignore */}
   });
   relWrap?.addEventListener('click', (e) => {

@@ -1,4 +1,8 @@
-const API_PRODUCTS = (window.BASE_URL || '/') + 'api/search/products.php';
+const BASE_URL = window.BASE_URL || '/';
+const API_PRODUCTS = BASE_URL + 'api/search/products.php';
+const FAVORITES_ENDPOINT = (window.FAVORITES_ENDPOINT || (BASE_URL + 'api/wishlist/toggle.php'));
+const USER_LOGGED = Boolean(window.USER_LOGGED);
+const LOGIN_URL = window.LOGIN_URL || (BASE_URL + 'views/login.php');
 
 const categoryListEl = document.getElementById('catalogCategories');
 const productGridEl = document.getElementById('productGrid');
@@ -20,6 +24,7 @@ let activeRequest = null;
 
 function initializeCatalog() {
     if (!productGridEl) return;
+    productGridEl.addEventListener('click', handleWishlistClick);
     attachFilterListeners();
     bindCategoryEvents();
     fetchProducts();
@@ -138,8 +143,16 @@ function renderProducts(products) {
                 <div class="product-price">$${product.price.toLocaleString('es-MX')}</div>
                 <div class="product-meta">${product.availability ? 'Disponible' : 'Agotado'}</div>
                 <div class="product-meta">${truncateText(product.description || '', 90)}</div>
-                <div class="product-actions">
-                    <a href="${(window.BASE_URL || '/') + 'views/productos-detal.php?id=' + product.id}">Ver detalle</a>
+                <div class="product-cta">
+                    <button
+                        class="catalog-wishlist-btn ${product.in_wishlist ? 'active' : ''}"
+                        data-product-id="${product.id}"
+                        aria-pressed="${product.in_wishlist ? 'true' : 'false'}"
+                    >
+                        <i class="${product.in_wishlist ? 'fas' : 'far'} fa-heart"></i>
+                        <span>${product.in_wishlist ? 'Guardado' : 'Favorito'}</span>
+                    </button>
+                    <a class="product-detail-btn" href="${BASE_URL + 'views/productos-detal.php?id=' + product.id}">Ver detalle</a>
                 </div>
             </article>
         `;
@@ -242,6 +255,92 @@ function truncateText(text, maxLength) {
 function setGridLoading(state) {
     if (!productGridEl) return;
     productGridEl.classList.toggle('loading', state);
+}
+
+function handleWishlistClick(event) {
+    const btn = event.target.closest('.catalog-wishlist-btn');
+    if (!btn) return;
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!USER_LOGGED) {
+        showCatalogToast('Debes iniciar sesión para guardar favoritos', 'warning');
+        const next = encodeURIComponent(window.location.pathname + window.location.search);
+        setTimeout(() => {
+            window.location.href = `${LOGIN_URL}?next=${next}`;
+        }, 1000);
+        return;
+    }
+
+    if (btn.dataset.loading === '1') return;
+    const productId = parseInt(btn.dataset.productId, 10);
+    if (!productId) return;
+
+    toggleWishlist(btn, productId);
+}
+
+async function toggleWishlist(button, productId) {
+    const icon = button.querySelector('i');
+    const label = button.querySelector('span');
+    const previousIcon = icon.className;
+    button.dataset.loading = '1';
+    button.disabled = true;
+    icon.className = 'fas fa-spinner fa-spin';
+
+    try {
+        const response = await fetch(FAVORITES_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ producto_id: productId })
+        });
+
+        if (response.status === 401) {
+            showCatalogToast('Tu sesión expiró, inicia sesión nuevamente', 'warning');
+            setTimeout(() => {
+                const next = encodeURIComponent(window.location.pathname + window.location.search);
+                window.location.href = `${LOGIN_URL}?next=${next}`;
+            }, 1000);
+            return;
+        }
+
+        const data = await response.json();
+        if (!data.ok) {
+            throw new Error(data.msg || 'No se pudo actualizar favoritos');
+        }
+
+        updateWishlistButton(button, data.in_wishlist);
+        showCatalogToast(data.in_wishlist ? 'Agregado a favoritos' : 'Eliminado de favoritos', 'success');
+        window.dispatchEvent(new CustomEvent('wishlist:updated'));
+    } catch (error) {
+        console.error(error);
+        icon.className = previousIcon;
+        showCatalogToast('Error al actualizar favoritos', 'error');
+    } finally {
+        button.disabled = false;
+        button.dataset.loading = '0';
+    }
+}
+
+function updateWishlistButton(button, isActive) {
+    button.classList.toggle('active', isActive);
+    button.setAttribute('aria-pressed', String(isActive));
+    const icon = button.querySelector('i');
+    const label = button.querySelector('span');
+    if (icon && label) {
+        icon.className = `${isActive ? 'fas' : 'far'} fa-heart`;
+        label.textContent = isActive ? 'Guardado' : 'Favorito';
+    }
+}
+
+function showCatalogToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `catalog-toast ${type}`;
+    toast.innerHTML = `<i class="fas fa-heart"></i><span>${message}</span>`;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+        toast.classList.add('hide');
+        setTimeout(() => toast.remove(), 300);
+    }, 2200);
 }
 
 initializeCatalog();
