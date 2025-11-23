@@ -346,8 +346,8 @@ case 'venta_crear': {
   $pago_tj  = $metodo==='tarjeta'  ? $total : 0.0;
 
   $stmt = $db->prepare("
-    INSERT INTO ventas (gestor_id, subtotal, descuento_total, iva, total, pago_efectivo, pago_tarjeta, pago_transferencia, metodo_principal)
-    VALUES (?,?,0,?,?,?, ?, 0, ?)");
+    INSERT INTO ventas (gestor_id, subtotal, descuento_total, iva, total, pago_efectivo, pago_tarjeta, pago_transferencia, metodo_principal, fecha)
+    VALUES (?,?,0,?,?,?,?,0,?,NOW())");
   $stmt->bind_param('iddddds', $cajero_id, $subtotal, $iva, $total, $pago_ef, $pago_tj, $metodo);
   $stmt->execute();
   $venta_id = $stmt->insert_id;
@@ -514,46 +514,73 @@ case 'corte_resumen': {
     $turno = $stmt->get_result()->fetch_assoc();
   }
   
-  if (!$turno) out(['ok'=>true,'data'=>null]);
+  if (!$turno) {
+    out(['ok'=>true,'data'=>null]);
+    break;
+  }
 
   $ini = $turno['fecha_apertura']; 
   $fin = $turno['fecha_cierre'] ?: date('Y-m-d H:i:s');
+  $cajero_id_turno = (int)$turno['cajero_id'];
 
+  // Buscar ventas del cajero del turno, ya sea por fecha o todas si no tienen fecha
+  // Esto soluciona el problema de ventas sin fecha
   $stmt = $db->prepare("
      SELECT COALESCE(SUM(pago_efectivo),0) ef,
             COALESCE(SUM(pago_tarjeta),0)  tj,
             COALESCE(SUM(total),0)        tt,
             COUNT(*) c
      FROM ventas
-     WHERE fecha BETWEEN ? AND ?");
-  $stmt->bind_param('ss',$ini,$fin);
+     WHERE gestor_id = ? 
+       AND ((fecha BETWEEN ? AND ?) OR fecha IS NULL)");
+  $stmt->bind_param('iss',$cajero_id_turno,$ini,$fin);
   $stmt->execute(); 
   $s = $stmt->get_result()->fetch_assoc();
 
   $saldo_inicial = (float)$turno['saldo_inicial'];
   $saldo_actual  = $saldo_inicial + (float)$s['ef'];
 
+  // Obtener movimientos: todas las ventas del cajero del turno
   $stmt = $db->prepare("
-     SELECT fecha, metodo_principal AS metodo, total AS monto
+     SELECT COALESCE(fecha, NOW()) AS fecha, 
+            metodo_principal AS metodo, 
+            total AS monto
      FROM ventas
-     WHERE fecha BETWEEN ? AND ?
-     ORDER BY fecha DESC LIMIT 50");
-  $stmt->bind_param('ss',$ini,$fin);
+     WHERE gestor_id = ? 
+       AND ((fecha BETWEEN ? AND ?) OR fecha IS NULL)
+     ORDER BY COALESCE(fecha, NOW()) DESC 
+     LIMIT 50");
+  $stmt->bind_param('iss',$cajero_id_turno,$ini,$fin);
   $stmt->execute(); 
-  $movs = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+  $result = $stmt->get_result();
+  $movs = [];
+  
+  // Asegurar que todos los movimientos tengan formato correcto
+  while($row = $result->fetch_assoc()) {
+    $movs[] = [
+      'fecha' => $row['fecha'] ?? '',
+      'metodo' => $row['metodo'] ?? '',
+      'monto' => (float)($row['monto'] ?? 0)
+    ];
+  }
 
+  // Formatear fechas de inicio y fin
+  $inicioFormateado = date('Y-m-d H:i:s', strtotime($ini));
+  $finFormateado = $turno['fecha_cierre'] ? date('Y-m-d H:i:s', strtotime($fin)) : null;
+  
   out(['ok'=>true,'data'=>[
     'turno_id'=>(int)$turno['id'],
     'caja_id'=>$caja,
-    'inicio'=>$ini,
-    'fin'=>$fin,
+    'inicio'=>$inicioFormateado,
+    'fin'=>$finFormateado,
     'saldo_inicial'=>$saldo_inicial,
     'ventas_efectivo'=>(float)$s['ef'],
     'ventas_tarjeta' =>(float)$s['tj'],
     'ventas_total'   =>(float)$s['tt'],
     'ventas_count'   =>(int)$s['c'],
     'saldo_actual'   =>$saldo_actual,
-    'movimientos'    =>$movs
+    'movimientos'    =>$movs,
+    'movimientos_count' => count($movs)
   ]]);
   break;
 }
