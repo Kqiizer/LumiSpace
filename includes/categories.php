@@ -672,6 +672,7 @@ function getSubcategorias($subcats_data) {
         $BASE . 'imagenes/lamparas/deco3.jpg',
         $BASE . 'imagenes/lamparas/deco4.jpg',
       ];
+      $homeCategoryIndex = 0;
     ?>
     <div class="products-grid" data-base="<?= htmlspecialchars($BASE) ?>">
 
@@ -681,8 +682,9 @@ function getSubcategorias($subcats_data) {
           $nombre = htmlspecialchars($cat['nombre'] ?? 'Sin nombre');
           $descripcion = htmlspecialchars($cat['descripcion'] ?? 'Encuentra la mejor selección de productos');
           $imagen = getCategoryImage($cat['imagen'] ?? '', $BASE);
-          if (!empty($homeCategoryImages)) {
-            $imagen = array_shift($homeCategoryImages);
+          if (isset($homeCategoryImages[$homeCategoryIndex])) {
+            $imagen = $homeCategoryImages[$homeCategoryIndex];
+            $homeCategoryIndex++;
           }
           $total_productos = $productos_por_categoria[$cat_id] ?? 0;
           $subcats = getSubcategorias($cat['subcategorias'] ?? null);
@@ -699,7 +701,8 @@ function getSubcategorias($subcats_data) {
               <div class="products-badge <?= $total_productos === 0 ? 'empty' : '' ?>">
                 <?= $total_productos === 0 ? 'Sin productos' : number_format($total_productos) . ' producto' . ($total_productos !== 1 ? 's' : '') ?>
               </div>
-              <div class="category-image skeleton" data-bg="<?= htmlspecialchars($imagen) ?>"></div>
+              <div class="category-image skeleton" data-bg="<?= htmlspecialchars($imagen) ?>"
+                   style="background-image:url('<?= htmlspecialchars($imagen, ENT_QUOTES, 'UTF-8') ?>');"></div>
             </div>
 
             <div class="category-header">
