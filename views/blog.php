@@ -20,8 +20,8 @@ $featuredPost = !empty($posts) ? $posts[0] : null;
 <head>
     <meta charset="UTF-8">
     <title>Blog | LumiSpace</title>
-    <link rel="stylesheet" href="<?= BASE_URL ?>css/styles/reset.css">
-    <link rel="stylesheet" href="<?= BASE_URL ?>css/styles/blog.css">
+    <link rel="stylesheet" href="css/styles/reset.css">
+    <link rel="stylesheet" href="css/styles/blog.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 </head>
 
