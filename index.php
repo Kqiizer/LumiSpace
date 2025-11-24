@@ -36,6 +36,7 @@ if (session_status() === PHP_SESSION_NONE)
       <?php include "includes/hero.php"; ?>
       <?php include "includes/features.php"; ?>
       <?php include "includes/categories.php"; ?>
+      <?php include "includes/catalog.php"; ?>
       <?php include "includes/statistics.php"; ?>
       <?php include "includes/collection.php"; ?>
 
