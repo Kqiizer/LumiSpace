@@ -1,9 +1,25 @@
 <?php
 
-// Ruta base del proyecto (ajusta "LumiSpace" si tu carpeta tiene otro nombre)
+// Detección dinámica de BASE_URL para compatibilidad Hostinger/Docker
 if (!defined("BASE_URL")) {
     $envBase = getenv('BASE_URL');
-    define("BASE_URL", $envBase !== false ? $envBase : "/LumiSpace/");
+    if ($envBase !== false) {
+        define("BASE_URL", $envBase);
+    } else {
+        // Normalizar rutas para evitar problemas de slashes en Windows/Linux
+        $projectDir = str_replace('\\', '/', dirname(__DIR__));
+        $docRoot = str_replace('\\', '/', $_SERVER['DOCUMENT_ROOT'] ?? $projectDir);
+
+        // Si el proyecto está dentro del document root
+        if (strpos($projectDir, $docRoot) === 0) {
+            $folder = substr($projectDir, strlen($docRoot));
+            // Asegurar formato /carpeta/ o /
+            define("BASE_URL", rtrim($folder, '/') . '/');
+        } else {
+            // Fallback por si la estructura de carpetas es inusual
+            define("BASE_URL", "/");
+        }
+    }
 }
 
 include_once(__DIR__ . "/db.php");
@@ -1820,14 +1836,14 @@ function getCategorias(): array
     $check_featured = $conn->query("SHOW COLUMNS FROM categorias LIKE 'featured_image'");
     $has_imagen = $check_imagen && $check_imagen->num_rows > 0;
     $has_featured = $check_featured && $check_featured->num_rows > 0;
-    
+
     $image_col = '';
     if ($has_featured) {
         $image_col = ', featured_image';
     } elseif ($has_imagen) {
         $image_col = ', imagen';
     }
-    
+
     $sql = "SELECT id, nombre, descripcion{$image_col} FROM categorias ORDER BY nombre ASC";
     $res = $conn->query($sql);
     return $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
@@ -1878,7 +1894,8 @@ function eliminarCategoria(int $id): bool
     return $stmt->execute();
 }
 
-function getBrandsOverview(): array {
+function getBrandsOverview(): array
+{
     $conn = getDBConnection();
     $hasBrandsTable = tableExists($conn, 'marcas');
     $brands = [];
@@ -1925,16 +1942,16 @@ function getBrandsOverview(): array {
         if ($res) {
             while ($row = $res->fetch_assoc()) {
                 $brands[] = [
-                    'id'          => (int)$row['id'],
-                    'name'        => $row['nombre'] ?? 'Marca',
+                    'id' => (int) $row['id'],
+                    'name' => $row['nombre'] ?? 'Marca',
                     'description' => $row['descripcion'] ?? '',
-                    'logo'        => publicImageUrl($row['logo_path'] ?? ''),
-                    'tagline'     => $row['tagline'] ?? '',
-                    'campaign'    => $row['campania'] ?? '',
-                    'accent'      => $row['color_acento'] ?? '',
-                    'featured'    => !empty($row['destacada']),
-                    'products'    => (int)($row['total_productos'] ?? 0),
-                    'popularity'  => (int)($row['popularidad'] ?? 0),
+                    'logo' => publicImageUrl($row['logo_path'] ?? ''),
+                    'tagline' => $row['tagline'] ?? '',
+                    'campaign' => $row['campania'] ?? '',
+                    'accent' => $row['color_acento'] ?? '',
+                    'featured' => !empty($row['destacada']),
+                    'products' => (int) ($row['total_productos'] ?? 0),
+                    'popularity' => (int) ($row['popularidad'] ?? 0),
                 ];
             }
         }
@@ -1947,16 +1964,16 @@ function getBrandsOverview(): array {
             if ($res) {
                 while ($row = $res->fetch_assoc()) {
                     $brands[] = [
-                        'id'          => null,
-                        'name'        => $row['nombre'],
+                        'id' => null,
+                        'name' => $row['nombre'],
                         'description' => '',
-                        'logo'        => publicImageUrl('images/default.png'),
-                        'tagline'     => '',
-                        'campaign'    => '',
-                        'accent'      => '',
-                        'featured'    => false,
-                        'products'    => (int)$row['total_productos'],
-                        'popularity'  => (int)$row['total_productos'],
+                        'logo' => publicImageUrl('images/default.png'),
+                        'tagline' => '',
+                        'campaign' => '',
+                        'accent' => '',
+                        'featured' => false,
+                        'products' => (int) $row['total_productos'],
+                        'popularity' => (int) $row['total_productos'],
                     ];
                 }
             }
@@ -2029,7 +2046,8 @@ function toggleFavorito(int $usuario_id, int $producto_id): bool
  *
  * @return array{select:string[],join:string}
  */
-function lsFavoritesProductSelect(mysqli $conn, bool $withAddedAt = false): array {
+function lsFavoritesProductSelect(mysqli $conn, bool $withAddedAt = false): array
+{
     static $cache = [];
     $key = $withAddedAt ? 'with_added_at' : 'without_added_at';
     if (isset($cache[$key])) {
@@ -2079,7 +2097,7 @@ function lsFavoritesProductSelect(mysqli $conn, bool $withAddedAt = false): arra
 
     return $cache[$key] = [
         'select' => $select,
-        'join'   => $join,
+        'join' => $join,
     ];
 }
 
@@ -2162,7 +2180,8 @@ function getFavoritos(?int $usuario_id): array
  * BLOG / CONTENIDO
  * ============================================================
  */
-function getBlogPostsData(): array {
+function getBlogPostsData(): array
+{
     $conn = getDBConnection();
     $hasBlogTable = tableExists($conn, 'blog_posts');
     $posts = [];
@@ -2204,18 +2223,18 @@ function getBlogPostsData(): array {
                     $related = array_values(array_filter(array_map('trim', explode(',', $row['relacionados']))));
                 }
                 $posts[] = [
-                    'id'          => (int)$row['id'],
-                    'title'       => $row['titulo'] ?? 'Artículo',
-                    'slug'        => $row['slug'] ?? '',
-                    'category'    => $row['categoria'] ?? ($row['categoria_id'] ?? 'General'),
-                    'tags'        => $postTags,
-                    'summary'     => $row['resumen'] ?? '',
-                    'content'     => $row['contenido'] ?? '',
-                    'author'      => $row['autor'] ?? 'Equipo LumiSpace',
-                    'image'       => publicImageUrl($row['imagen_destacada'] ?? ''),
-                    'published_at'=> $row['publicado_en'] ?? date('Y-m-d'),
-                    'related'     => $related,
-                    'featured'    => !empty($row['destacado']),
+                    'id' => (int) $row['id'],
+                    'title' => $row['titulo'] ?? 'Artículo',
+                    'slug' => $row['slug'] ?? '',
+                    'category' => $row['categoria'] ?? ($row['categoria_id'] ?? 'General'),
+                    'tags' => $postTags,
+                    'summary' => $row['resumen'] ?? '',
+                    'content' => $row['contenido'] ?? '',
+                    'author' => $row['autor'] ?? 'Equipo LumiSpace',
+                    'image' => publicImageUrl($row['imagen_destacada'] ?? ''),
+                    'published_at' => $row['publicado_en'] ?? date('Y-m-d'),
+                    'related' => $related,
+                    'featured' => !empty($row['destacado']),
                 ];
             }
         }
@@ -2278,9 +2297,9 @@ function getBlogPostsData(): array {
     usort($posts, static fn($a, $b) => strtotime($b['published_at']) <=> strtotime($a['published_at']));
 
     return [
-        'posts'      => $posts,
+        'posts' => $posts,
         'categories' => $categories,
-        'tags'       => $tags,
+        'tags' => $tags,
     ];
 }
 
@@ -2289,7 +2308,8 @@ function getBlogPostsData(): array {
  * 🔍 Buscador avanzado
  * ============================================================
  */
-function lsGetProductColumnsMeta(): array {
+function lsGetProductColumnsMeta(): array
+{
     static $meta = null;
     if ($meta !== null) {
         return $meta;
@@ -2305,65 +2325,67 @@ function lsGetProductColumnsMeta(): array {
     }
 
     $meta = [
-        'has_precio'          => isset($cols['precio']),
+        'has_precio' => isset($cols['precio']),
         'has_precio_original' => isset($cols['precio_original']),
-        'has_descuento'       => isset($cols['descuento']),
-        'has_stock'           => isset($cols['stock']) || isset($cols['existencia']),
-        'stock_column'        => isset($cols['stock']) ? 'stock' : (isset($cols['existencia']) ? 'existencia' : null),
-        'has_categoria_id'    => isset($cols['categoria_id']),
-        'has_categoria_text'  => isset($cols['categoria']),
-        'has_marca_id'        => isset($cols['marca_id']),
-        'has_proveedor_id'    => isset($cols['proveedor_id']),
-        'has_color'           => isset($cols['color']),
-        'has_talla'           => isset($cols['talla']) || isset($cols['tamano']),
-        'talla_column'        => isset($cols['talla']) ? 'talla' : (isset($cols['tamano']) ? 'tamano' : null),
-        'has_disponible'      => isset($cols['disponible']),
-        'has_popular'         => isset($cols['ventas']) ? 'ventas' : (isset($cols['visitas']) ? 'visitas' : null),
-        'has_rating'          => isset($cols['calificacion']),
-        'has_created'         => isset($cols['creado_en']) ? 'creado_en' : (isset($cols['created_at']) ? 'created_at' : null),
+        'has_descuento' => isset($cols['descuento']),
+        'has_stock' => isset($cols['stock']) || isset($cols['existencia']),
+        'stock_column' => isset($cols['stock']) ? 'stock' : (isset($cols['existencia']) ? 'existencia' : null),
+        'has_categoria_id' => isset($cols['categoria_id']),
+        'has_categoria_text' => isset($cols['categoria']),
+        'has_marca_id' => isset($cols['marca_id']),
+        'has_proveedor_id' => isset($cols['proveedor_id']),
+        'has_color' => isset($cols['color']),
+        'has_talla' => isset($cols['talla']) || isset($cols['tamano']),
+        'talla_column' => isset($cols['talla']) ? 'talla' : (isset($cols['tamano']) ? 'tamano' : null),
+        'has_disponible' => isset($cols['disponible']),
+        'has_popular' => isset($cols['ventas']) ? 'ventas' : (isset($cols['visitas']) ? 'visitas' : null),
+        'has_rating' => isset($cols['calificacion']),
+        'has_created' => isset($cols['creado_en']) ? 'creado_en' : (isset($cols['created_at']) ? 'created_at' : null),
     ];
 
     return $meta;
 }
 
-function normalizeSearchProductRow(array $row): array {
+function normalizeSearchProductRow(array $row): array
+{
     return [
-        'id'             => (int)($row['id'] ?? 0),
-        'name'           => $row['nombre'] ?? 'Producto',
-        'description'    => $row['descripcion'] ?? '',
-        'category'       => $row['categoria'] ?? 'Otros',
-        'brand'          => $row['marca'] ?? ($row['proveedor'] ?? ''),
-        'price'          => isset($row['precio']) ? (float)$row['precio'] : 0.0,
-        'originalPrice'  => isset($row['precio_original']) && $row['precio_original'] !== null ? (float)$row['precio_original'] : null,
-        'discount'       => isset($row['descuento']) ? (float)$row['descuento'] : 0.0,
-        'stock'          => isset($row['stock']) ? (int)$row['stock'] : 0,
-        'availability'   => isset($row['disponible']) ? (bool)$row['disponible'] : (isset($row['stock']) ? ((int)$row['stock'] > 0) : true),
-        'color'          => $row['color'] ?? null,
-        'size'           => $row['talla'] ?? null,
-        'rating'         => isset($row['calificacion']) ? (float)$row['calificacion'] : null,
-        'image'          => publicImageUrl($row['imagen'] ?? ''),
-        'created_at'     => $row['creado_en'] ?? ($row['created_at'] ?? null),
-        'popularity'     => isset($row['popularity']) ? (int)$row['popularity'] : (isset($row['ventas']) ? (int)$row['ventas'] : (isset($row['visitas']) ? (int)$row['visitas'] : 0)),
+        'id' => (int) ($row['id'] ?? 0),
+        'name' => $row['nombre'] ?? 'Producto',
+        'description' => $row['descripcion'] ?? '',
+        'category' => $row['categoria'] ?? 'Otros',
+        'brand' => $row['marca'] ?? ($row['proveedor'] ?? ''),
+        'price' => isset($row['precio']) ? (float) $row['precio'] : 0.0,
+        'originalPrice' => isset($row['precio_original']) && $row['precio_original'] !== null ? (float) $row['precio_original'] : null,
+        'discount' => isset($row['descuento']) ? (float) $row['descuento'] : 0.0,
+        'stock' => isset($row['stock']) ? (int) $row['stock'] : 0,
+        'availability' => isset($row['disponible']) ? (bool) $row['disponible'] : (isset($row['stock']) ? ((int) $row['stock'] > 0) : true),
+        'color' => $row['color'] ?? null,
+        'size' => $row['talla'] ?? null,
+        'rating' => isset($row['calificacion']) ? (float) $row['calificacion'] : null,
+        'image' => publicImageUrl($row['imagen'] ?? ''),
+        'created_at' => $row['creado_en'] ?? ($row['created_at'] ?? null),
+        'popularity' => isset($row['popularity']) ? (int) $row['popularity'] : (isset($row['ventas']) ? (int) $row['ventas'] : (isset($row['visitas']) ? (int) $row['visitas'] : 0)),
     ];
 }
 
-function searchProductos(array $options = []): array {
+function searchProductos(array $options = []): array
+{
     $conn = getDBConnection();
     $meta = lsGetProductColumnsMeta();
 
-    $query      = trim((string)($options['q'] ?? ''));
-    $category   = trim((string)($options['category'] ?? ''));
-    $brand      = trim((string)($options['brand'] ?? ''));
-    $color      = trim((string)($options['color'] ?? ''));
-    $size       = trim((string)($options['size'] ?? ''));
-    $available  = isset($options['availability']) ? (string)$options['availability'] : '';
-    $minPrice   = isset($options['min_price']) ? (float)$options['min_price'] : null;
-    $maxPrice   = isset($options['max_price']) ? (float)$options['max_price'] : null;
+    $query = trim((string) ($options['q'] ?? ''));
+    $category = trim((string) ($options['category'] ?? ''));
+    $brand = trim((string) ($options['brand'] ?? ''));
+    $color = trim((string) ($options['color'] ?? ''));
+    $size = trim((string) ($options['size'] ?? ''));
+    $available = isset($options['availability']) ? (string) $options['availability'] : '';
+    $minPrice = isset($options['min_price']) ? (float) $options['min_price'] : null;
+    $maxPrice = isset($options['max_price']) ? (float) $options['max_price'] : null;
     $discountOnly = !empty($options['discount_only']);
-    $sort       = (string)($options['sort'] ?? 'relevance');
-    $page       = max(1, (int)($options['page'] ?? 1));
-    $perPage    = (int)($options['per_page'] ?? 12);
-    $perPage    = min(max($perPage, 6), 48);
+    $sort = (string) ($options['sort'] ?? 'relevance');
+    $page = max(1, (int) ($options['page'] ?? 1));
+    $perPage = (int) ($options['per_page'] ?? 12);
+    $perPage = min(max($perPage, 6), 48);
 
     $select = [
         "p.id",
@@ -2414,18 +2436,23 @@ function searchProductos(array $options = []): array {
             "p.nombre LIKE ?",
             "p.descripcion LIKE ?"
         ];
-        $params[] = $like; $types .= "s";
-        $params[] = $like; $types .= "s";
+        $params[] = $like;
+        $types .= "s";
+        $params[] = $like;
+        $types .= "s";
 
         if ($meta['has_categoria_id']) {
             $whereParts[] = "c.nombre LIKE ?";
-            $params[] = $like; $types .= "s";
+            $params[] = $like;
+            $types .= "s";
         } elseif ($meta['has_categoria_text']) {
             $whereParts[] = "p.categoria LIKE ?";
-            $params[] = $like; $types .= "s";
+            $params[] = $like;
+            $types .= "s";
         }
         $whereParts[] = "SOUNDEX(p.nombre) = SOUNDEX(?)";
-        $params[] = $query; $types .= "s";
+        $params[] = $query;
+        $types .= "s";
 
         $where[] = '(' . implode(' OR ', $whereParts) . ')';
     }
@@ -2434,30 +2461,36 @@ function searchProductos(array $options = []): array {
         if ($meta['has_categoria_id']) {
             if (ctype_digit($category)) {
                 $where[] = "c.id = ?";
-                $params[] = (int)$category; $types .= "i";
+                $params[] = (int) $category;
+                $types .= "i";
             } else {
                 $where[] = "LOWER(c.nombre) = ?";
-                $params[] = strtolower($category); $types .= "s";
+                $params[] = strtolower($category);
+                $types .= "s";
             }
         } elseif ($meta['has_categoria_text']) {
             $where[] = "LOWER(p.categoria) = ?";
-            $params[] = strtolower($category); $types .= "s";
+            $params[] = strtolower($category);
+            $types .= "s";
         }
     }
 
     if ($brand !== '' && $brandWhereAlias) {
         $where[] = "LOWER($brandWhereAlias) = ?";
-        $params[] = strtolower($brand); $types .= "s";
+        $params[] = strtolower($brand);
+        $types .= "s";
     }
 
     if ($color !== '' && $meta['has_color']) {
         $where[] = "LOWER(p.color) = ?";
-        $params[] = strtolower($color); $types .= "s";
+        $params[] = strtolower($color);
+        $types .= "s";
     }
 
     if ($size !== '' && $meta['has_talla']) {
         $where[] = "LOWER(p.{$meta['talla_column']}) = ?";
-        $params[] = strtolower($size); $types .= "s";
+        $params[] = strtolower($size);
+        $types .= "s";
     }
 
     if ($available !== '') {
@@ -2478,12 +2511,14 @@ function searchProductos(array $options = []): array {
 
     if ($minPrice !== null && $meta['has_precio']) {
         $where[] = "p.precio >= ?";
-        $params[] = $minPrice; $types .= "d";
+        $params[] = $minPrice;
+        $types .= "d";
     }
 
     if ($maxPrice !== null && $meta['has_precio']) {
         $where[] = "p.precio <= ?";
-        $params[] = $maxPrice; $types .= "d";
+        $params[] = $maxPrice;
+        $types .= "d";
     }
 
     if ($discountOnly && $meta['has_descuento']) {
@@ -2544,7 +2579,7 @@ function searchProductos(array $options = []): array {
     });
 
     $total = count($normalized);
-    $totalPages = (int)ceil($total / $perPage);
+    $totalPages = (int) ceil($total / $perPage);
     $offset = ($page - 1) * $perPage;
     $pageItems = array_slice($normalized, $offset, $perPage);
 
@@ -2574,12 +2609,12 @@ function searchProductos(array $options = []): array {
 
     // Facets
     $facets = [
-        'categories'    => [],
-        'brands'        => [],
-        'colors'        => [],
-        'sizes'         => [],
-        'availability'  => ['in_stock' => 0, 'out_of_stock' => 0],
-        'price'         => ['min' => null, 'max' => null],
+        'categories' => [],
+        'brands' => [],
+        'colors' => [],
+        'sizes' => [],
+        'availability' => ['in_stock' => 0, 'out_of_stock' => 0],
+        'price' => ['min' => null, 'max' => null],
     ];
 
     foreach ($normalized as $item) {
@@ -2612,15 +2647,16 @@ function searchProductos(array $options = []): array {
 
     return [
         'results' => $pageItems,
-        'total'   => $total,
-        'page'    => $page,
-        'per_page'=> $perPage,
+        'total' => $total,
+        'page' => $page,
+        'per_page' => $perPage,
         'total_pages' => $totalPages,
-        'facets'  => $facets,
+        'facets' => $facets,
     ];
 }
 
-function getSearchSuggestions(string $term, int $limit = 8): array {
+function getSearchSuggestions(string $term, int $limit = 8): array
+{
     $term = trim($term);
     if ($term === '') {
         return [];
@@ -2644,7 +2680,8 @@ function getSearchSuggestions(string $term, int $limit = 8): array {
     return array_slice($names, 0, $limit);
 }
 
-function logSearchQuery(?int $usuario_id, string $query, array $filters = [], int $resultsCount = 0): void {
+function logSearchQuery(?int $usuario_id, string $query, array $filters = [], int $resultsCount = 0): void
+{
     $query = trim($query);
     if ($query === '') {
         return;
