@@ -108,6 +108,28 @@ function getCategoryImage($imagen, $BASE) {
       flex: 1;
     }
 
+    /* Asegurar que el header y menú sean visibles */
+    .header {
+      position: sticky !important;
+      top: 0 !important;
+      z-index: 1000 !important;
+    }
+
+    .menu-toggle,
+    #menu-btn {
+      display: flex !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
+
+    .sidebar {
+      z-index: 2000 !important;
+    }
+
+    .overlay {
+      z-index: 1500 !important;
+    }
+
     .container {
       max-width: 1280px;
       margin: 0 auto;
@@ -551,7 +573,7 @@ function getCategoryImage($imagen, $BASE) {
     }
   </style>
 </head>
-<body>
+<body data-base="<?= htmlspecialchars($BASE) ?>">
 
   <div class="page-wrapper">
     <div class="main-content">
@@ -744,7 +766,27 @@ function getCategoryImage($imagen, $BASE) {
     <?php include __DIR__ . "/../includes/footer.php"; ?>
   </div>
 
-  <script src="<?= $BASE ?>js/header.js"></script>
+  <script>
+  // Asegurar que el menú funcione correctamente
+  document.addEventListener('DOMContentLoaded', function() {
+    // Verificar que los elementos del menú existan
+    const menuBtn = document.getElementById('menu-btn');
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('overlay');
+    
+    if (menuBtn && sidebar && overlay) {
+      console.log('✅ Elementos del menú encontrados');
+    } else {
+      console.warn('⚠️ Algunos elementos del menú no se encontraron:', {
+        menuBtn: !!menuBtn,
+        sidebar: !!sidebar,
+        overlay: !!overlay
+      });
+    }
+  });
+  </script>
+  <script src="<?= $BASE ?>js/header.js" defer></script>
+  <script src="<?= $BASE ?>js/search-overlay.js" defer></script>
   <script>
   (()=>{
     const BASE_URL = document.querySelector('.products-grid')?.dataset.base || '/';
