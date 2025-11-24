@@ -1,6 +1,6 @@
 /* ==== FOOTER GENERAL ==== */
 .footer {
-  background: linear-gradient(135deg, #8b7355 0%, #6d5a42 100%);
+  background: linear-gradient(135deg, #6D5A42 0%, #A0896B 100%);
   color: white;
   position: relative;
   margin-top: auto;
@@ -24,7 +24,7 @@
 
 /* ==== TITULOS ==== */
 .footer-section h4.footer-title {
-  color: #d4c4a8;
+  color: #d6c7b2;
   font-size: 18px;
   font-weight: bold;
   margin-bottom: 25px;
@@ -38,7 +38,7 @@
   left: 0;
   width: 40px;
   height: 2px;
-  background-color: #a0896b;
+  background-color: #A0896B;
 }
 
 /* ==== LOGO ==== */
@@ -54,7 +54,7 @@
 .footer-logo .logo-icon {
   width: 50px;
   height: 50px;
-  background-color: #a0896b;
+  background-color: #6D5A42;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -90,8 +90,8 @@
 }
 
 .social-link:hover {
-  background-color: #a0896b;
-  border-color: #a0896b;
+  background-color: #6D5A42;
+  border-color: #6D5A42;
   transform: translateY(-3px);
 }
 
@@ -112,7 +112,7 @@
 }
 
 .footer-links a:hover {
-  color: #d4c4a8;
+  color: #d6c7b2;
   padding-left: 10px;
 }
 
@@ -123,7 +123,7 @@
   top: 50%;
   width: 0;
   height: 1px;
-  background-color: #a0896b;
+  background-color: #A0896B;
   transition: width 0.3s ease;
 }
 
@@ -146,7 +146,7 @@
 }
 
 .contact-item i {
-  color: #d4c4a8;
+  color: #d6c7b2;
   font-size: 16px;
   margin-top: 2px;
   width: 16px;
@@ -172,7 +172,7 @@
 
 .newsletter-text h3 {
   font-size: 24px;
-  color: #d4c4a8;
+  color: #d6c7b2;
   margin-bottom: 10px;
 }
 
@@ -202,12 +202,12 @@
 }
 
 .newsletter-input:focus {
-  border-color: #a0896b;
+  border-color: #6D5A42;
   background: rgba(255, 255, 255, 0.15);
 }
 
 .newsletter-btn {
-  background: linear-gradient(135deg, #a0896b, #8b7355);
+  background: linear-gradient(135deg, #6D5A42, #A0896B);
   color: white;
   border: none;
   padding: 15px 30px;
@@ -222,7 +222,7 @@
 
 .newsletter-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 25px rgba(160, 137, 107, 0.4);
+  box-shadow: 0 10px 25px rgba(109, 90, 66, 0.4);
 }
 
 /* ==== FOOTER BOTTOM ==== */
@@ -259,7 +259,7 @@
 
 .payment-icons i {
   font-size: 24px;
-  color: #d4c4a8;
+  color: #d6c7b2;
   transition: color 0.3s ease;
 }
 
@@ -282,7 +282,7 @@
 }
 
 .footer-policies a:hover {
-  color: #d4c4a8;
+  color: #d6c7b2;
 }
 
 .footer-policies span {
@@ -296,17 +296,17 @@ body.dark .footer {
 }
 
 body.dark .footer-section h4.footer-title {
-  color: #f2d38a;
+  color: #d7c6ac;
 }
 
 body.dark .footer-logo .logo-icon {
-  background-color: #6e5b43;
+  background-color: #8d775d;
 }
 
 body.dark .newsletter-btn {
-  background: linear-gradient(135deg, #6e5b43, #5a4633);
+  background: linear-gradient(135deg, #bea583, #8d775d);
 }
 
 body.dark .newsletter-btn:hover {
-  box-shadow: 0 10px 25px rgba(110, 91, 67, 0.5);
+  box-shadow: 0 10px 25px rgba(190, 165, 131, 0.5);
 }
