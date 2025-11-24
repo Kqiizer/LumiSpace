@@ -1,11 +1,6 @@
 <?php
 
-// Ruta base del proyecto (ajusta "LumiSpace" si tu carpeta tiene otro nombre)
-if (!defined("BASE_URL")) {
-    $envBase = getenv('BASE_URL');
-    define("BASE_URL", $envBase !== false ? $envBase : "/LumiSpace/");
-}
-
+require_once __DIR__ . '/base_url.php';
 include_once(__DIR__ . "/db.php");
 require_once __DIR__ . "/mail.php"; // 📩 enviar correos
 

@@ -267,7 +267,7 @@ window.addEventListener('load', () => {
         <i class="fas fa-search"></i>
       </button>
 
-      <a href="<?= $BASE ?>views/favoritos.php" class="icon-btn <?= $currentPage === 'favoritos.php' ? 'active' : '' ?>">
+      <a href="<?= $BASE ?>index/favoritos.php" class="icon-btn <?= $currentPage === 'favoritos.php' ? 'active' : '' ?>">
         <i class="fas fa-heart"></i>
         <span class="badge" id="fav-badge" style="<?= $favoritosCount ? '' : 'display:none;' ?>"><?= $favoritosCount ?></span>
       </a>
