@@ -365,6 +365,134 @@ window.addEventListener('load', () => {
   <?php endif; ?>
 </aside>
 
+<!-- 🔎 Buscador global -->
+<div class="global-search" id="globalSearch" aria-hidden="true">
+  <div class="global-search__panel" role="dialog" aria-modal="true" aria-labelledby="globalSearchTitle">
+    <div class="global-search__header">
+      <div style="display:flex; align-items:center; justify-content:space-between;">
+        <div>
+          <p style="text-transform:uppercase; letter-spacing:0.08em; font-size:0.75rem; color:#b8a899; margin:0;">Explora</p>
+          <h2 id="globalSearchTitle" style="margin:0; font-size:1.5rem;">Busca en LumiSpace</h2>
+        </div>
+        <button type="button" class="ghost-btn" aria-label="Cerrar buscador" data-search-close>
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="global-search__input-wrapper">
+        <i class="fas fa-search"></i>
+        <input type="search" id="globalSearchInput" placeholder="Lámparas nórdicas, plafones blancos, luz cálida..." autocomplete="off">
+        <button type="button" class="ghost-btn" aria-label="Limpiar búsqueda" data-search-clear>
+          <i class="fas fa-times-circle"></i>
+        </button>
+      </div>
+
+      <div class="global-search__autocomplete is-hidden" id="globalAutocompletePanel">
+        <ul class="autocomplete-list" id="globalLiveSuggestions"></ul>
+      </div>
+
+      <div class="global-search__meta">
+        <span id="globalSearchStats">Encuentra productos por nombre, categoría o atributos.</span>
+        <select id="globalSearchSort">
+          <option value="relevance">Mejor resultado</option>
+          <option value="price_asc">Precio: menor a mayor</option>
+          <option value="price_desc">Precio: mayor a menor</option>
+          <option value="newest">Más recientes</option>
+          <option value="popularity">Popularidad</option>
+          <option value="rating">Mejor calificados</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="global-search__body">
+      <aside class="global-search__filters">
+        <div class="filters-section">
+          <h4>Categoría</h4>
+          <label class="filter-label">
+            <span>Selecciona una categoría</span>
+            <select id="globalFilterCategory">
+              <option value="">Todas</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="filters-section">
+          <h4>Marca</h4>
+          <label class="filter-label">
+            <span>Filtra por marca</span>
+            <select id="globalFilterBrand">
+              <option value="">Todas</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="filters-section">
+          <h4>Color y Tamaño</h4>
+          <label class="filter-label">
+            <span>Color</span>
+            <select id="globalFilterColor">
+              <option value="">Cualquiera</option>
+            </select>
+          </label>
+          <label class="filter-label">
+            <span>Tamaño / Talla</span>
+            <select id="globalFilterSize">
+              <option value="">Cualquiera</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="filters-section">
+          <h4>Precio</h4>
+          <div class="filter-price">
+            <input type="number" id="globalFilterPriceMin" placeholder="Desde">
+            <span>-</span>
+            <input type="number" id="globalFilterPriceMax" placeholder="Hasta">
+          </div>
+        </div>
+
+        <div class="filters-section">
+          <h4>Disponibilidad</h4>
+          <label class="filter-checkbox">
+            <input type="checkbox" id="globalFilterAvailabilityIn">
+            <span>En existencia</span>
+          </label>
+          <label class="filter-checkbox">
+            <input type="checkbox" id="globalFilterAvailabilityOut">
+            <span>Agotados</span>
+          </label>
+          <label class="filter-checkbox">
+            <input type="checkbox" id="globalFilterDiscountOnly">
+            <span>Solo con descuento</span>
+          </label>
+        </div>
+
+        <button type="button" class="btn-reset" id="globalResetFilters">
+          Limpiar filtros
+        </button>
+      </aside>
+
+      <section class="global-search__results">
+        <div class="suggestions-panel">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+            <strong>Coincidencias rápidas</strong>
+            <small style="color:#8a7767;">Basadas en tu búsqueda</small>
+          </div>
+          <ul class="suggestions-list" id="globalSearchSuggestions"></ul>
+        </div>
+
+        <div class="results-grid" id="globalSearchResults"></div>
+
+        <div class="search-empty hidden" id="searchEmptyState">
+          <i class="fas fa-bolt"></i>
+          <h4>No encontramos resultados</h4>
+          <p>Prueba con otra palabra o ajusta los filtros activos.</p>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
 <!-- ✅ Script (controla menú, overlay y animaciones) -->
 <script src="<?= $BASE ?>js/header.js" defer></script>
 <script src="<?= $BASE ?>js/translator.js" defer></script>

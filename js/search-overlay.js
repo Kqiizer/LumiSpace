@@ -1,5 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
   const BASE = document.body.dataset.base || '/';
+  const API_SEARCH = `${BASE}api/search/products.php`;
+  const API_SUGGESTIONS = `${BASE}api/search/suggestions.php`;
+
   const overlay = document.getElementById('globalSearch');
   const openBtn = document.getElementById('openSearchPanel');
   const closeButtons = overlay?.querySelectorAll('[data-search-close]');
@@ -7,24 +10,27 @@ document.addEventListener('DOMContentLoaded', () => {
   const input = document.getElementById('globalSearchInput');
   const sortSelect = document.getElementById('globalSearchSort');
   const stats = document.getElementById('globalSearchStats');
-  const resultsGrid = document.getElementById('searchResults');
-  const suggestionsList = document.getElementById('searchSuggestions');
+  const resultsGrid = document.getElementById('globalSearchResults');
+  const trendingSuggestions = document.getElementById('globalSearchSuggestions');
+  const liveSuggestionsPanel = document.getElementById('globalAutocompletePanel');
+  const liveSuggestionsList = document.getElementById('globalLiveSuggestions');
   const emptyState = document.getElementById('searchEmptyState');
-  const resetFiltersBtn = document.getElementById('resetFiltersBtn');
+  const resetFiltersBtn = document.getElementById('globalResetFilters');
 
   const filterControls = {
-    category: document.getElementById('filterCategory'),
-    brand: document.getElementById('filterBrand'),
-    color: document.getElementById('filterColor'),
-    size: document.getElementById('filterSize'),
-    priceMin: document.getElementById('filterPriceMin'),
-    priceMax: document.getElementById('filterPriceMax'),
-    availIn: document.getElementById('filterAvailabilityIn'),
-    availOut: document.getElementById('filterAvailabilityOut'),
-    discount: document.getElementById('filterDiscountOnly')
+    category: document.getElementById('globalFilterCategory'),
+    brand: document.getElementById('globalFilterBrand'),
+    color: document.getElementById('globalFilterColor'),
+    size: document.getElementById('globalFilterSize'),
+    priceMin: document.getElementById('globalFilterPriceMin'),
+    priceMax: document.getElementById('globalFilterPriceMax'),
+    availIn: document.getElementById('globalFilterAvailabilityIn'),
+    availOut: document.getElementById('globalFilterAvailabilityOut'),
+    discount: document.getElementById('globalFilterDiscountOnly')
   };
 
   let debounceId;
+  let suggestionsDebounceId;
   let lastQuery = '';
   let lastResults = [];
   let isFetching = false;
@@ -33,7 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!overlay) return;
     overlay.classList.add('active');
     document.body.style.overflow = 'hidden';
-    setTimeout(() => input?.focus(), 50);
+    setTimeout(() => input?.focus(), 60);
     if (!lastQuery) {
       fetchResults();
     }
@@ -56,16 +62,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   input?.addEventListener('input', () => {
     lastQuery = input.value.trim();
-    if (!lastQuery) {
-      suggestionsList.innerHTML = '';
-    }
     fetchResults();
+    queueLiveSuggestions(lastQuery);
   });
 
   clearBtn?.addEventListener('click', () => {
     if (!input) return;
     input.value = '';
     lastQuery = '';
+    renderLiveSuggestions([]);
     fetchResults();
   });
 
@@ -113,21 +118,18 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function fetchResults() {
-    if (!resultsGrid || isFetching) {
-      // allow new query but avoid overlapping heavy request
-    }
     clearTimeout(debounceId);
     debounceId = setTimeout(async () => {
       try {
         isFetching = true;
         setLoading(true);
         const params = buildQueryParams();
-        const res = await fetch(`${BASE}api/search/products.php?${params.toString()}`, { cache: 'no-store' });
+        const res = await fetch(`${API_SEARCH}?${params.toString()}`, { cache: 'no-store' });
         if (!res.ok) throw new Error('Error de red');
         const data = await res.json();
         lastResults = data.results || [];
         updateStats(data.meta);
-        updateSuggestions(lastResults);
+        updateTrendingSuggestions(lastResults);
         renderResults(lastResults);
         updateFiltersFromFacets(data.facets || {});
       } catch (error) {
@@ -137,7 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
         isFetching = false;
         setLoading(false);
       }
-    }, 250);
+    }, 220);
   }
 
   function buildQueryParams() {
@@ -155,7 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function setLoading(state) {
     resultsGrid?.classList.toggle('loading', state);
-    if (state) {
+    if (state && resultsGrid) {
       resultsGrid.innerHTML = `
         <div class="loading-state">
           <i class="fas fa-spinner fa-spin"></i>
@@ -171,10 +173,10 @@ document.addEventListener('DOMContentLoaded', () => {
     stats.textContent = `${total} resultado${total === 1 ? '' : 's'} • Página ${page}`;
   }
 
-  function updateSuggestions(results) {
-    if (!suggestionsList) return;
+  function updateTrendingSuggestions(results) {
+    if (!trendingSuggestions) return;
     if (!lastQuery) {
-      suggestionsList.innerHTML = '';
+      trendingSuggestions.innerHTML = '';
       return;
     }
     const ranked = [...results]
@@ -182,11 +184,11 @@ document.addEventListener('DOMContentLoaded', () => {
       .sort((a, b) => b.score - a.score)
       .slice(0, 6);
 
-    suggestionsList.innerHTML = ranked
+    trendingSuggestions.innerHTML = ranked
       .map(({ item }) => `<li data-id="${item.id}">${highlightMatch(item.name, lastQuery)}</li>`)
       .join('');
 
-    suggestionsList.querySelectorAll('li').forEach(li => {
+    trendingSuggestions.querySelectorAll('li').forEach(li => {
       li.addEventListener('click', () => {
         window.location.href = `${BASE}views/productos-detal.php?id=${li.dataset.id}`;
       });
@@ -309,6 +311,50 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  function queueLiveSuggestions(term) {
+    clearTimeout(suggestionsDebounceId);
+    if (!term || term.length < 2) {
+      renderLiveSuggestions([]);
+      return;
+    }
+    suggestionsDebounceId = setTimeout(() => fetchLiveSuggestions(term), 180);
+  }
+
+  async function fetchLiveSuggestions(term) {
+    try {
+      const response = await fetch(`${API_SUGGESTIONS}?q=${encodeURIComponent(term)}&limit=6`, { cache: 'no-store' });
+      if (!response.ok) throw new Error('Suggest error');
+      const data = await response.json();
+      if (!data.ok) throw new Error('Suggest payload');
+      renderLiveSuggestions(data.suggestions || []);
+    } catch (error) {
+      console.error('Autocomplete error', error);
+      renderLiveSuggestions([]);
+    }
+  }
+
+  function renderLiveSuggestions(items) {
+    if (!liveSuggestionsPanel || !liveSuggestionsList) return;
+    if (!items.length) {
+      liveSuggestionsPanel.classList.add('is-hidden');
+      liveSuggestionsList.innerHTML = '';
+      return;
+    }
+    liveSuggestionsPanel.classList.remove('is-hidden');
+    liveSuggestionsList.innerHTML = items
+      .map(item => `<li data-value="${item}"><i class="fas fa-arrow-turn-down"></i>${highlightMatch(item, lastQuery)}</li>`)
+      .join('');
+
+    liveSuggestionsList.querySelectorAll('li[data-value]').forEach(li => {
+      li.addEventListener('click', () => {
+        input.value = li.dataset.value;
+        lastQuery = li.dataset.value;
+        renderLiveSuggestions([]);
+        fetchResults();
+      });
+    });
+  }
+
   function similarity(a, b) {
     if (!a || !b) return 0;
     a = a.toLowerCase();
@@ -344,5 +390,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!text) return '';
     return text.length > max ? `${text.slice(0, max)}…` : text;
   }
+
+  // Pre-cargar resultados para sugerencias destacadas
+  fetchResults();
 });
 

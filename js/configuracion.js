@@ -219,9 +219,7 @@ function deletePayment(index) {
 // Moneda
 function showCurrencySelector() {
     const currencies = [
-        {code: 'MXN', symbol: '$', name: 'Peso Mexicano'},
-        {code: 'USD', symbol: '$', name: 'Dólar Estadounidense'},
-        {code: 'CAD', symbol: '$', name: 'Dólar Canadiense'}
+        {code: 'MXN', symbol: '$', name: 'Peso Mexicano'}
     ];
     
     const currentCurrency = localStorage.getItem('lumispace_currency') || 'MXN';
