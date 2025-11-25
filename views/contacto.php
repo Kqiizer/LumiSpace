@@ -546,6 +546,9 @@
         </div>
     </section>
 
+    <!-- Footer -->
+    <?php include __DIR__ . "/../includes/footer.php"; ?>
+
     <script src="/js/about-script.js"></script>
 </body>
 
