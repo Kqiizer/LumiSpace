@@ -1036,6 +1036,41 @@ function img_url($path, $BASE, $folder = 'productos') {
             </div>
         </section>
 
+        <!-- Sección Conoces - Integrantes -->
+        <section class="team-section" style="padding: 80px 20px; background: var(--bg-primary);">
+            <div class="container" style="max-width: 1200px; margin: 0 auto;">
+                <div style="text-align: center; margin-bottom: 50px;">
+                    <h2 style="font-size: clamp(2rem, 4vw, 3rem); font-weight: 700; color: var(--text-primary); margin-bottom: 15px;">
+                        ¿Conoces a nuestro equipo?
+                    </h2>
+                    <p style="font-size: 1.1rem; color: var(--text-secondary); max-width: 600px; margin: 0 auto;">
+                        Conoce a las personas detrás de LumiSpace
+                    </p>
+                </div>
+
+                <div class="team-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 30px; margin-top: 40px;">
+                    <!-- Carta de Ximena Cuevas -->
+                    <div class="team-card" style="background: var(--bg-white); border-radius: 20px; overflow: hidden; box-shadow: var(--shadow-md); transition: all 0.3s ease;">
+                        <div class="team-image" style="position: relative; height: 300px; overflow: hidden; background: linear-gradient(135deg, #e8ddd4, #d4c4a8);">
+                            <img src="<?= $BASE ?>images/imagenes-integrantes/ximena-crv.jpeg" 
+                                 alt="Ximena Cuevas" 
+                                 style="width: 100%; height: 100%; object-fit: cover; display: block;">
+                        </div>
+                        <div class="team-info" style="padding: 25px 20px; text-align: center;">
+                            <h3 style="font-size: 1.3rem; color: var(--primary-color); margin-bottom: 8px; font-weight: 600;">
+                                Ximena Cuevas
+                            </h3>
+                            <p class="team-role" style="color: var(--primary-dark); font-size: 0.95rem; font-weight: 500; margin-bottom: 12px;">
+                                Miembro del Equipo
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Puedes agregar más cartas de integrantes aquí -->
+                </div>
+            </div>
+        </section>
+
         <!-- Footer -->
         <?php include __DIR__ . "/../includes/footer.php"; ?>
     </div>
