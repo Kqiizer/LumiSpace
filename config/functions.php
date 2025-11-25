@@ -1,8 +1,4 @@
 <?php
-
-<<<<<<< HEAD
-require_once __DIR__ . '/base_url.php';
-=======
 // Detección dinámica de BASE_URL para compatibilidad Hostinger/Docker
 if (!defined("BASE_URL")) {
     $envBase = getenv('BASE_URL');
@@ -25,7 +21,6 @@ if (!defined("BASE_URL")) {
     }
 }
 
->>>>>>> d9636b89b6fbe18860aa8fcb9a6fe06d416c83d8
 include_once(__DIR__ . "/db.php");
 require_once __DIR__ . "/mail.php"; // 📩 enviar correos
 
