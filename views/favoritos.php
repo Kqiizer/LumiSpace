@@ -178,7 +178,7 @@ $favoritos = getFavoritos($uid);
         // Add to Cart Logic
         async function agregarAlCarrito(id) {
             try {
-                const res = await fetch('<?= BASE_URL ?>api/carrito/agregar.php', {
+                const res = await fetch('<?= BASE_URL ?>api/carrito/add.php', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ producto_id: id, cantidad: 1 })
@@ -187,12 +187,12 @@ $favoritos = getFavoritos($uid);
                 if (data.ok) {
                     const cartBadge = document.getElementById('cart-badge');
                     if (cartBadge) {
-                        cartBadge.innerText = data.total_items;
+                        const currentCount = parseInt(cartBadge.innerText || '0');
+                        cartBadge.innerText = currentCount + 1;
                         cartBadge.style.display = 'flex';
                     }
                     
-                    // Custom toast notification could go here
-                    // For now, let's use a simple visual feedback on the button
+                    // Visual feedback on the button
                     const btn = document.querySelector(`button[onclick="agregarAlCarrito(${id})"]`);
                     if(btn) {
                         const originalHTML = btn.innerHTML;
@@ -202,6 +202,11 @@ $favoritos = getFavoritos($uid);
                             btn.innerHTML = originalHTML;
                             btn.classList.remove('success');
                         }, 2000);
+                    }
+                    
+                    // Show toast
+                    if (typeof showToast === 'function') {
+                        showToast('✓ Producto agregado al carrito', 'success');
                     }
                 }
             } catch (e) {
