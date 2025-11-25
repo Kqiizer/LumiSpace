@@ -256,7 +256,6 @@ window.addEventListener('load', () => {
       <li><a href="<?= $BASE ?>index.php" class="<?= $currentPage === 'index.php' ? 'active' : '' ?>">Inicio</a></li>
       <li><a href="<?= $BASE ?>views/categorias.php" class="<?= $currentPage === 'categorias.php' ? 'active' : '' ?>">Categorías</a></li>
       <li><a href="<?= $BASE ?>views/catalogo.php" class="<?= $currentPage === 'catalogo.php' ? 'active' : '' ?>">Catálogo</a></li>
-      <li><a href="<?= $BASE ?>views/marcas.php" class="<?= $currentPage === 'marcas.php' ? 'active' : '' ?>">Marcas</a></li>
       <li><a href="<?= $BASE ?>views/blog.php" class="<?= $currentPage === 'blog.php' ? 'active' : '' ?>">Blog</a></li>
       <li><a href="<?= $BASE ?>views/contacto.php" class="<?= $currentPage === 'contacto.php' ? 'active' : '' ?>">Contacto</a></li>
     </ul>
@@ -267,7 +266,7 @@ window.addEventListener('load', () => {
         <i class="fas fa-search"></i>
       </button>
 
-      <a href="<?= $BASE ?>views/favoritos.php" class="icon-btn <?= $currentPage === 'favoritos.php' ? 'active' : '' ?>">
+      <a href="<?= $BASE ?>index/favoritos.php" class="icon-btn <?= $currentPage === 'favoritos.php' ? 'active' : '' ?>">
         <i class="fas fa-heart"></i>
         <span class="badge" id="fav-badge" style="<?= $favoritosCount ? '' : 'display:none;' ?>"><?= $favoritosCount ?></span>
       </a>
@@ -319,10 +318,6 @@ window.addEventListener('load', () => {
   <a href="<?= $BASE ?>views/catalogo.php" class="btn <?= $currentPage === 'catalogo.php' ? 'active' : '' ?>">
     <img src="<?= ls_menu_icon($BASE, 'catalogo.png') ?>" alt="Catálogo" class="menu-icon">
     <span class="t" data-i18n="nav.catalog" data-i18n-es="Catálogo">Catálogo</span>
-  </a>
-  <a href="<?= $BASE ?>views/marcas.php" class="btn <?= $currentPage === 'marcas.php' ? 'active' : '' ?>">
-    <img src="<?= ls_menu_icon($BASE, 'marcas.png') ?>" alt="Marcas" class="menu-icon">
-    <span class="t" data-i18n="nav.brands" data-i18n-es="Marcas">Marcas</span>
   </a>
   <a href="<?= $BASE ?>views/blog.php" class="btn <?= $currentPage === 'blog.php' ? 'active' : '' ?>">
     <img src="<?= ls_menu_icon($BASE, 'blog.png') ?>" alt="Blog" class="menu-icon">

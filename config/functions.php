@@ -1,6 +1,6 @@
 <?php
 
-// Detección dinámica de BASE_URL para compatibilidad Hostinger/Docker.
+// Detección dinámica de BASE_URL para compatibilidad Hostinger/Docker
 if (!defined("BASE_URL")) {
     $envBase = getenv('BASE_URL');
     if ($envBase !== false) {
