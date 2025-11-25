@@ -1,5 +1,6 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) session_start();
+if (session_status() === PHP_SESSION_NONE)
+  session_start();
 require_once __DIR__ . "/../config/functions.php";
 
 $BASE = defined('BASE_URL') ? rtrim(BASE_URL, '/') . '/' : '/';
@@ -17,27 +18,28 @@ $has_activo = $check_activo && $check_activo->num_rows > 0;
 
 if ($categorias_db && is_array($categorias_db)) {
   // Obtener todos los conteos en una sola consulta para mejor rendimiento
-  $cat_ids = array_map(function($cat) { return (int)$cat['id']; }, $categorias_db);
+  $cat_ids = array_map(function ($cat) {
+    return (int) $cat['id']; }, $categorias_db);
   $placeholders = implode(',', array_fill(0, count($cat_ids), '?'));
-  
+
   $where_clause = $has_activo ? "AND activo = 1" : "";
   $sql = "SELECT categoria_id, COUNT(*) as total FROM productos 
           WHERE categoria_id IN ($placeholders) $where_clause 
           GROUP BY categoria_id";
-  
+
   $stmt = $conn->prepare($sql);
   if ($stmt) {
     $types = str_repeat('i', count($cat_ids));
     $stmt->bind_param($types, ...$cat_ids);
     $stmt->execute();
     $result = $stmt->get_result();
-    
+
     while ($row = $result->fetch_assoc()) {
-      $productos_por_categoria[(int)$row['categoria_id']] = (int)$row['total'];
+      $productos_por_categoria[(int) $row['categoria_id']] = (int) $row['total'];
     }
     $stmt->close();
   }
-  
+
   // Inicializar en 0 las categorías sin productos
   foreach ($cat_ids as $cat_id) {
     if (!isset($productos_por_categoria[$cat_id])) {
@@ -50,29 +52,32 @@ if ($categorias_db && is_array($categorias_db)) {
  * Obtiene la URL de la imagen de categoría
  * Maneja diferentes formatos de rutas de imágenes
  */
-function getCategoryImage($imagen, $BASE) {
+function getCategoryImage($imagen, $BASE)
+{
+  $defaultImage = $BASE . 'images/categorias/default.jpg';
+
   if (empty($imagen) || trim($imagen) === '') {
-    return $BASE . 'images/categorias/default.jpg';
+    return $defaultImage;
   }
-  
+
   $imagen = trim($imagen);
-  
+
   // Si ya es una URL completa (http o https), devolverla tal cual
   if (preg_match('#^https?://#i', $imagen)) {
     return $imagen;
   }
-  
+
   // Si empieza con /, es una ruta absoluta desde la raíz
   if (strpos($imagen, '/') === 0) {
     return $BASE . ltrim($imagen, '/');
   }
-  
+
   // Si la imagen ya contiene una ruta relativa completa (ej: imagenes/lamparas/deco2.jpg)
   // o empieza con imagenes/ o images/, usarla directamente
   if (strpos($imagen, 'imagenes/') === 0 || strpos($imagen, 'images/') === 0) {
     return $BASE . $imagen;
   }
-  
+
   // Si es solo un nombre de archivo, asumir que está en images/categorias/
   return $BASE . 'images/categorias/' . $imagen;
 }
@@ -80,29 +85,33 @@ function getCategoryImage($imagen, $BASE) {
 /**
  * Procesa las subcategorías
  */
-function getSubcategorias($subcats_data) {
+function getSubcategorias($subcats_data)
+{
   if (empty($subcats_data)) {
     return [];
   }
-  
+
   if (is_string($subcats_data)) {
     $decoded = json_decode($subcats_data, true);
     return is_array($decoded) ? $decoded : [];
   }
-  
+
   return is_array($subcats_data) ? $subcats_data : [];
 }
 ?>
 
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Categorías - Tienda</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <style>
     :root {
@@ -354,7 +363,7 @@ function getSubcategorias($subcats_data) {
       left: 0;
       right: 0;
       height: 65%;
-      background: linear-gradient(to top, rgba(0,0,0,0.5), transparent);
+      background: linear-gradient(to top, rgba(0, 0, 0, 0.5), transparent);
       pointer-events: none;
       transition: var(--transition-smooth);
     }
@@ -496,12 +505,10 @@ function getSubcategorias($subcats_data) {
 
     /* Skeleton loader */
     .skeleton {
-      background: linear-gradient(
-        90deg, 
-        var(--border-color) 25%, 
-        var(--bg-light) 50%, 
-        var(--border-color) 75%
-      );
+      background: linear-gradient(90deg,
+          var(--border-color) 25%,
+          var(--bg-light) 50%,
+          var(--border-color) 75%);
       background-size: 200% 100%;
       animation: loading 1.5s infinite;
       position: relative;
@@ -515,8 +522,13 @@ function getSubcategorias($subcats_data) {
     }
 
     @keyframes loading {
-      0% { background-position: 200% 0; }
-      100% { background-position: -200% 0; }
+      0% {
+        background-position: 200% 0;
+      }
+
+      100% {
+        background-position: -200% 0;
+      }
     }
 
     /* Toast mejorado */
@@ -594,6 +606,7 @@ function getSubcategorias($subcats_data) {
         opacity: 0;
         transform: translateY(30px) scale(0.95);
       }
+
       to {
         opacity: 1;
         transform: translateY(0) scale(1);
@@ -630,7 +643,9 @@ function getSubcategorias($subcats_data) {
     }
 
     @keyframes spin {
-      to { transform: rotate(360deg); }
+      to {
+        transform: rotate(360deg);
+      }
     }
 
     /* Responsive */
@@ -696,335 +711,333 @@ function getSubcategorias($subcats_data) {
     }
   </style>
 </head>
+
 <body>
 
-<!-- Loading Overlay -->
-<div class="loading-overlay" id="loadingOverlay">
-  <div class="spinner"></div>
-</div>
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+  </div>
 
-<!-- Categorías de Productos -->
-<section class="products">
-  <div class="container">
-    
-    <div class="section-header">
-      <h1>Nuestras Categorías</h1>
-      <p>Explora nuestra amplia selección de productos</p>
-    </div>
+  <!-- Categorías de Productos -->
+  <section class="products">
+    <div class="container">
 
-    <?php
+      <div class="section-header">
+        <h1>Nuestras Categorías</h1>
+        <p>Explora nuestra amplia selección de productos</p>
+      </div>
+
+      <?php
       // Detectar si estamos en la página de inicio
       $isHomePage = basename($_SERVER['SCRIPT_NAME']) === 'index.php';
-      
+
       // Limitar a 3 categorías en la página de inicio
       if ($isHomePage && is_array($categorias_db)) {
         $categorias_db = array_slice($categorias_db, 0, 3);
       }
-    ?>
-    <div class="products-grid <?= $isHomePage ? 'home-categories' : '' ?>" data-base="<?= htmlspecialchars($BASE) ?>">
+      ?>
+      <div class="products-grid <?= $isHomePage ? 'home-categories' : '' ?>" data-base="<?= htmlspecialchars($BASE) ?>">
 
-      <?php if (!empty($categorias_db) && is_array($categorias_db)): ?>
-        <?php foreach ($categorias_db as $cat): 
-          $cat_id = (int)$cat['id'];
-          $nombre = htmlspecialchars($cat['nombre'] ?? 'Sin nombre');
-          $descripcion = htmlspecialchars($cat['descripcion'] ?? 'Encuentra la mejor selección de productos');
-          
-          // Obtener la imagen de la categoría (exactamente como en views/categorias.php)
-          // Usar 'imagen' o 'featured_image' según lo que exista en la BD
-          $categoryImage = $cat['imagen'] ?? $cat['featured_image'] ?? '';
-          $imagen = getCategoryImage($categoryImage, $BASE);
-          
-          $total_productos = $productos_por_categoria[$cat_id] ?? 0;
-          $subcats = getSubcategorias($cat['subcategorias'] ?? null);
-        ?>
-          <div class="product-category <?= $total_productos === 0 ? 'no-products' : '' ?>" 
-               data-category-id="<?= $cat_id ?>"
-               data-category-name="<?= $nombre ?>"
-               data-products-count="<?= $total_productos ?>"
-               role="button"
-               tabindex="0"
-               aria-label="Ver productos de <?= $nombre ?>">
-            
-            <div class="category-image-wrapper">
-              <div class="products-badge <?= $total_productos === 0 ? 'empty' : '' ?>">
-                <?= $total_productos === 0 ? 'Sin productos' : number_format($total_productos) . ' producto' . ($total_productos !== 1 ? 's' : '') ?>
+        <?php if (!empty($categorias_db) && is_array($categorias_db)): ?>
+          <?php foreach ($categorias_db as $cat):
+            $cat_id = (int) $cat['id'];
+            $nombre = htmlspecialchars($cat['nombre'] ?? 'Sin nombre');
+            $descripcion = htmlspecialchars($cat['descripcion'] ?? 'Encuentra la mejor selección de productos');
+
+            // Obtener la imagen de la categoría (exactamente como en views/categorias.php)
+            // Usar 'imagen' o 'featured_image' según lo que exista en la BD
+            $categoryImage = $cat['imagen'] ?? $cat['featured_image'] ?? '';
+            $imagen = getCategoryImage($categoryImage, $BASE);
+
+            $total_productos = $productos_por_categoria[$cat_id] ?? 0;
+            $subcats = getSubcategorias($cat['subcategorias'] ?? null);
+            ?>
+            <div class="product-category <?= $total_productos === 0 ? 'no-products' : '' ?>"
+              data-category-id="<?= $cat_id ?>" data-category-name="<?= $nombre ?>"
+              data-products-count="<?= $total_productos ?>" role="button" tabindex="0"
+              aria-label="Ver productos de <?= $nombre ?>">
+
+              <div class="category-image-wrapper">
+                <div class="products-badge <?= $total_productos === 0 ? 'empty' : '' ?>">
+                  <?= $total_productos === 0 ? 'Sin productos' : number_format($total_productos) . ' producto' . ($total_productos !== 1 ? 's' : '') ?>
+                </div>
+                <div class="category-image lazy-bg skeleton" data-bg="<?= htmlspecialchars($imagen, ENT_QUOTES, 'UTF-8') ?>"
+                  style="background-image: url('<?= htmlspecialchars($imagen, ENT_QUOTES, 'UTF-8') ?>');"></div>
               </div>
-              <div class="category-image lazy-bg skeleton" 
-                   data-bg="<?= htmlspecialchars($imagen, ENT_QUOTES, 'UTF-8') ?>"
-                   style="background-image: url('<?= htmlspecialchars($imagen, ENT_QUOTES, 'UTF-8') ?>');"></div>
-            </div>
 
-            <div class="category-header">
-              <h2 class="category-title"><?= $nombre ?></h2>
-              <p class="category-description"><?= $descripcion ?></p>
-              
-              <?php if (!empty($subcats) && is_array($subcats)): ?>
-                <ul class="category-list">
-                  <?php 
-                  $display_subcats = array_slice($subcats, 0, 4);
-                  foreach ($display_subcats as $sub): 
-                    $sub_name = is_array($sub) ? ($sub['nombre'] ?? $sub) : $sub;
-                  ?>
-                    <li><?= htmlspecialchars($sub_name) ?></li>
-                  <?php endforeach; ?>
-                  
-                  <?php if (count($subcats) > 4): ?>
-                    <li style="color: var(--primary); font-weight: 600; letter-spacing: 0.3px;">
-                      +<?= count($subcats) - 4 ?> más...
-                    </li>
-                  <?php endif; ?>
-                </ul>
+              <div class="category-header">
+                <h2 class="category-title"><?= $nombre ?></h2>
+                <p class="category-description"><?= $descripcion ?></p>
+
+                <?php if (!empty($subcats) && is_array($subcats)): ?>
+                  <ul class="category-list">
+                    <?php
+                    $display_subcats = array_slice($subcats, 0, 4);
+                    foreach ($display_subcats as $sub):
+                      $sub_name = is_array($sub) ? ($sub['nombre'] ?? $sub) : $sub;
+                      ?>
+                      <li><?= htmlspecialchars($sub_name) ?></li>
+                    <?php endforeach; ?>
+
+                    <?php if (count($subcats) > 4): ?>
+                      <li style="color: var(--primary); font-weight: 600; letter-spacing: 0.3px;">
+                        +<?= count($subcats) - 4 ?> más...
+                      </li>
+                    <?php endif; ?>
+                  </ul>
+                <?php endif; ?>
+              </div>
+
+              <?php if ($total_productos > 0): ?>
+                <div class="category-footer">
+                  <span class="view-products-btn">
+                    Ver productos <i class="fas fa-arrow-right"></i>
+                  </span>
+                </div>
               <?php endif; ?>
             </div>
-
-            <?php if ($total_productos > 0): ?>
-              <div class="category-footer">
-                <span class="view-products-btn">
-                  Ver productos <i class="fas fa-arrow-right"></i>
-                </span>
-              </div>
-            <?php endif; ?>
+          <?php endforeach; ?>
+        <?php else: ?>
+          <div class="empty-state">
+            <i class="fas fa-box-open"></i>
+            <h3>No hay categorías disponibles</h3>
+            <p>Las categorías aparecerán aquí cuando se agreguen al sistema</p>
           </div>
-        <?php endforeach; ?>
-      <?php else: ?>
-        <div class="empty-state">
-          <i class="fas fa-box-open"></i>
-          <h3>No hay categorías disponibles</h3>
-          <p>Las categorías aparecerán aquí cuando se agreguen al sistema</p>
-        </div>
-      <?php endif; ?>
+        <?php endif; ?>
 
+      </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<script>
-(function() {
-  'use strict';
-  
-  const BASE_URL = document.querySelector('.products-grid')?.dataset.base || '/';
-  const loadingOverlay = document.getElementById('loadingOverlay');
-  
-  /**
-   * Muestra un toast de notificación
-   */
-  function showToast(message, type = 'info', duration = 3000) {
-    // Remover toast existente
-    const existing = document.querySelector('.toast');
-    if (existing) existing.remove();
-    
-    const icons = {
-      info: 'fa-info-circle',
-      warning: 'fa-exclamation-triangle',
-      success: 'fa-check-circle',
-      error: 'fa-times-circle'
-    };
-    
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    toast.innerHTML = `
+  <script>
+    (function () {
+      'use strict';
+
+      const BASE_URL = document.querySelector('.products-grid')?.dataset.base || '/';
+      const loadingOverlay = document.getElementById('loadingOverlay');
+
+      /**
+       * Muestra un toast de notificación
+       */
+      function showToast(message, type = 'info', duration = 3000) {
+        // Remover toast existente
+        const existing = document.querySelector('.toast');
+        if (existing) existing.remove();
+
+        const icons = {
+          info: 'fa-info-circle',
+          warning: 'fa-exclamation-triangle',
+          success: 'fa-check-circle',
+          error: 'fa-times-circle'
+        };
+
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.innerHTML = `
       <i class="fas ${icons[type] || icons.info}"></i>
       <div class="toast-message">${message}</div>
       <i class="fas fa-times toast-close"></i>
     `;
-    
-    document.body.appendChild(toast);
-    
-    // Click en cerrar
-    toast.querySelector('.toast-close').addEventListener('click', () => {
-      hideToast(toast);
-    });
-    
-    // Auto ocultar
-    const timeoutId = setTimeout(() => {
-      hideToast(toast);
-    }, duration);
-    
-    // Guardar timeout para poder cancelarlo
-    toast.dataset.timeoutId = timeoutId;
-  }
-  
-  /**
-   * Oculta el toast con animación
-   */
-  function hideToast(toast) {
-    if (toast.dataset.timeoutId) {
-      clearTimeout(parseInt(toast.dataset.timeoutId));
-    }
-    
-    toast.style.opacity = '0';
-    toast.style.transform = 'translateY(20px) scale(0.95)';
-    
-    setTimeout(() => {
-      toast.remove();
-    }, 300);
-  }
-  
-  /**
-   * Muestra/oculta el overlay de carga
-   */
-  function toggleLoading(show = true) {
-    if (loadingOverlay) {
-      if (show) {
-        loadingOverlay.classList.add('active');
-      } else {
-        loadingOverlay.classList.remove('active');
+
+        document.body.appendChild(toast);
+
+        // Click en cerrar
+        toast.querySelector('.toast-close').addEventListener('click', () => {
+          hideToast(toast);
+        });
+
+        // Auto ocultar
+        const timeoutId = setTimeout(() => {
+          hideToast(toast);
+        }, duration);
+
+        // Guardar timeout para poder cancelarlo
+        toast.dataset.timeoutId = timeoutId;
       }
-    }
-  }
-  
-  /**
-   * Lazy loading de imágenes con IntersectionObserver
-   */
-  function initImageLazyLoading() {
-    const imageObserver = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          const img = entry.target;
-          const bgUrl = img.dataset.bg;
-          
-          if (bgUrl) {
-            const testImg = new Image();
-            
-            testImg.onload = () => {
-              img.style.backgroundImage = `url('${bgUrl}')`;
-              img.classList.remove('skeleton');
-            };
-            
-            testImg.onerror = () => {
-              // Imagen por defecto si falla la carga
-              img.style.backgroundImage = `url('${BASE_URL}images/categorias/default.jpg')`;
-              img.classList.remove('skeleton');
-              console.warn('Error cargando imagen:', bgUrl);
-            };
-            
-            testImg.src = bgUrl;
+
+      /**
+       * Oculta el toast con animación
+       */
+      function hideToast(toast) {
+        if (toast.dataset.timeoutId) {
+          clearTimeout(parseInt(toast.dataset.timeoutId));
+        }
+
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(20px) scale(0.95)';
+
+        setTimeout(() => {
+          toast.remove();
+        }, 300);
+      }
+
+      /**
+       * Muestra/oculta el overlay de carga
+       */
+      function toggleLoading(show = true) {
+        if (loadingOverlay) {
+          if (show) {
+            loadingOverlay.classList.add('active');
           } else {
-            img.classList.remove('skeleton');
+            loadingOverlay.classList.remove('active');
           }
-          
-          imageObserver.unobserve(img);
         }
-      });
-    }, {
-      rootMargin: '50px' // Cargar imágenes 50px antes de entrar en viewport
-    });
-
-    // Observar tanto .category-image como .lazy-bg
-    document.querySelectorAll('.category-image, .lazy-bg').forEach(img => {
-      // Si estamos en la página de inicio, cargar imágenes inmediatamente
-      const isHomePage = document.querySelector('.products-grid.home-categories') !== null;
-      if (isHomePage) {
-        const bgUrl = img.dataset.bg;
-        if (bgUrl) {
-          const testImg = new Image();
-          testImg.onload = () => {
-            img.style.backgroundImage = `url('${bgUrl}')`;
-            img.classList.remove('skeleton');
-          };
-          testImg.onerror = () => {
-            img.style.backgroundImage = `url('${BASE_URL}images/categorias/default.jpg')`;
-            img.classList.remove('skeleton');
-          };
-          testImg.src = bgUrl;
-        } else {
-          img.classList.remove('skeleton');
-        }
-      } else {
-        // En otras páginas, usar lazy loading
-        imageObserver.observe(img);
       }
-    });
-  }
-  
-  /**
-   * Navegar a la página de categoría
-   */
-  function navigateToCategory(categoryId, categoryName, productsCount) {
-    if (productsCount === 0) {
-      showToast('Esta categoría aún no tiene productos disponibles', 'warning');
-      return;
-    }
-    
-    toggleLoading(true);
-    
-    // Agregar pequeño delay para mejor UX
-    setTimeout(() => {
-      window.location.href = BASE_URL + "views/categoria.php?id=" + categoryId;
-    }, 200);
-  }
-  
-  /**
-   * Inicializar clicks en categorías
-   */
-  function initCategoryClicks() {
-    document.querySelectorAll('.product-category').forEach(card => {
-      const catId = card.dataset.categoryId;
-      const catName = card.dataset.categoryName;
-      const productsCount = parseInt(card.dataset.productsCount || 0);
 
-      // Click con mouse
-      card.addEventListener('click', (e) => {
-        // Prevenir navegación si se clickea en elementos específicos
-        if (e.target.closest('.toast-close')) return;
-        
-        navigateToCategory(catId, catName, productsCount);
-      });
-      
-      // Soporte para teclado (accesibilidad)
-      card.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          navigateToCategory(catId, catName, productsCount);
+      /**
+       * Lazy loading de imágenes con IntersectionObserver
+       */
+      function initImageLazyLoading() {
+        const imageObserver = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              const img = entry.target;
+              const bgUrl = img.dataset.bg;
+
+              if (bgUrl) {
+                const testImg = new Image();
+
+                testImg.onload = () => {
+                  img.style.backgroundImage = `url('${bgUrl}')`;
+                  img.classList.remove('skeleton');
+                };
+
+                testImg.onerror = () => {
+                  // Imagen por defecto si falla la carga
+                  img.style.backgroundImage = `url('${BASE_URL}images/categorias/default.jpg')`;
+                  img.classList.remove('skeleton');
+                  console.warn('Error cargando imagen:', bgUrl);
+                };
+
+                testImg.src = bgUrl;
+              } else {
+                img.classList.remove('skeleton');
+              }
+
+              imageObserver.unobserve(img);
+            }
+          });
+        }, {
+          rootMargin: '50px' // Cargar imágenes 50px antes de entrar en viewport
+        });
+
+        // Observar tanto .category-image como .lazy-bg
+        document.querySelectorAll('.category-image, .lazy-bg').forEach(img => {
+          // Si estamos en la página de inicio, cargar imágenes inmediatamente
+          const isHomePage = document.querySelector('.products-grid.home-categories') !== null;
+          if (isHomePage) {
+            const bgUrl = img.dataset.bg;
+            if (bgUrl) {
+              const testImg = new Image();
+              testImg.onload = () => {
+                img.style.backgroundImage = `url('${bgUrl}')`;
+                img.classList.remove('skeleton');
+              };
+              testImg.onerror = () => {
+                img.style.backgroundImage = `url('${BASE_URL}images/categorias/default.jpg')`;
+                img.classList.remove('skeleton');
+              };
+              testImg.src = bgUrl;
+            } else {
+              img.classList.remove('skeleton');
+            }
+          } else {
+            // En otras páginas, usar lazy loading
+            imageObserver.observe(img);
+          }
+        });
+      }
+
+      /**
+       * Navegar a la página de categoría
+       */
+      function navigateToCategory(categoryId, categoryName, productsCount) {
+        if (productsCount === 0) {
+          showToast('Esta categoría aún no tiene productos disponibles', 'warning');
+          return;
         }
-      });
-    });
-  }
-  
-  /**
-   * Eventos personalizados para admin
-   */
-  function initCustomEvents() {
-    window.addEventListener('categoryAdded', () => {
-      showToast('Nueva categoría agregada correctamente', 'success');
-      setTimeout(() => location.reload(), 1500);
-    });
 
-    window.addEventListener('categoryUpdated', () => {
-      showToast('Categoría actualizada correctamente', 'success');
-      setTimeout(() => location.reload(), 1500);
-    });
+        toggleLoading(true);
 
-    window.addEventListener('categoryDeleted', () => {
-      showToast('Categoría eliminada correctamente', 'success');
-      setTimeout(() => location.reload(), 1500);
-    });
-  }
-  
-  /**
-   * Inicialización
-   */
-  function init() {
-    initImageLazyLoading();
-    initCategoryClicks();
-    initCustomEvents();
-    
-    const categoryCount = document.querySelectorAll('.product-category').length;
-    console.log('✅ Sistema de categorías inicializado');
-    console.log(`📦 Categorías cargadas: ${categoryCount}`);
-    
-    // Ocultar loading si estaba visible
-    toggleLoading(false);
-  }
-  
-  // Ejecutar cuando el DOM esté listo
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
-  
-})();
-</script>
+        // Agregar pequeño delay para mejor UX
+        setTimeout(() => {
+          window.location.href = BASE_URL + "views/categoria.php?id=" + categoryId;
+        }, 200);
+      }
+
+      /**
+       * Inicializar clicks en categorías
+       */
+      function initCategoryClicks() {
+        document.querySelectorAll('.product-category').forEach(card => {
+          const catId = card.dataset.categoryId;
+          const catName = card.dataset.categoryName;
+          const productsCount = parseInt(card.dataset.productsCount || 0);
+
+          // Click con mouse
+          card.addEventListener('click', (e) => {
+            // Prevenir navegación si se clickea en elementos específicos
+            if (e.target.closest('.toast-close')) return;
+
+            navigateToCategory(catId, catName, productsCount);
+          });
+
+          // Soporte para teclado (accesibilidad)
+          card.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              navigateToCategory(catId, catName, productsCount);
+            }
+          });
+        });
+      }
+
+      /**
+       * Eventos personalizados para admin
+       */
+      function initCustomEvents() {
+        window.addEventListener('categoryAdded', () => {
+          showToast('Nueva categoría agregada correctamente', 'success');
+          setTimeout(() => location.reload(), 1500);
+        });
+
+        window.addEventListener('categoryUpdated', () => {
+          showToast('Categoría actualizada correctamente', 'success');
+          setTimeout(() => location.reload(), 1500);
+        });
+
+        window.addEventListener('categoryDeleted', () => {
+          showToast('Categoría eliminada correctamente', 'success');
+          setTimeout(() => location.reload(), 1500);
+        });
+      }
+
+      /**
+       * Inicialización
+       */
+      function init() {
+        initImageLazyLoading();
+        initCategoryClicks();
+        initCustomEvents();
+
+        const categoryCount = document.querySelectorAll('.product-category').length;
+        console.log('✅ Sistema de categorías inicializado');
+        console.log(`📦 Categorías cargadas: ${categoryCount}`);
+
+        // Ocultar loading si estaba visible
+        toggleLoading(false);
+      }
+
+      // Ejecutar cuando el DOM esté listo
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+      } else {
+        init();
+      }
+
+    })();
+  </script>
 </body>
+
 </html>
