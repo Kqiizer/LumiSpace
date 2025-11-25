@@ -46,6 +46,54 @@ body.dark {
   gap: 1rem;
 }
 
+.global-search__autocomplete {
+  position: relative;
+}
+
+.autocomplete-panel {
+  margin-top: -0.3rem;
+  border: 1px solid var(--search-border);
+  border-radius: 16px;
+  background: var(--search-panel-bg);
+  box-shadow: var(--search-shadow);
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 0.35rem 0;
+}
+
+body.dark .autocomplete-panel {
+  background: rgba(36, 31, 29, 0.98);
+}
+
+.autocomplete-panel.is-hidden {
+  display: none;
+}
+
+.autocomplete-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.autocomplete-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1rem;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: background 0.2s ease;
+}
+
+.autocomplete-list li i {
+  color: var(--primary-color, #a1683a);
+  font-size: 0.85rem;
+}
+
+.autocomplete-list li:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
 .global-search__input-wrapper {
   display: flex;
   align-items: center;
