@@ -416,19 +416,30 @@ function getCorteCajaHoy(): array
 }
 
 // Ventas agrupadas por categoría (hoy)
+// ------------------------------------------------------------
+// 📌 VENTAS POR CATEGORÍA — VERSIÓN CORREGIDA PARA HOSTINGER
+// ------------------------------------------------------------
 function getVentasPorCategoria(): array
 {
     $conn = getDBConnection();
-    $sql = "SELECT cat.nombre as categoria, SUM(dv.subtotal) as total
-             FROM detalle_ventas dv
-             INNER JOIN productos p ON dv.producto_id = p.id
-             INNER JOIN categorias cat ON p.categoria_id = cat.id
-             INNER JOIN ventas v ON dv.venta_id = v.id
-             WHERE DATE(v.fecha) = CURDATE()
-             GROUP BY cat.id";
-    $res = $conn->query($sql);
-    return $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
+
+    $sql = "
+        SELECT 
+            c.nombre AS categoria,
+            SUM(dv.cantidad * dv.precio) AS monto_total
+        FROM ventas v
+        INNER JOIN detalle_ventas dv ON dv.venta_id = v.id
+        INNER JOIN productos p ON p.id = dv.producto_id
+        LEFT JOIN categorias c ON c.id = p.categoria_id
+        GROUP BY c.nombre
+        ORDER BY monto_total DESC
+    ";
+
+    $result = $conn->query($sql);
+    return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
 }
+
+
 
 // Detalle completo de una venta
 function getVentaById(int $venta_id): ?array
@@ -496,30 +507,45 @@ function getCategoriasMasVendidasMes(int $limit = 10): array
    REPORTES MENSUALES
    ============================================================ */
 
-// Ventas por mes (para gráficas del dashboard)
+
+
 function getVentasMensuales(): array
 {
     $conn = getDBConnection();
-    $sql = "SELECT MONTHNAME(fecha) as mes, SUM(total) as total 
-             FROM ventas 
-             WHERE YEAR(fecha)=YEAR(NOW())
-             GROUP BY MONTH(fecha)
-             ORDER BY MONTH(fecha)";
-    $res = $conn->query($sql);
-    return $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
+
+    $sql = "
+        SELECT 
+            DATE_FORMAT(v.fecha, '%Y-%m') AS mes,
+            SUM(dv.cantidad * dv.precio) AS total
+        FROM ventas v
+        INNER JOIN detalle_ventas dv ON dv.venta_id = v.id
+        GROUP BY mes
+        ORDER BY mes
+    ";
+
+    $result = $conn->query($sql);
+    return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
 }
 
 // Ventas por día en el mes actual
 function getVentasPorDiaMesActual(): array
 {
     $conn = getDBConnection();
-    $sql = "SELECT DAY(fecha) as dia, SUM(total) as total
-            FROM ventas
-            WHERE MONTH(fecha)=MONTH(NOW()) AND YEAR(fecha)=YEAR(NOW())
-            GROUP BY DAY(fecha)
-            ORDER BY dia ASC";
-    $res = $conn->query($sql);
-    return $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
+
+    $sql = "
+        SELECT 
+            DAY(v.fecha) AS dia,
+            SUM(dv.cantidad * dv.precio) AS total
+        FROM ventas v
+        INNER JOIN detalle_ventas dv ON dv.venta_id = v.id
+        WHERE MONTH(v.fecha) = MONTH(CURRENT_DATE())
+        AND YEAR(v.fecha) = YEAR(CURRENT_DATE())
+        GROUP BY dia
+        ORDER BY dia
+    ";
+
+    $result = $conn->query($sql);
+    return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
 }
 
 
@@ -528,25 +554,25 @@ function getVentasPorDiaMesActual(): array
    ============================================================ */
 
 // Top N productos más vendidos (general)
-function getProductosMasVendidos(int $limit = 10): array
+function getProductosMasVendidos(int $limit = 5): array
 {
     $conn = getDBConnection();
-    $stmt = $conn->prepare("
-        SELECT p.id, p.nombre, p.precio, p.imagen,
-               SUM(dv.cantidad) as total_vendido,
-               SUM(dv.subtotal) as ingresos
+
+    $sql = "
+        SELECT 
+            p.nombre,
+            SUM(dv.cantidad) AS total_vendido
         FROM detalle_ventas dv
-        JOIN productos p ON dv.producto_id = p.id
-        JOIN ventas v ON dv.venta_id = v.id
-        GROUP BY p.id
+        INNER JOIN productos p ON p.id = dv.producto_id
+        GROUP BY p.id, p.nombre
         ORDER BY total_vendido DESC
-        LIMIT ?
-    ");
-    $stmt->bind_param("i", $limit);
-    $stmt->execute();
-    $res = $stmt->get_result();
-    return $res->fetch_all(MYSQLI_ASSOC);
+        LIMIT $limit
+    ";
+
+    $result = $conn->query($sql);
+    return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
 }
+
 
 // Top N productos más vendidos del mes actual
 function getProductosMasVendidosMes(int $limit = 10): array
@@ -767,16 +793,19 @@ function getUsuariosRecientes(int $limit = 5): array
 function getInventarioResumen(): array
 {
     $conn = getDBConnection();
+
     $sql = "
-        SELECT c.nombre AS categoria, 
-               COALESCE(SUM(p.stock), 0) AS cantidad
-        FROM categorias c
-        LEFT JOIN productos p ON p.categoria_id = c.id
-        GROUP BY c.id, c.nombre
-        ORDER BY c.nombre ASC
+        SELECT c.nombre AS categoria,
+               COUNT(p.id) AS cantidad
+        FROM productos p
+        LEFT JOIN categorias c ON p.categoria_id = c.id
+        GROUP BY c.nombre
+        ORDER BY cantidad DESC
     ";
-    $res = $conn->query($sql);
-    return $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
+
+    $result = $conn->query($sql);
+
+    return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
 }
 
 
