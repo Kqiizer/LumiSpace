@@ -267,7 +267,7 @@ window.addEventListener('load', () => {
         <i class="fas fa-search"></i>
       </button>
 
-      <a href="<?= $BASE ?>index/favoritos.php" class="icon-btn <?= $currentPage === 'favoritos.php' ? 'active' : '' ?>">
+      <a href="<?= $BASE ?>views/favoritos.php" class="icon-btn <?= $currentPage === 'favoritos.php' ? 'active' : '' ?>">
         <i class="fas fa-heart"></i>
         <span class="badge" id="fav-badge" style="<?= $favoritosCount ? '' : 'display:none;' ?>"><?= $favoritosCount ?></span>
       </a>
@@ -289,103 +289,6 @@ window.addEventListener('load', () => {
 
 <!-- 🔹 Overlay para fondo oscuro al abrir sidebar -->
 <div class="overlay" id="overlay"></div>
-
-<!-- 🔍 Buscador avanzado -->
-<div class="global-search" id="globalSearch" aria-hidden="true">
-  <div class="global-search__panel" role="dialog" aria-modal="true" aria-labelledby="globalSearchTitle">
-    <div class="global-search__header">
-      <h2 id="globalSearchTitle">Buscador avanzado</h2>
-      <div class="global-search__input-wrapper">
-        <i class="fas fa-search"></i>
-        <input
-          type="search"
-          id="globalSearchInput"
-          placeholder="Buscar lámparas, categorías, marcas..."
-          autocomplete="off"
-        />
-        <button type="button" class="ghost-btn" data-search-clear aria-label="Limpiar búsqueda">
-          <i class="fas fa-times"></i>
-        </button>
-      </div>
-      <div class="global-search__meta">
-        <select id="globalSearchSort">
-          <option value="relevance">Relevancia</option>
-          <option value="price_asc">Precio: menor a mayor</option>
-          <option value="price_desc">Precio: mayor a menor</option>
-          <option value="popularity">Popularidad</option>
-          <option value="rating">Mejor calificación</option>
-          <option value="newest">Novedades</option>
-        </select>
-        <span id="globalSearchStats">Resultados listos</span>
-        <button type="button" class="ghost-btn" data-search-close aria-label="Cerrar buscador">
-          <i class="fas fa-times"></i>
-        </button>
-      </div>
-    </div>
-
-    <div class="global-search__body">
-      <aside class="global-search__filters">
-        <div class="filters-section">
-          <h4>Filtros rápidos</h4>
-          <label class="filter-label">Categoría
-            <select id="filterCategory"></select>
-          </label>
-          <label class="filter-label">Marca
-            <select id="filterBrand"></select>
-          </label>
-          <label class="filter-label">Color
-            <select id="filterColor"></select>
-          </label>
-          <label class="filter-label">Talla / Tamaño
-            <select id="filterSize"></select>
-          </label>
-        </div>
-
-        <div class="filters-section">
-          <h4>Precio</h4>
-          <div class="filter-price">
-            <input type="number" id="filterPriceMin" placeholder="Mín" min="0">
-            <span>-</span>
-            <input type="number" id="filterPriceMax" placeholder="Máx" min="0">
-          </div>
-        </div>
-
-        <div class="filters-section">
-          <h4>Disponibilidad</h4>
-          <label class="filter-checkbox">
-            <input type="checkbox" id="filterAvailabilityIn" value="in">
-            <span>En stock</span>
-          </label>
-          <label class="filter-checkbox">
-            <input type="checkbox" id="filterAvailabilityOut" value="out">
-            <span>Agotado</span>
-          </label>
-          <label class="filter-checkbox">
-            <input type="checkbox" id="filterDiscountOnly">
-            <span>Solo con descuento</span>
-          </label>
-        </div>
-
-        <button type="button" class="btn-reset" id="resetFiltersBtn">
-          <i class="fas fa-undo"></i> Restablecer filtros
-        </button>
-      </aside>
-
-      <section class="global-search__results">
-        <div class="suggestions-panel">
-          <h4>Sugerencias</h4>
-          <ul id="searchSuggestions" class="suggestions-list"></ul>
-        </div>
-
-        <div id="searchResults" class="results-grid"></div>
-        <div id="searchEmptyState" class="search-empty hidden">
-          <i class="fas fa-search"></i>
-          <p>No se encontraron productos. Ajusta los filtros o intenta con otro término.</p>
-        </div>
-      </section>
-    </div>
-  </div>
-</div>
 
 <!-- 🔹 Sidebar (modo móvil y también accesible en escritorio pequeño) -->
 <aside class="sidebar" id="sidebar">
