@@ -21,19 +21,24 @@ if (!isset($_SESSION["last_login_email"])) {
         $user = $stmt->get_result()->fetch_assoc();
 
         if ($user) {
-            $token  = bin2hex(random_bytes(32));
-            $expira = date("Y-m-d H:i:s", strtotime("+1 hour"));
+$token  = bin2hex(random_bytes(32));
+$expira = date("Y-m-d H:i:s", strtotime("+1 hour"));
 
-            $upd = $conn->prepare("UPDATE usuarios SET reset_token=?, reset_expira=? WHERE id=?");
-            $upd->bind_param("ssi", $token, $expira, $user["id"]);
-            $upd->execute();
+$upd = $conn->prepare("UPDATE usuarios SET reset_token=?, reset_expira=? WHERE id=?");
+$upd->bind_param("ssi", $token, $expira, $user["id"]);
+$upd->execute();
 
-            $resetLink = getenv("BASE_URL") . "/views/reset.php?token=" . urlencode($token);
+// 🔥 FORZAR URL DEL HOSTING — YA NO USAMOS LOCALHOST NI BASE_URL
+$resetLink = "https://lumispace.shop/views/reset.php?token=" . urlencode($token);
 
-            $subject = "Restablecer contraseña";
-            $body = "Hola,<br>Haz clic en el siguiente enlace para restablecer tu contraseña:<br><br>
-                     <a href='{$resetLink}'>{$resetLink}</a><br><br>
-                     Este enlace caduca en 1 hora.";
+$subject = "Restablecer contraseña";
+$body = "
+    Hola,<br>
+    Haz clic en el siguiente enlace para restablecer tu contraseña:<br><br>
+    <a href='{$resetLink}'>{$resetLink}</a><br><br>
+    Este enlace caduca en 1 hora.
+";
+
 
             if (enviarCorreo($user["email"], $subject, $body)) {
                 $msg = "✅ Hemos enviado un enlace de recuperación a tu correo registrado.";
@@ -42,6 +47,7 @@ if (!isset($_SESSION["last_login_email"])) {
                 $msg = "❌ Error al enviar el correo.";
                 $alertClass = "error";
             }
+
         } else {
             $msg = "⚠️ Ese correo no está registrado.";
             $alertClass = "error";
@@ -64,6 +70,7 @@ if (!isset($_SESSION["last_login_email"])) {
 <body>
   <div class="auth-wrapper">
         <div class="auth-image" style="background: url('../images/pos-logi.jpg') no-repeat center center/cover;"></div>
+
     <div class="auth-form">
       <h2>🔑 Recuperar contraseña</h2>
       <p class="subtitle">Haz clic en el botón para enviarte un enlace de recuperación</p>
