@@ -1,3 +1,12 @@
+<?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+require_once __DIR__ . "/../config/functions.php";
+
+// Configuración base
+$BASE = defined('BASE_URL') ? rtrim(BASE_URL, '/') . '/' : '/';
+?>
 <!DOCTYPE html>
 <html lang="es">
 
@@ -186,9 +195,8 @@
             <div class="team-grid">
                 <div class="team-card">
                     <div class="team-image">
-                        <div class="image-placeholder">
-                            <i class="fas fa-user"></i>
-                        </div>
+                        <img src="<?= $BASE ?>images/imagenes-integrantes/ximena-crv.jpeg" 
+                             alt="Ximena Cuevas">
                         <div class="team-social">
                             <a href="#"><i class="fab fa-linkedin"></i></a>
                             <a href="#"><i class="fab fa-twitter"></i></a>
