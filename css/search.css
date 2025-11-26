@@ -14,10 +14,26 @@ body.search-page {
     color: var(--search-text);
 }
 
+body.dark.search-page {
+    --search-bg: #120e0c;
+    --search-card: #1f1814;
+    --search-border: rgba(255, 255, 255, 0.08);
+    --search-primary: #f6c995;
+    --search-accent: #e3a66e;
+    --search-text: #f5eee4;
+    --search-muted: rgba(245, 236, 220, 0.72);
+    background: var(--search-bg);
+    color: var(--search-text);
+}
+
 .search-hero {
     padding: 40px 0 20px;
     background: linear-gradient(120deg, #faf5ef, #f2e6d8);
     border-bottom: 1px solid var(--search-border);
+}
+
+body.dark .search-hero {
+    background: linear-gradient(120deg, #1d1510, #120d0a);
 }
 
 .search-hero .container {
@@ -51,6 +67,11 @@ body.search-page {
     background: var(--search-card);
     font-size: 16px;
     transition: box-shadow 0.2s ease, border 0.2s ease;
+}
+
+body.dark .search-bar input {
+    color: var(--search-text);
+    background: rgba(255, 255, 255, 0.04);
 }
 
 .search-bar input:focus {
@@ -87,6 +108,10 @@ body.search-page {
     box-shadow: 0 15px 40px rgba(0, 0, 0, 0.08);
     z-index: 20;
     display: none;
+}
+
+body.dark .search-suggestions {
+    box-shadow: 0 25px 50px rgba(0,0,0,0.45);
 }
 
 .search-suggestions.active {
@@ -126,6 +151,11 @@ body.search-page {
     border: 1px solid var(--search-border);
 }
 
+body.dark .filters-card,
+body.dark .results-card {
+    box-shadow: 0 20px 45px rgba(0,0,0,0.55);
+}
+
 .filters-card h3 {
     font-size: 18px;
     margin-bottom: 16px;
@@ -152,6 +182,12 @@ body.search-page {
     background: #fff;
 }
 
+body.dark .filter-group input,
+body.dark .filter-group select {
+    background: rgba(255,255,255,0.04);
+    color: var(--search-text);
+}
+
 .filter-badges {
     display: flex;
     flex-wrap: wrap;
@@ -164,6 +200,10 @@ body.search-page {
     padding: 6px 10px;
     border-radius: 999px;
     font-size: 13px;
+}
+
+body.dark .filter-badge {
+    background: rgba(255, 221, 177, 0.1);
 }
 
 .results-header {
@@ -195,6 +235,11 @@ body.search-page {
     gap: 10px;
     background: #fff;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+body.dark .search-card-product {
+    background: #201813;
+    color: var(--search-text);
 }
 
 .search-card-product:hover {
