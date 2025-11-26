@@ -847,7 +847,7 @@ function getCategoryImage($imagen, $BASE) {
             <h2>¿Listo para Iluminar Tu Espacio?</h2>
             <p>Descubre nuestras ofertas exclusivas y transforma tu hogar hoy mismo</p>
             <div class="cta-buttons">
-              <a href="<?= $BASE ?>index.php" class="cta-btn primary">
+              <a href="<?= $BASE ?>views/catalogo.php" class="cta-btn primary">
                 <i class="fas fa-shopping-bag"></i> Ver Todos los Productos
               </a>
               <a href="<?= $BASE ?>views/contacto.php" class="cta-btn secondary">
