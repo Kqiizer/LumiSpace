@@ -112,58 +112,6 @@ function isGroupActive(array $pages, string $current): string {
       </div>
     </div>
 
-    <!-- Ventas -->
-    <div class="menu-group">
-      <button class="menu-item has-submenu <?= isGroupActive(['ventas.php','punto-venta.php','ordenes.php'], $currentPage) ?>">
-        <i class="fas fa-cash-register"></i>
-        <span>Ventas</span>
-        <i class="fas fa-chevron-down arrow"></i>
-      </button>
-      <div class="submenu <?= isGroupActive(['ventas.php','punto-venta.php','ordenes.php'], $currentPage) ?>">
-        <a class="submenu-item <?= activeClass('punto-venta.php', $currentPage) ?>" 
-           href="<?= $BASE ?>views/ventas/punto-venta.php">
-          <i class="fas fa-shopping-cart"></i>
-          <span>Punto de Venta</span>
-        </a>
-        <a class="submenu-item <?= activeClass('ventas.php', $currentPage) ?>" 
-           href="<?= $BASE ?>views/ventas/ventas.php">
-          <i class="fas fa-receipt"></i>
-          <span>Historial de Ventas</span>
-        </a>
-        <a class="submenu-item <?= activeClass('ordenes.php', $currentPage) ?>" 
-           href="<?= $BASE ?>views/ventas/ordenes.php">
-          <i class="fas fa-clipboard-list"></i>
-          <span>Órdenes Online</span>
-        </a>
-      </div>
-    </div>
-
-    <!-- Reportes -->
-    <div class="menu-group">
-      <button class="menu-item has-submenu <?= isGroupActive(['reportes.php','reportes-ventas.php','reportes-inventario.php'], $currentPage) ?>">
-        <i class="fas fa-chart-line"></i>
-        <span>Reportes</span>
-        <i class="fas fa-chevron-down arrow"></i>
-      </button>
-      <div class="submenu <?= isGroupActive(['reportes.php','reportes-ventas.php','reportes-inventario.php'], $currentPage) ?>">
-        <a class="submenu-item <?= activeClass('reportes.php', $currentPage) ?>" 
-           href="<?= $BASE ?>views/reportes/reportes.php">
-          <i class="fas fa-file-chart-line"></i>
-          <span>Reportes Generales</span>
-        </a>
-        <a class="submenu-item <?= activeClass('reportes-ventas.php', $currentPage) ?>" 
-           href="<?= $BASE ?>views/reportes/reportes-ventas.php">
-          <i class="fas fa-chart-bar"></i>
-          <span>Análisis de Ventas</span>
-        </a>
-        <a class="submenu-item <?= activeClass('reportes-inventario.php', $currentPage) ?>" 
-           href="<?= $BASE ?>views/reportes/reportes-inventario.php">
-          <i class="fas fa-boxes"></i>
-          <span>Stock y Movimientos</span>
-        </a>
-      </div>
-    </div>
-
     <!-- Configuración -->
     <a class="menu-item <?= activeClass('configuracion.php', $currentPage) ?>" 
        href="<?= $BASE ?>views/configuracion.php">
