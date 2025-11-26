@@ -161,9 +161,77 @@ if (isset($google_client) && $google_client instanceof Google_Client) {
       align-items: center;
       gap: 8px;
     }
-    .terms-check a {
+    .terms-check .legal-link {
       color: #0b5394;
       text-decoration: underline;
+      cursor: pointer;
+      border: none;
+      background: none;
+      padding: 0;
+      font: inherit;
+    }
+    .legal-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      padding: 20px;
+    }
+    .legal-modal.open {
+      display: flex;
+    }
+    .legal-modal__content {
+      background: #fff;
+      width: min(900px, 100%);
+      max-height: 90vh;
+      border-radius: 18px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 25px 80px rgba(0,0,0,0.25);
+    }
+    .legal-modal__header {
+      padding: 18px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(0,0,0,0.05);
+    }
+    .legal-modal__header h3 {
+      margin: 0;
+      font-size: 1rem;
+    }
+    .legal-modal__close {
+      border: none;
+      background: none;
+      font-size: 1.4rem;
+      cursor: pointer;
+      line-height: 1;
+      color: #444;
+    }
+    .legal-modal__frame {
+      flex: 1;
+      border: none;
+      width: 100%;
+      background: #f5f5f5;
+    }
+    .legal-modal__footer {
+      padding: 14px 24px;
+      border-top: 1px solid rgba(0,0,0,0.05);
+      text-align: right;
+    }
+    .legal-modal__exit {
+      background: #8b7355;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 18px;
+      cursor: pointer;
+      font-weight: 600;
     }
   </style>
 </head>
@@ -206,8 +274,8 @@ if (isset($google_client) && $google_client instanceof Google_Client) {
           <input type="checkbox" id="acepto" name="acepto" required>
           <label for="acepto">
             Acepto los 
-            <a href="../docs/terminos-condiciones.html" target="_blank">Términos y Condiciones</a> y la 
-            <a href="../docs/politica-privacidad.html" target="_blank">Política de Privacidad</a>.
+            <button type="button" class="legal-link" data-legal-doc="terms">Términos y Condiciones</button> y la 
+            <button type="button" class="legal-link" data-legal-doc="privacy">Política de Privacidad</button>.
           </label>
         </div>
 
@@ -237,6 +305,72 @@ if (isset($google_client) && $google_client instanceof Google_Client) {
       }
       return true;
     }
+
+    (function(){
+      const modal = document.getElementById('legalModal');
+      const frame = document.getElementById('legalModalFrame');
+      const title = document.getElementById('legalModalTitle');
+      if (!modal || !frame || !title) return;
+
+      const DOCS = {
+        terms: {
+          url: '../docs/terminos-condiciones.html',
+          title: 'Términos y Condiciones'
+        },
+        privacy: {
+          url: '../docs/politica-privacidad.html',
+          title: 'Política de Privacidad'
+        }
+      };
+
+      const openModal = (key) => {
+        const doc = DOCS[key] || DOCS.terms;
+        frame.src = doc.url;
+        title.textContent = doc.title;
+        modal.classList.add('open');
+        document.body.style.overflow = 'hidden';
+      };
+
+      const closeModal = () => {
+        modal.classList.remove('open');
+        frame.src = '';
+        document.body.style.overflow = '';
+      };
+
+      document.querySelectorAll('[data-legal-doc]').forEach(link => {
+        link.addEventListener('click', (event) => {
+          event.preventDefault();
+          openModal(link.dataset.legalDoc);
+        });
+      });
+
+      modal.querySelectorAll('[data-legal-close]').forEach(btn => {
+        btn.addEventListener('click', closeModal);
+      });
+
+      modal.addEventListener('click', (event) => {
+        if (event.target === modal) closeModal();
+      });
+
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && modal.classList.contains('open')) {
+          closeModal();
+        }
+      });
+    })();
   </script>
+
+  <div class="legal-modal" id="legalModal" aria-hidden="true">
+    <div class="legal-modal__content">
+      <div class="legal-modal__header">
+        <h3 id="legalModalTitle">Documento legal</h3>
+        <button type="button" class="legal-modal__close" data-legal-close>&times;</button>
+      </div>
+      <iframe class="legal-modal__frame" id="legalModalFrame" title="Documento legal"></iframe>
+      <div class="legal-modal__footer">
+        <button type="button" class="legal-modal__exit" data-legal-close>Salir</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
