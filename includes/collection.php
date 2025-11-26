@@ -151,6 +151,13 @@ function getImagenProducto($img, $base) {
  */
 function getRating($prodId, $conn) {
     if (!$conn) return ['avg' => 0, 'total' => 0];
+    
+    // Verificar si la tabla opiniones existe
+    $check_table = $conn->query("SHOW TABLES LIKE 'opiniones'");
+    if (!$check_table || $check_table->num_rows === 0) {
+        return ['avg' => 0, 'total' => 0];
+    }
+    
     $stmt = $conn->prepare("SELECT COALESCE(AVG(rating),0) as avg, COUNT(*) as total FROM opiniones WHERE producto_id=?");
     if (!$stmt) return ['avg' => 0, 'total' => 0];
     $stmt->bind_param("i", $prodId);

@@ -33,10 +33,18 @@ if (!$producto) {
 // Esta función maneja tanto usuarios logueados (BD) como invitados (sesión)
 carritoAgregar($producto_id, $cantidad);
 
+// Obtener el carrito actualizado para contar productos
+$carrito_actualizado = carritoObtener();
+$count = 0;
+foreach ($carrito_actualizado as $item) {
+    $count += (int)($item['cantidad'] ?? 1);
+}
+
 // Preparar respuesta
 echo json_encode([
   'ok' => true,
   'msg' => '🛒 Producto agregado al carrito',
+  'count' => $count,
   'producto' => [
     'id' => (int) $producto['id'],
     'nombre' => $producto['nombre'],

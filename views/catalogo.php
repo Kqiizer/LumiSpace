@@ -1113,6 +1113,20 @@ function img_url($path, $BASE, $folder = 'productos')
                     aplicarFiltros();
                 });
 
+                // Aplicar filtro de categoría desde la URL si existe
+                const urlParams = new URLSearchParams(window.location.search);
+                const categoriaId = urlParams.get('categoria');
+                if (categoriaId) {
+                    const chipCategoria = document.querySelector(`.filter-chip[data-category="${categoriaId}"]`);
+                    if (chipCategoria) {
+                        chips.forEach(c => c.classList.remove("active"));
+                        chipCategoria.classList.add("active");
+                        aplicarFiltros();
+                        // Scroll suave al área de filtros
+                        chipCategoria.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                    }
+                }
+
             });
         </script>
 

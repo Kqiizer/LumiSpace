@@ -1,3 +1,12 @@
+<?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+require_once __DIR__ . "/../config/functions.php";
+
+// Configuración base
+$BASE = defined('BASE_URL') ? rtrim(BASE_URL, '/') . '/' : '/';
+?>
 <!DOCTYPE html>
 <html lang="es">
 
@@ -186,14 +195,8 @@
             <div class="team-grid">
                 <div class="team-card">
                     <div class="team-image">
-                        <div class="image-placeholder">
-                            <i class="fas fa-user"></i>
-                        </div>
-                        <div class="team-social">
-                            <a href="#"><i class="fab fa-linkedin"></i></a>
-                            <a href="#"><i class="fab fa-twitter"></i></a>
-                            <a href="#"><i class="fab fa-instagram"></i></a>
-                        </div>
+                        <img src="<?= $BASE ?>images/imagenes-integrantes/ximena-crv.jpeg" 
+                             alt="Ximena Cuevas">
                     </div>
                     <div class="team-info">
                         <h3>Ximena Cuevas</h3>
@@ -203,14 +206,8 @@
 
                 <div class="team-card">
                     <div class="team-image">
-                        <div class="image-placeholder">
-                            <i class="fas fa-user"></i>
-                        </div>
-                        <div class="team-social">
-                            <a href="#"><i class="fab fa-linkedin"></i></a>
-                            <a href="#"><i class="fab fa-twitter"></i></a>
-                            <a href="#"><i class="fab fa-instagram"></i></a>
-                        </div>
+                        <img src="<?= $BASE ?>images/imagenes-integrantes/josefina-hdz.jpeg" 
+                             alt="Josefina Hernandez">
                     </div>
                     <div class="team-info">
                         <h3>Josefina Hernandez</h3>
@@ -220,14 +217,8 @@
 
                 <div class="team-card">
                     <div class="team-image">
-                        <div class="image-placeholder">
-                            <i class="fas fa-user"></i>
-                        </div>
-                        <div class="team-social">
-                            <a href="#"><i class="fab fa-linkedin"></i></a>
-                            <a href="#"><i class="fab fa-twitter"></i></a>
-                            <a href="#"><i class="fab fa-instagram"></i></a>
-                        </div>
+                        <img src="<?= $BASE ?>images/imagenes-integrantes/fernando-arroyo.jpeg" 
+                             alt="Fernando Arroyo">
                     </div>
                     <div class="team-info">
                         <h3>Fernando Arroyo</h3>
@@ -237,18 +228,23 @@
 
                 <div class="team-card">
                     <div class="team-image">
-                        <div class="image-placeholder">
-                            <i class="fas fa-user"></i>
-                        </div>
-                        <div class="team-social">
-                            <a href="#"><i class="fab fa-linkedin"></i></a>
-                            <a href="#"><i class="fab fa-twitter"></i></a>
-                            <a href="#"><i class="fab fa-instagram"></i></a>
-                        </div>
+                        <img src="<?= $BASE ?>images/imagenes-integrantes/santiago-ballesteros.jpeg" 
+                             alt="Santiago Ballesteros">
                     </div>
                     <div class="team-info">
                         <h3>Santiago Ballesteros</h3>
                         <p class="team-role">programador back-end</p>
+                    </div>
+                </div>
+
+                <div class="team-card">
+                    <div class="team-image">
+                        <img src="<?= $BASE ?>images/imagenes-integrantes/fatima-contreras.jpeg" 
+                             alt="Fátima Contreras">
+                    </div>
+                    <div class="team-info">
+                        <h3>Fátima Contreras</h3>
+                        <p class="team-role">programadora front-end</p>
                     </div>
                 </div>
             </div>
@@ -545,6 +541,9 @@
             </div>
         </div>
     </section>
+
+    <!-- Footer -->
+    <?php include __DIR__ . "/../includes/footer.php"; ?>
 
     <script src="/js/about-script.js"></script>
 </body>

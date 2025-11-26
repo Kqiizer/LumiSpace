@@ -256,7 +256,6 @@ window.addEventListener('load', () => {
       <li><a href="<?= $BASE ?>index.php" class="<?= $currentPage === 'index.php' ? 'active' : '' ?>">Inicio</a></li>
       <li><a href="<?= $BASE ?>views/categorias.php" class="<?= $currentPage === 'categorias.php' ? 'active' : '' ?>">Categorías</a></li>
       <li><a href="<?= $BASE ?>views/catalogo.php" class="<?= $currentPage === 'catalogo.php' ? 'active' : '' ?>">Catálogo</a></li>
-      <li><a href="<?= $BASE ?>views/marcas.php" class="<?= $currentPage === 'marcas.php' ? 'active' : '' ?>">Marcas</a></li>
       <li><a href="<?= $BASE ?>views/blog.php" class="<?= $currentPage === 'blog.php' ? 'active' : '' ?>">Blog</a></li>
       <li><a href="<?= $BASE ?>views/contacto.php" class="<?= $currentPage === 'contacto.php' ? 'active' : '' ?>">Contacto</a></li>
     </ul>
@@ -267,7 +266,7 @@ window.addEventListener('load', () => {
         <i class="fas fa-search"></i>
       </button>
 
-      <a href="<?= $BASE ?>views/favoritos.php" class="icon-btn <?= $currentPage === 'favoritos.php' ? 'active' : '' ?>">
+      <a href="<?= $BASE ?>index/favoritos.php" class="icon-btn <?= $currentPage === 'favoritos.php' ? 'active' : '' ?>">
         <i class="fas fa-heart"></i>
         <span class="badge" id="fav-badge" style="<?= $favoritosCount ? '' : 'display:none;' ?>"><?= $favoritosCount ?></span>
       </a>
@@ -296,8 +295,8 @@ window.addEventListener('load', () => {
     id="theme-toggle"
     class="btn"
     type="button"
-    data-icon-dark="<?= ls_menu_icon($BASE, 'modo obscuro-luna.png') ?>"
-    data-icon-light="<?= ls_menu_icon($BASE, 'modo-claro.png') ?>"
+    data-icon-light-mode="<?= ls_menu_icon($BASE, 'modo obscuro-luna.png') ?>"
+    data-icon-dark-mode="<?= ls_menu_icon($BASE, 'modo-claro.png') ?>"
   >
     <img
       src="<?= ls_menu_icon($BASE, 'modo obscuro-luna.png') ?>"
@@ -319,10 +318,6 @@ window.addEventListener('load', () => {
   <a href="<?= $BASE ?>views/catalogo.php" class="btn <?= $currentPage === 'catalogo.php' ? 'active' : '' ?>">
     <img src="<?= ls_menu_icon($BASE, 'catalogo.png') ?>" alt="Catálogo" class="menu-icon">
     <span class="t" data-i18n="nav.catalog" data-i18n-es="Catálogo">Catálogo</span>
-  </a>
-  <a href="<?= $BASE ?>views/marcas.php" class="btn <?= $currentPage === 'marcas.php' ? 'active' : '' ?>">
-    <img src="<?= ls_menu_icon($BASE, 'marcas.png') ?>" alt="Marcas" class="menu-icon">
-    <span class="t" data-i18n="nav.brands" data-i18n-es="Marcas">Marcas</span>
   </a>
   <a href="<?= $BASE ?>views/blog.php" class="btn <?= $currentPage === 'blog.php' ? 'active' : '' ?>">
     <img src="<?= ls_menu_icon($BASE, 'blog.png') ?>" alt="Blog" class="menu-icon">
@@ -356,8 +351,14 @@ window.addEventListener('load', () => {
   <hr>
 
   <?php if (!empty($_SESSION['usuario_id'])): ?>
-    <p style="margin:10px 0; font-weight:bold;">👋 Hola, <?= htmlspecialchars($_SESSION['usuario_nombre'] ?? 'Usuario') ?></p>
-    <a href="<?= $BASE ?>logout.php" class="btn">🚪 Cerrar Sesión</a>
+    <div class="btn" style="margin:10px 0; font-weight:bold; cursor: default; opacity: 1;">
+      <img src="<?= ls_menu_icon($BASE, 'usuario.png') ?>" alt="Usuario" class="menu-icon">
+      <span>Hola, <?= htmlspecialchars($_SESSION['usuario_nombre'] ?? 'Usuario') ?></span>
+    </div>
+    <a href="<?= $BASE ?>logout.php" class="btn">
+      <img src="<?= ls_menu_icon($BASE, 'cerrar sesion.png') ?>" alt="Cerrar Sesión" class="menu-icon">
+      <span>Cerrar Sesión</span>
+    </a>
   <?php else: ?>
     <a href="<?= $BASE ?>views/login.php" class="btn">
       <img src="<?= ls_menu_icon($BASE, 'iniciar-sesion.png') ?>" alt="Iniciar Sesión" class="menu-icon">
@@ -369,6 +370,108 @@ window.addEventListener('load', () => {
     </a>
   <?php endif; ?>
 </aside>
+
+<!-- 🔎 Buscador global -->
+<div class="global-search" id="globalSearch" aria-hidden="true">
+  <div class="global-search__panel" role="dialog" aria-modal="true" aria-labelledby="globalSearchTitle">
+    <div class="global-search__header">
+      <div style="display:flex; align-items:center; justify-content:space-between;">
+        <div>
+          <p style="text-transform:uppercase; letter-spacing:0.08em; font-size:0.75rem; color:#b8a899; margin:0;">Explora</p>
+          <h2 id="globalSearchTitle" style="margin:0; font-size:1.5rem;">Busca en LumiSpace</h2>
+        </div>
+        <button type="button" class="ghost-btn" aria-label="Cerrar buscador" data-search-close>
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="global-search__input-wrapper">
+        <i class="fas fa-search"></i>
+        <input type="search" id="globalSearchInput" placeholder="Lámparas nórdicas, plafones blancos, luz cálida..." autocomplete="off">
+        <button type="button" class="ghost-btn" aria-label="Limpiar búsqueda" data-search-clear>
+          <i class="fas fa-times-circle"></i>
+        </button>
+      </div>
+
+      <div class="global-search__autocomplete is-hidden" id="globalAutocompletePanel">
+        <ul class="autocomplete-list" id="globalLiveSuggestions"></ul>
+      </div>
+
+      <div class="global-search__meta">
+        <span id="globalSearchStats">Encuentra productos por nombre, categoría o atributos.</span>
+        <select id="globalSearchSort">
+          <option value="relevance">Mejor resultado</option>
+          <option value="price_asc">Precio: menor a mayor</option>
+          <option value="price_desc">Precio: mayor a menor</option>
+          <option value="newest">Más recientes</option>
+          <option value="popularity">Popularidad</option>
+          <option value="rating">Mejor calificados</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="global-search__body">
+      <aside class="global-search__filters">
+        <div class="filters-section">
+          <h4>Categoría</h4>
+          <label class="filter-label">
+            <span>Selecciona una categoría</span>
+            <select id="globalFilterCategory">
+              <option value="">Todas</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="filters-section">
+          <h4>Precio</h4>
+          <div class="filter-price">
+            <input type="number" id="globalFilterPriceMin" placeholder="Desde">
+            <span>-</span>
+            <input type="number" id="globalFilterPriceMax" placeholder="Hasta">
+          </div>
+        </div>
+
+        <div class="filters-section">
+          <h4>Disponibilidad</h4>
+          <label class="filter-checkbox">
+            <input type="checkbox" id="globalFilterAvailabilityIn">
+            <span>En existencia</span>
+          </label>
+          <label class="filter-checkbox">
+            <input type="checkbox" id="globalFilterAvailabilityOut">
+            <span>Agotados</span>
+          </label>
+          <label class="filter-checkbox">
+            <input type="checkbox" id="globalFilterDiscountOnly">
+            <span>Solo con descuento</span>
+          </label>
+        </div>
+
+        <button type="button" class="btn-reset" id="globalResetFilters">
+          Limpiar filtros
+        </button>
+      </aside>
+
+      <section class="global-search__results">
+        <div class="suggestions-panel">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+            <strong>Coincidencias rápidas</strong>
+            <small style="color:#8a7767;">Basadas en tu búsqueda</small>
+          </div>
+          <ul class="suggestions-list" id="globalSearchSuggestions"></ul>
+        </div>
+
+        <div class="results-grid" id="globalSearchResults"></div>
+
+        <div class="search-empty hidden" id="searchEmptyState">
+          <i class="fas fa-bolt"></i>
+          <h4>No encontramos resultados</h4>
+          <p>Prueba con otra palabra o ajusta los filtros activos.</p>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
 
 <!-- ✅ Script (controla menú, overlay y animaciones) -->
 <script src="<?= $BASE ?>js/header.js" defer></script>

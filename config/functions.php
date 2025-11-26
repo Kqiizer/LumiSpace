@@ -54,11 +54,14 @@ function carritoAgregar(int $producto_id, int $cantidad = 1): void
     // Si ya existe, sumar cantidad
     if (isset($_SESSION['carrito'][$producto_id])) {
         $_SESSION['carrito'][$producto_id]['cantidad'] += $cantidad;
+        // Actualizar subtotal
+        $_SESSION['carrito'][$producto_id]['subtotal'] = (float) $_SESSION['carrito'][$producto_id]['precio'] * $_SESSION['carrito'][$producto_id]['cantidad'];
     } else {
         $producto = getProductoById($producto_id);
         if ($producto) {
             $_SESSION['carrito'][$producto_id] = [
                 'producto_id' => $producto['id'],
+                'id' => $producto['id'],
                 'nombre' => $producto['nombre'],
                 'precio' => (float) $producto['precio'],
                 'imagen' => $producto['imagen'] ?? 'images/default.png',
@@ -1373,13 +1376,38 @@ function getProductosPublicos(int $limit = 12): array
 {
     $conn = getDBConnection();
 
-    $sql = "SELECT p.id, p.nombre, p.descripcion, p.precio, p.stock, p.imagen, 
-                   c.nombre AS categoria
-            FROM productos p
-            LEFT JOIN categorias c ON p.categoria_id = c.id
-            WHERE p.estado = 'activo'
-            ORDER BY p.id DESC
-            LIMIT ?";
+    // Verificar qué columnas existen en la tabla productos
+    $check_estado = $conn->query("SHOW COLUMNS FROM productos LIKE 'estado'");
+    $has_estado = $check_estado && $check_estado->num_rows > 0;
+    $check_activo = $conn->query("SHOW COLUMNS FROM productos LIKE 'activo'");
+    $has_activo = $check_activo && $check_activo->num_rows > 0;
+
+    // Construir SELECT sin la columna stock que no existe
+    $sql = "SELECT p.id, p.nombre, p.descripcion, p.precio, p.imagen, 
+                   c.nombre AS categoria";
+    
+    // Agregar categoria_id si existe
+    $check_categoria_id = $conn->query("SHOW COLUMNS FROM productos LIKE 'categoria_id'");
+    if ($check_categoria_id && $check_categoria_id->num_rows > 0) {
+        $sql .= ", p.categoria_id";
+    }
+    
+    $sql .= " FROM productos p
+            LEFT JOIN categorias c ON p.categoria_id = c.id";
+    
+    // Construir WHERE según las columnas disponibles
+    $where_conditions = [];
+    if ($has_estado) {
+        $where_conditions[] = "p.estado = 'activo'";
+    } elseif ($has_activo) {
+        $where_conditions[] = "p.activo = 1";
+    }
+    
+    if (!empty($where_conditions)) {
+        $sql .= " WHERE " . implode(" AND ", $where_conditions);
+    }
+    
+    $sql .= " ORDER BY p.id DESC LIMIT ?";
 
     $stmt = $conn->prepare($sql);
     if (!$stmt) {

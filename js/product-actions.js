@@ -47,6 +47,21 @@
 
                 // Update cart badge if exists
                 updateCartBadge();
+                
+                // Si estamos en la página del carrito, recargar inmediatamente para mostrar el nuevo producto
+                const currentPath = window.location.pathname.toLowerCase();
+                const currentHref = window.location.href.toLowerCase();
+                const isCartPage = currentPath.includes('carrito') || 
+                                  currentHref.includes('carrito') ||
+                                  currentPath.includes('includes/carrito');
+                
+                if (isCartPage) {
+                    // Recargar inmediatamente sin delay para mostrar el nuevo producto
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 300);
+                }
+                
                 return true;
             } else {
                 throw new Error(data.msg || 'Error al agregar al carrito');

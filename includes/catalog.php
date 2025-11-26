@@ -8,57 +8,75 @@ $conn = getDBConnection();
 // Obtener categorías con sus imágenes (usando el mismo sistema que categories.php)
 $categorias_db = getCategorias();
 
-/**
- * Obtiene la URL de la imagen de categoría (MISMO sistema que categories.php)
- */
-function getCategoryImage($imagen, $BASE) {
-  if (empty($imagen) || trim($imagen) === '') {
-    return $BASE . 'images/categorias/default.jpg';
+// La función getCategoryImage() ya está declarada en includes/categories.php
+// Si no existe, la declaramos aquí como fallback
+if (!function_exists('getCategoryImage')) {
+  function getCategoryImage($imagen, $BASE) {
+    if (empty($imagen) || trim($imagen) === '') {
+      return $BASE . 'images/categorias/default.jpg';
+    }
+    
+    $imagen = trim($imagen);
+    
+    // Si ya es una URL completa (http o https), devolverla tal cual
+    if (preg_match('#^https?://#i', $imagen)) {
+      return $imagen;
+    }
+    
+    // Si empieza con /, es una ruta absoluta desde la raíz
+    if (strpos($imagen, '/') === 0) {
+      return $BASE . ltrim($imagen, '/');
+    }
+    
+    // Si la imagen ya contiene una ruta relativa completa (ej: imagenes/lamparas/deco2.jpg)
+    // o empieza con imagenes/ o images/, usarla directamente
+    if (strpos($imagen, 'imagenes/') === 0 || strpos($imagen, 'images/') === 0) {
+      return $BASE . $imagen;
+    }
+    
+    // Si es solo un nombre de archivo, asumir que está en images/categorias/
+    return $BASE . 'images/categorias/' . $imagen;
   }
-  
-  $imagen = trim($imagen);
-  
-  // Si ya es una URL completa (http o https), devolverla tal cual
-  if (preg_match('#^https?://#i', $imagen)) {
-    return $imagen;
-  }
-  
-  // Si empieza con /, es una ruta absoluta desde la raíz
-  if (strpos($imagen, '/') === 0) {
-    return $BASE . ltrim($imagen, '/');
-  }
-  
-  // Si la imagen ya contiene una ruta relativa completa (ej: imagenes/lamparas/deco2.jpg)
-  // o empieza con imagenes/ o images/, usarla directamente
-  if (strpos($imagen, 'imagenes/') === 0 || strpos($imagen, 'images/') === 0) {
-    return $BASE . $imagen;
-  }
-  
-  // Si es solo un nombre de archivo, asumir que está en images/categorias/
-  return $BASE . 'images/categorias/' . $imagen;
 }
 
 // Obtener productos destacados de las primeras 2 categorías
 $productos = [];
 if (!empty($categorias_db) && is_array($categorias_db)) {
+  // Verificar qué columnas existen en la tabla productos
+  $check_activo = $conn->query("SHOW COLUMNS FROM productos LIKE 'activo'");
+  $has_activo = $check_activo && $check_activo->num_rows > 0;
+  $check_estado = $conn->query("SHOW COLUMNS FROM productos LIKE 'estado'");
+  $has_estado = $check_estado && $check_estado->num_rows > 0;
+  
   // Tomar las primeras 2 categorías
   $categorias_mostrar = array_slice($categorias_db, 0, 2);
   
   foreach ($categorias_mostrar as $cat) {
     $cat_id = (int)($cat['id'] ?? 0);
     
-    // Obtener un producto destacado de esta categoría
+    // Construir la consulta SQL dinámicamente según las columnas disponibles
+    $where_conditions = ["p.categoria_id = ?"];
+    $types = "i";
+    $params = [$cat_id];
+    
+    if ($has_activo) {
+      $where_conditions[] = "p.activo = 1";
+    } elseif ($has_estado) {
+      $where_conditions[] = "p.estado = 'activo'";
+    }
+    
     $sql = "SELECT p.*, c.nombre AS categoria
             FROM productos p
             LEFT JOIN categorias c ON p.categoria_id = c.id
-            WHERE p.categoria_id = ? 
-            AND (p.activo = 1 OR p.estado = 'activo')
+            WHERE " . implode(" AND ", $where_conditions) . "
             ORDER BY p.id DESC
             LIMIT 1";
     
     $stmt = $conn->prepare($sql);
     if ($stmt) {
-      $stmt->bind_param("i", $cat_id);
+      if ($params) {
+        $stmt->bind_param($types, ...$params);
+      }
       $stmt->execute();
       $result = $stmt->get_result();
       $producto = $result->fetch_assoc();
@@ -77,7 +95,39 @@ if (!empty($categorias_db) && is_array($categorias_db)) {
   }
 }
 
-// Si no hay productos, usar las categorías directamente como productos
+// Si no hay productos de categorías específicas, obtener productos destacados generales
+if (empty($productos)) {
+  // Verificar qué columnas existen
+  $check_activo = $conn->query("SHOW COLUMNS FROM productos LIKE 'activo'");
+  $has_activo = $check_activo && $check_activo->num_rows > 0;
+  $check_estado = $conn->query("SHOW COLUMNS FROM productos LIKE 'estado'");
+  $has_estado = $check_estado && $check_estado->num_rows > 0;
+  
+  $where_conditions = [];
+  if ($has_activo) {
+    $where_conditions[] = "p.activo = 1";
+  } elseif ($has_estado) {
+    $where_conditions[] = "p.estado = 'activo'";
+  }
+  
+  $where_sql = !empty($where_conditions) ? "WHERE " . implode(" AND ", $where_conditions) : "";
+  
+  $sql = "SELECT p.*, c.nombre AS categoria
+          FROM productos p
+          LEFT JOIN categorias c ON p.categoria_id = c.id
+          $where_sql
+          ORDER BY p.id DESC
+          LIMIT 2";
+  
+  $res = $conn->query($sql);
+  if ($res) {
+    while ($row = $res->fetch_assoc()) {
+      $productos[] = $row;
+    }
+  }
+}
+
+// Si aún no hay productos, usar las categorías directamente como productos
 if (empty($productos) && !empty($categorias_db)) {
   $categorias_mostrar = array_slice($categorias_db, 0, 2);
   foreach ($categorias_mostrar as $cat) {
@@ -153,8 +203,8 @@ if (empty($productos) && !empty($categorias_db)) {
    CATÁLOGO SECTION
    ========================================== */
 .catalog-section {
-  padding: 80px 20px;
-  background: #f9f4ed;
+  padding: 100px 20px;
+  background: #faf8f6;
   position: relative;
 }
 
@@ -164,20 +214,24 @@ if (empty($productos) && !empty($categorias_db)) {
 }
 
 .catalog-title {
-  font-family: 'Playfair Display', serif;
-  font-size: 3.5rem;
-  font-weight: 800;
-  color: #32281c;
+  font-family: 'Inter', sans-serif;
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #8b7355;
   text-align: center;
-  margin-bottom: 60px;
-  letter-spacing: 2px;
+  margin-bottom: 50px;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
 }
 
+/* ==========================================
+   CATALOG GRID
+   ========================================== */
 .catalog-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 40px;
-  max-width: 900px;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 30px;
+  max-width: 1000px;
   margin: 0 auto;
 }
 
@@ -185,103 +239,118 @@ if (empty($productos) && !empty($categorias_db)) {
    CATALOG CARD
    ========================================== */
 .catalog-card {
-  background: #6D5A42;
-  border-radius: 24px;
+  background: #ffffff;
+  border-radius: 16px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
   position: relative;
+  border: 1px solid rgba(139, 115, 85, 0.1);
+  box-shadow: 0 4px 12px rgba(109, 90, 66, 0.08);
 }
 
 .catalog-card:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 20px 40px rgba(109, 90, 66, 0.3);
+  transform: translateY(-6px);
+  box-shadow: 0 12px 32px rgba(109, 90, 66, 0.15);
+  border-color: rgba(139, 115, 85, 0.2);
 }
 
 .catalog-card-image {
   width: 100%;
-  height: 400px;
+  height: 320px;
   overflow: hidden;
-  background: #8A7458;
+  background: linear-gradient(135deg, #f4f1ec 0%, #e9e4dd 100%);
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
 }
 
 .catalog-card-image img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.5s ease;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .catalog-card:hover .catalog-card-image img {
-  transform: scale(1.1);
+  transform: scale(1.08);
 }
 
 .catalog-card-title {
-  font-family: 'Playfair Display', serif;
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #ffffff;
+  font-family: 'Inter', sans-serif;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #2d2520;
   text-align: center;
-  padding: 24px 20px;
+  padding: 20px 20px 16px;
   margin: 0;
-  line-height: 1.3;
+  line-height: 1.4;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .catalog-card-price {
-  background: #ffffff;
-  color: #32281c;
+  background: linear-gradient(135deg, #8b7355 0%, #a0896b 100%);
+  color: #ffffff;
   border: none;
-  padding: 16px 32px;
-  border-radius: 12px;
-  font-size: 1.25rem;
-  font-weight: 700;
+  padding: 14px 28px;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
   font-family: 'Inter', sans-serif;
   margin: 0 auto 24px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   width: auto;
-  min-width: 150px;
+  min-width: 140px;
   display: block;
+  box-shadow: 0 4px 12px rgba(139, 115, 85, 0.2);
 }
 
 .catalog-card-price:hover {
-  background: #f2e7d9;
+  background: linear-gradient(135deg, #a0896b 0%, #8b7355 100%);
   transform: translateY(-2px);
-  box-shadow: 0 8px 16px rgba(50, 40, 28, 0.2);
+  box-shadow: 0 6px 20px rgba(139, 115, 85, 0.3);
 }
 
 /* ==========================================
    RESPONSIVE
    ========================================== */
 @media (max-width: 768px) {
+  .catalog-section {
+    padding: 80px 20px;
+  }
+  
   .catalog-title {
-    font-size: 2.5rem;
+    font-size: 2rem;
     margin-bottom: 40px;
   }
   
   .catalog-grid {
     grid-template-columns: 1fr;
-    gap: 30px;
+    gap: 24px;
     max-width: 500px;
   }
   
   .catalog-card-image {
-    height: 300px;
+    height: 280px;
   }
   
   .catalog-card-title {
-    font-size: 1.25rem;
-    padding: 20px 16px;
+    font-size: 1.0625rem;
+    padding: 18px 16px 14px;
+    min-height: 56px;
   }
   
   .catalog-card-price {
-    font-size: 1.1rem;
-    padding: 14px 28px;
+    font-size: 0.9375rem;
+    padding: 12px 24px;
+    min-width: 130px;
   }
 }
 
@@ -291,22 +360,23 @@ if (empty($productos) && !empty($categorias_db)) {
   }
   
   .catalog-title {
-    font-size: 2rem;
-    letter-spacing: 1px;
+    font-size: 1.75rem;
+    margin-bottom: 30px;
   }
   
   .catalog-card-image {
-    height: 250px;
+    height: 240px;
   }
   
   .catalog-card-title {
-    font-size: 1.1rem;
-    padding: 16px 12px;
+    font-size: 1rem;
+    padding: 16px 12px 12px;
+    min-height: 52px;
   }
   
   .catalog-card-price {
-    font-size: 1rem;
-    padding: 12px 24px;
+    font-size: 0.875rem;
+    padding: 10px 20px;
     min-width: 120px;
   }
 }
