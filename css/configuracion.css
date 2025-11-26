@@ -31,12 +31,22 @@ body {
     -webkit-font-smoothing: antialiased;
 }
 
+body.dark {
+    background: linear-gradient(135deg, #0f0b09 0%, #1d1713 100%);
+    color: #f8f1e8;
+}
+
 .container {
     max-width: 480px;
     margin: 0 auto;
     background: var(--color-white);
     min-height: 100vh;
     box-shadow: 0 0 60px rgba(109, 90, 66, 0.1);
+}
+
+body.dark .container {
+    background: #1f1914;
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.6);
 }
 
 /* Header */
@@ -54,6 +64,12 @@ body {
     box-shadow: 0 2px 16px rgba(109, 90, 66, 0.04);
 }
 
+body.dark .header {
+    background: linear-gradient(180deg, rgba(32, 26, 21, 0.95) 0%, rgba(18, 14, 11, 0.92) 100%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+}
+
 .back-button {
     background: transparent;
     border: none;
@@ -69,16 +85,27 @@ body {
     height: 40px;
 }
 
+body.dark .back-button {
+    color: #f8f0e3;
+}
+
 .back-button:hover {
     background: rgba(139, 115, 85, 0.08);
     transform: translateX(-2px);
 }
 
+body.dark .back-button:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
 .header-title {
     font-size: 20px;
     font-weight: 600;
     color: var(--color-text);
     letter-spacing: -0.02em;
+}
+
+body.dark .header-title {
+    color: #f8f0e6;
 }
 
 .header-spacer {
@@ -104,6 +131,10 @@ body {
     margin-bottom: 4px;
 }
 
+body.dark .section-title {
+    color: rgba(255, 226, 198, 0.9);
+}
+
 /* Settings Item */
 .settings-item {
     display: flex;
@@ -118,10 +149,18 @@ body {
     overflow: hidden;
 }
 
+body.dark .settings-item {
+    background: rgba(28, 22, 18, 0.92);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
 .settings-item:hover {
     background: rgba(250, 248, 246, 0.8);
 }
 
+body.dark .settings-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
 .item-content {
     display: flex;
     align-items: center;
@@ -142,6 +181,11 @@ body {
     flex-shrink: 0;
 }
 
+body.dark .item-icon {
+    background: linear-gradient(135deg, rgba(255, 210, 168, 0.18), rgba(255, 255, 255, 0.06));
+    color: #f6d7b0;
+}
+
 .settings-item:hover .item-icon {
     background: linear-gradient(135deg, var(--color-secondary) 0%, var(--color-primary) 100%);
     color: var(--color-white);
@@ -153,6 +197,10 @@ body {
     font-weight: 500;
     color: var(--color-text);
     letter-spacing: -0.01em;
+}
+
+body.dark .item-label {
+    color: #f6ede3;
 }
 
 .item-right {
@@ -167,15 +215,27 @@ body {
     font-weight: 500;
 }
 
+body.dark .item-value {
+    color: rgba(255, 255, 255, 0.72);
+}
+
 .chevron {
     color: var(--color-secondary);
     transition: var(--transition);
     flex-shrink: 0;
 }
 
+body.dark .chevron {
+    color: rgba(255, 255, 255, 0.4);
+}
+
 .settings-item:hover .chevron {
     transform: translateX(4px);
     color: var(--color-primary);
+}
+
+body.dark .settings-item:hover .chevron {
+    color: #ffddb1;
 }
 
 /* Logout Section */
@@ -196,6 +256,11 @@ body {
     cursor: pointer;
     transition: var(--transition);
     box-shadow: 0 6px 20px rgba(122, 74, 41, 0.45);
+}
+
+body.dark .logout-button {
+    background: linear-gradient(135deg, #c9783a 0%, #a04d1d 50%, #f0a464 100%);
+    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.55);
 }
 
 .logout-button:hover {
@@ -244,6 +309,11 @@ body {
     animation: slideUp 0.3s ease;
 }
 
+body.dark .modal-content {
+    background: #201914;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+
 .modal-header {
     padding: 16px 20px;
     border-bottom: 1px solid #eee;
@@ -254,6 +324,11 @@ body {
     position: sticky;
     top: 0;
     z-index: 10;
+}
+
+body.dark .modal-header {
+    background: #201914;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .modal-title {
@@ -268,6 +343,11 @@ body {
     overflow-y: auto;
 }
 
+body.dark .modal-body {
+    background: #1a140f;
+    color: #f6eee4;
+}
+
 .legal-modal {
     padding: 0;
     max-height: none;
@@ -278,6 +358,11 @@ body {
     min-height: clamp(360px, 70vh, 640px);
     border-top: 1px solid #f1ece4;
     background: linear-gradient(135deg, rgba(139, 115, 85, 0.04), rgba(193, 153, 112, 0.08));
+}
+
+body.dark .legal-frame-wrapper {
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(197, 148, 92, 0.1));
 }
 
 .legal-iframe {
@@ -298,6 +383,16 @@ body {
 .legal-fallback a {
     color: var(--color-primary);
     font-weight: 600;
+}
+
+body.dark .legal-fallback {
+    background: #1a140f;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.75);
+}
+
+body.dark .legal-fallback a {
+    color: #f7c689;
 }
 
 @keyframes fadeIn {
