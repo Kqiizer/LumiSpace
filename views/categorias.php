@@ -120,6 +120,9 @@ function getCategoryImage($imagen, $BASE) {
       display: flex !important;
       visibility: visible !important;
       opacity: 1 !important;
+      pointer-events: auto !important;
+      cursor: pointer !important;
+      z-index: 1001 !important;
     }
 
     .sidebar {
@@ -767,26 +770,28 @@ function getCategoryImage($imagen, $BASE) {
   </div>
 
   <script>
-  // Asegurar que el menú funcione correctamente
-  document.addEventListener('DOMContentLoaded', function() {
-    // Verificar que los elementos del menú existan
+  </script>
+  <script src="<?= $BASE ?>js/header.js"></script>
+  <script src="<?= $BASE ?>js/search-overlay.js" defer></script>
+  <script>
+  // Asegurar que el menú funcione después de que header.js se cargue
+  window.addEventListener('load', function() {
     const menuBtn = document.getElementById('menu-btn');
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('overlay');
-    
-    if (menuBtn && sidebar && overlay) {
-      console.log('✅ Elementos del menú encontrados');
-    } else {
-      console.warn('⚠️ Algunos elementos del menú no se encontraron:', {
-        menuBtn: !!menuBtn,
-        sidebar: !!sidebar,
-        overlay: !!overlay
-      });
+    if (menuBtn && !menuBtn.onclick) {
+      // Si header.js no se cargó correctamente, inicializar manualmente
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('overlay');
+      if (sidebar && overlay) {
+        menuBtn.addEventListener('click', function() {
+          const isActive = sidebar.classList.toggle('active');
+          overlay.classList.toggle('active', isActive);
+          menuBtn.classList.toggle('open', isActive);
+          document.body.style.overflow = isActive ? 'hidden' : '';
+        });
+      }
     }
   });
   </script>
-  <script src="<?= $BASE ?>js/header.js" defer></script>
-  <script src="<?= $BASE ?>js/search-overlay.js" defer></script>
   <script>
   (()=>{
     const BASE_URL = document.querySelector('.products-grid')?.dataset.base || '/';
