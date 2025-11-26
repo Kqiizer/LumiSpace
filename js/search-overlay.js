@@ -19,8 +19,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const filterControls = {
     category: document.getElementById('globalFilterCategory'),
-    color: document.getElementById('globalFilterColor'),
-    size: document.getElementById('globalFilterSize'),
     priceMin: document.getElementById('globalFilterPriceMin'),
     priceMax: document.getElementById('globalFilterPriceMax'),
     availIn: document.getElementById('globalFilterAvailabilityIn'),
@@ -98,8 +96,6 @@ document.addEventListener('DOMContentLoaded', () => {
   function getFilters() {
     return {
       category: filterControls.category?.value || '',
-      color: filterControls.color?.value || '',
-      size: filterControls.size?.value || '',
       min_price: filterControls.priceMin?.value || '',
       max_price: filterControls.priceMax?.value || '',
       availability: getAvailabilityValue(),
@@ -282,8 +278,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function updateFiltersFromFacets(facets) {
     populateSelect(filterControls.category, facets.categories);
-    populateSelect(filterControls.color, facets.colors);
-    populateSelect(filterControls.size, facets.sizes);
     if (facets.price) {
       if (!filterControls.priceMin.value) filterControls.priceMin.placeholder = `Desde $${Math.round(facets.price.min || 0)}`;
       if (!filterControls.priceMax.value) filterControls.priceMax.placeholder = `Hasta $${Math.round(facets.price.max || 0)}`;

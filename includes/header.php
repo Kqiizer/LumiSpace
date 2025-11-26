@@ -417,22 +417,6 @@ window.addEventListener('load', () => {
         </div>
 
         <div class="filters-section">
-          <h4>Color y Tamaño</h4>
-          <label class="filter-label">
-            <span>Color</span>
-            <select id="globalFilterColor">
-              <option value="">Cualquiera</option>
-            </select>
-          </label>
-          <label class="filter-label">
-            <span>Tamaño / Talla</span>
-            <select id="globalFilterSize">
-              <option value="">Cualquiera</option>
-            </select>
-          </label>
-        </div>
-
-        <div class="filters-section">
           <h4>Precio</h4>
           <div class="filter-price">
             <input type="number" id="globalFilterPriceMin" placeholder="Desde">
