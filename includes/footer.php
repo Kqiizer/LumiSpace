@@ -1,5 +1,8 @@
 <!-- Footer -->
-<link rel="stylesheet" href="../css/styles/footer.css">
+<?php
+$BASE = defined('BASE_URL') ? rtrim(BASE_URL, '/') . '/' : '/';
+?>
+<link rel="stylesheet" href="<?= $BASE ?>css/styles/footer.css">
 
 <footer class="footer">
   <div class="footer-content">
