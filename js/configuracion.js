@@ -324,9 +324,9 @@ function showContactUs() {
     
     const content = `
         <div class="modal-body">
-            <div style="text-align: center; margin-bottom: 25px;">
-                <h3 style="font-size: 18px; margin-bottom: 10px;">Estamos aquí para ayudarte</h3>
-                <p style="color: #666; font-size: 14px;">Conéctate con nosotros en redes sociales</p>
+            <div class="contact-modal-header">
+                <h3>Estamos aquí para ayudarte</h3>
+                <p>Conéctate con nosotros en redes sociales</p>
             </div>
             
             ${socials.map(social => `
@@ -349,12 +349,12 @@ function showContactUs() {
                 </div>
             `).join('')}
             
-            <div style="margin-top: 30px; padding: 20px; background: #f5f5f5; border-radius: 12px; text-align: center;">
-                <h4 style="font-size: 15px; margin-bottom: 10px;">Soporte por Email</h4>
-                <p style="font-size: 14px; color: #666; margin-bottom: 10px;">
+            <div class="support-email-card">
+                <h4>Soporte por Email</h4>
+                <p class="support-email-text">
                     ¿Necesitas ayuda? Escríbenos a:
                 </p>
-                <a href="mailto:lumispace0@gmail.com" style="color: var(--color-primary); font-weight: 600; text-decoration: none;">
+                <a class="support-email-link" href="mailto:lumispace0@gmail.com">
                     lumispace0@gmail.com
                 </a>
             </div>
