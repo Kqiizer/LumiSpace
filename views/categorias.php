@@ -863,7 +863,7 @@ function getCategoryImage($imagen, $BASE) {
     <?php include __DIR__ . "/../includes/footer.php"; ?>
   </div>
 
-  <script src="<?= $BASE ?>js/header.js"></script>
+  <script src="<?= $BASE ?>js/header.js" defer></script>
   <script src="<?= $BASE ?>js/search-overlay.js" defer></script>
   <script>
   (()=>{
