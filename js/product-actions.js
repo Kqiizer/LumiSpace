@@ -106,6 +106,17 @@
 
                 // Update favorites badge if exists
                 updateFavoritesBadge();
+                
+                // Si estamos en la página de favoritos y se agregó un favorito, recargar después de un delay
+                const isFavoritesPage = window.location.pathname.includes('favoritos.php') || 
+                                       window.location.pathname.includes('favoritos') ||
+                                       window.location.href.includes('favoritos');
+                
+                if (isFavoritesPage && data.in_wishlist) {
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                }
             } else {
                 throw new Error(data.msg || 'Error al actualizar favoritos');
             }

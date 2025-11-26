@@ -4,11 +4,11 @@ require_once __DIR__ . '/../config/functions.php';
 
 $BASE = defined('BASE_URL') ? rtrim(BASE_URL, '/') . '/' : '/';
 $uid = $_SESSION['usuario_id'] ?? 0;
-$favoritos = getFavoritos($uid);
 
-// Debug: verificar que los favoritos se obtengan correctamente
-if (empty($favoritos) && $uid > 0) {
-    error_log("⚠️ No se encontraron favoritos para usuario ID: " . $uid);
+// Obtener favoritos
+$favoritos = [];
+if ($uid > 0) {
+    $favoritos = getFavoritos($uid);
 }
 
 require_once __DIR__ . '/../includes/header.php';
