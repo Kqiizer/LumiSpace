@@ -806,8 +806,8 @@ body.dark .notification-icon {
     position: absolute;
     top: 14px;
     right: 14px;
-    width: 42px;
-    height: 42px;
+    width: 46px;
+    height: 46px;
     border: none;
     border-radius: 50%;
     background: rgba(255,255,255,0.92);
@@ -816,11 +816,22 @@ body.dark .notification-icon {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: transform 0.2s ease, color 0.2s ease;
+    transition: transform 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 8px 18px rgba(0,0,0,0.18);
 }
 
 .favorite-btn.active {
     color: #ef4444;
+}
+
+.favorite-btn svg,
+.favorite-btn i {
+    font-size: 1.15rem;
+}
+
+.favorite-btn:hover {
+    transform: scale(1.08);
+    box-shadow: 0 12px 25px rgba(0,0,0,0.25);
 }
 
 .product-info {
@@ -955,19 +966,30 @@ body.dark .notification-icon {
 
 .explore-fav-btn {
     position: absolute;
-    top: 10px;
-    right: 10px;
-    width: 36px;
-    height: 36px;
+    top: 12px;
+    right: 12px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     border: none;
-    background: rgba(255,255,255,0.9);
+    background: rgba(255,255,255,0.92);
     color: var(--fav-primary);
     cursor: pointer;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.18);
+    transition: transform 0.2s ease, color 0.2s ease;
 }
 
 .explore-fav-btn.active {
     color: #ef4444;
+}
+
+.explore-fav-btn svg,
+.explore-fav-btn i {
+    font-size: 1rem;
+}
+
+.explore-fav-btn:hover {
+    transform: scale(1.08);
 }
 
 .explore-name {
