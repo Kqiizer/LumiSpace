@@ -474,6 +474,56 @@ body {
     background: var(--fav-accent);
 }
 
+.notification {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    background: #ffffff;
+    padding: 16px 20px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.18);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 10000;
+    border-left: 4px solid var(--fav-primary);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.notification.hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-10px);
+}
+
+.notification-icon {
+    width: 28px;
+    height: 28px;
+    color: var(--fav-primary);
+}
+
+.notification[data-type="success"] {
+    border-left-color: #22c55e;
+}
+
+.notification[data-type="warning"] {
+    border-left-color: #fbbf24;
+}
+
+.notification[data-type="error"] {
+    border-left-color: #ef4444;
+}
+
+body.dark .notification {
+    background: #1e1813;
+    color: #f6eee4;
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.6);
+}
+
+body.dark .notification-icon {
+    color: #ffe6c6;
+}
+
 /* === DARK MODE === */
 body.dark {
     background-color: #121212;

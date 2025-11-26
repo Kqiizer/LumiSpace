@@ -7,7 +7,7 @@ require_once __DIR__ . "/../../config/functions.php";
 $usuario_id = $_SESSION['usuario_id'] ?? 0;
 if (!$usuario_id) {
   http_response_code(401);
-  echo json_encode(["ok"=>false, "msg"=>"No autenticado"]);
+  echo json_encode(["ok"=>false, "msg"=>"No autenticado", "count"=>0]);
   exit;
 }
 
@@ -16,7 +16,7 @@ $producto_id = (int)($payload['producto_id'] ?? 0);
 
 if ($producto_id <= 0) {
   http_response_code(400);
-  echo json_encode(["ok"=>false, "msg"=>"Producto inválido"]);
+  echo json_encode(["ok"=>false, "msg"=>"Producto inválido", "count"=>getFavoritosCount((int)$usuario_id)]);
   exit;
 }
 
