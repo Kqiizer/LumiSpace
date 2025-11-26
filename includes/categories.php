@@ -962,7 +962,7 @@ function getSubcategorias($subcats_data)
 
         // Agregar pequeño delay para mejor UX
         setTimeout(() => {
-          window.location.href = BASE_URL + "views/categoria.php?id=" + categoryId;
+          window.location.href = BASE_URL + "views/catalogo.php?categoria=" + categoryId;
         }, 200);
       }
 
