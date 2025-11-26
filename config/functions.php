@@ -2665,6 +2665,16 @@ function searchProductos(array $options = []): array
     unset($item);
 
     // Facets
+    $priceRangeBuckets = [
+        'lt100' => ['min' => null, 'max' => 100],
+        '100_500' => ['min' => 100, 'max' => 500],
+        '500_1000' => ['min' => 500, 'max' => 1000],
+        '1000_2000' => ['min' => 1000, 'max' => 2000],
+        '2000_5000' => ['min' => 2000, 'max' => 5000],
+        '5000_10000' => ['min' => 5000, 'max' => 10000],
+        'gt10000' => ['min' => 10000, 'max' => null],
+    ];
+
     $facets = [
         'categories' => [],
         'brands' => [],
@@ -2672,6 +2682,7 @@ function searchProductos(array $options = []): array
         'sizes' => [],
         'availability' => ['in_stock' => 0, 'out_of_stock' => 0],
         'price' => ['min' => null, 'max' => null],
+        'price_ranges' => array_fill_keys(array_keys($priceRangeBuckets), 0),
     ];
 
     foreach ($normalized as $item) {
@@ -2692,8 +2703,20 @@ function searchProductos(array $options = []): array
         } else {
             $facets['availability']['out_of_stock'] += 1;
         }
-        $facets['price']['min'] = $facets['price']['min'] === null ? $item['price'] : min($facets['price']['min'], $item['price']);
-        $facets['price']['max'] = $facets['price']['max'] === null ? $item['price'] : max($facets['price']['max'], $item['price']);
+        $priceValue = isset($item['price']) ? (float) $item['price'] : 0.0;
+        $facets['price']['min'] = $facets['price']['min'] === null ? $priceValue : min($facets['price']['min'], $priceValue);
+        $facets['price']['max'] = $facets['price']['max'] === null ? $priceValue : max($facets['price']['max'], $priceValue);
+
+        foreach ($priceRangeBuckets as $bucketKey => $limits) {
+            $min = $limits['min'];
+            $max = $limits['max'];
+            $fitsMin = $min === null || $priceValue >= $min;
+            $fitsMax = $max === null || $priceValue < $max;
+            if ($fitsMin && $fitsMax) {
+                $facets['price_ranges'][$bucketKey] += 1;
+                break;
+            }
+        }
     }
 
     // Clean temp keys

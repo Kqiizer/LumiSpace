@@ -97,10 +97,9 @@ if (tableExists($conn, 'marcas')) {
 
                 <div class="filter-group">
                     <label>Precio</label>
-                    <div class="filter-price-range">
-                        <input type="number" id="filterMinPrice" placeholder="Mínimo" min="0">
-                        <span aria-hidden="true">-</span>
-                        <input type="number" id="filterMaxPrice" placeholder="Máximo" min="0">
+                    <div style="display:flex; gap:10px;">
+                        <input type="number" id="filterMinPrice" placeholder="Mín" min="0">
+                        <input type="number" id="filterMaxPrice" placeholder="Máx" min="0">
                     </div>
                 </div>
 
