@@ -25,30 +25,12 @@ document.addEventListener('DOMContentLoaded', () => {
     availOut: document.getElementById('globalFilterAvailabilityOut'),
     discount: document.getElementById('globalFilterDiscountOnly')
   };
-  const priceRangeList = document.getElementById('globalPriceRangeList');
-  const priceApplyBtn = document.getElementById('globalPriceCustomApply');
-  const priceClearBtn = document.getElementById('globalPriceClear');
-
-  const PRICE_RANGES = [
-    { id: 'lt100', label: 'Menos de $100', min: null, max: 100 },
-    { id: '100_500', label: '$100 - $500', min: 100, max: 500 },
-    { id: '500_1000', label: '$500 - $1000', min: 500, max: 1000 },
-    { id: '1000_2000', label: '$1000 - $2000', min: 1000, max: 2000 },
-    { id: '2000_5000', label: '$2000 - $5000', min: 2000, max: 5000 },
-    { id: '5000_10000', label: '$5000 - $10000', min: 5000, max: 10000 },
-    { id: 'gt10000', label: 'Más de $10000', min: 10000, max: null }
-  ];
-  const numberFormatter = new Intl.NumberFormat('es-MX');
 
   let debounceId;
   let suggestionsDebounceId;
   let lastQuery = '';
   let lastResults = [];
   let isFetching = false;
-  let activePriceRange = '';
-  let syncingPriceInputs = false;
-
-  initPriceRanges();
 
   function openSearch() {
     if (!overlay) return;
@@ -93,13 +75,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   Object.values(filterControls).forEach(control => {
     if (!control) return;
-    const eventName = control.type === 'checkbox' || control.tagName === 'SELECT' ? 'change' : 'input';
+    const eventName = control.type === 'checkbox' ? 'change' : 'input';
     control.addEventListener(eventName, () => {
       if (control === filterControls.priceMin || control === filterControls.priceMax) {
         control.value = control.value.slice(0, 7);
-        if (!syncingPriceInputs) {
-          clearPriceRangeSelection({ skipFetch: true });
-        }
       }
       fetchResults();
     });
@@ -111,88 +90,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (control.tagName === 'SELECT' || control.type === 'number') control.value = '';
       if (control.type === 'checkbox') control.checked = false;
     });
-    clearPriceRangeSelection({ skipFetch: true });
     fetchResults();
   });
-
-  priceApplyBtn?.addEventListener('click', () => {
-    fetchResults();
-  });
-
-  priceClearBtn?.addEventListener('click', () => {
-    syncingPriceInputs = true;
-    if (filterControls.priceMin) filterControls.priceMin.value = '';
-    if (filterControls.priceMax) filterControls.priceMax.value = '';
-    syncingPriceInputs = false;
-    clearPriceRangeSelection();
-  });
-
-  function initPriceRanges() {
-    if (!priceRangeList) return;
-    priceRangeList.innerHTML = PRICE_RANGES.map(range => `
-      <li>
-        <label>
-          <input type="radio" name="globalPriceRange" value="${range.id}">
-          <span>
-            ${range.label}
-            <small data-range-count="${range.id}">(0)</small>
-          </span>
-        </label>
-      </li>
-    `).join('');
-
-    priceRangeList.addEventListener('change', (event) => {
-      const target = event.target;
-      if (target && target.matches('input[name="globalPriceRange"]')) {
-        selectPriceRange(target.value);
-      }
-    });
-  }
-
-  function selectPriceRange(rangeId, { skipFetch = false } = {}) {
-    const range = PRICE_RANGES.find(item => item.id === rangeId);
-    if (!range) return;
-    activePriceRange = rangeId;
-    syncingPriceInputs = true;
-    if (filterControls.priceMin) {
-      filterControls.priceMin.value = range.min ?? '';
-    }
-    if (filterControls.priceMax) {
-      filterControls.priceMax.value = range.max ?? '';
-    }
-    syncingPriceInputs = false;
-    if (!skipFetch) {
-      fetchResults();
-    }
-  }
-
-  function clearPriceRangeSelection({ skipFetch = false } = {}) {
-    if (priceRangeList) {
-      const checked = priceRangeList.querySelector('input[name="globalPriceRange"]:checked');
-      if (checked) {
-        checked.checked = false;
-      }
-    }
-    activePriceRange = '';
-    if (!skipFetch) {
-      fetchResults();
-    }
-  }
-
-  function updatePriceRangeCounts(rangeCounts = {}) {
-    if (!priceRangeList) return;
-    PRICE_RANGES.forEach(range => {
-      const count = rangeCounts[range.id] ?? 0;
-      const node = priceRangeList.querySelector(`[data-range-count="${range.id}"]`);
-      if (node) {
-        node.textContent = `(${numberFormatter.format(count)})`;
-      }
-      const label = node?.closest('label');
-      if (label) {
-        label.classList.toggle('is-disabled', count === 0);
-      }
-    });
-  }
 
   function getFilters() {
     return {
@@ -382,9 +281,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (facets.price) {
       if (!filterControls.priceMin.value) filterControls.priceMin.placeholder = `Desde $${Math.round(facets.price.min || 0)}`;
       if (!filterControls.priceMax.value) filterControls.priceMax.placeholder = `Hasta $${Math.round(facets.price.max || 0)}`;
-    }
-    if (facets.price_ranges) {
-      updatePriceRangeCounts(facets.price_ranges);
     }
   }
 

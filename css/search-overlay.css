@@ -165,69 +165,14 @@ body.dark .ghost-btn:hover {
 .global-search__filters {
   border-right: 1px solid var(--search-border);
   padding-right: 1.5rem;
-  max-height: calc(100vh - 240px);
+  max-height: min(520px, calc(100vh - 240px));
   overflow-y: auto;
   overscroll-behavior: contain;
+  scrollbar-width: thin;
 }
 
 .filters-section {
   margin-bottom: 1.5rem;
-}
-
-.filters-section--price {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.price-range-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  border: 1px solid var(--search-border);
-  border-radius: 1rem;
-  overflow: hidden;
-  background: rgba(255, 255, 255, 0.6);
-  max-height: 240px;
-  overflow-y: auto;
-}
-
-body.dark .price-range-list {
-  background: rgba(36, 31, 29, 0.6);
-}
-
-.price-range-list li + li {
-  border-top: 1px solid var(--search-border);
-}
-
-.price-range-list label {
-  display: flex;
-  gap: 0.75rem;
-  padding: 0.75rem 0.9rem;
-  cursor: pointer;
-  align-items: center;
-}
-
-.price-range-list label span {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-  gap: 0.5rem;
-}
-
-.price-range-list label small {
-  color: #8b7a6c;
-  font-size: 0.8rem;
-}
-
-.price-range-list input[type="radio"] {
-  accent-color: var(--primary-color, #a1683a);
-}
-
-.price-range-list label.is-disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
 }
 
 .filters-section h4 {
@@ -257,49 +202,23 @@ body.dark .price-range-list {
 .filter-price {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
+  justify-content: space-between;
+  gap: 0.35rem;
+  flex-wrap: wrap;
 }
 
-.filter-price--custom {
-  border: 1px solid var(--search-border);
-  border-radius: 0.75rem;
-  padding: 0.45rem;
+.filter-price input {
+  flex: 1 1 130px;
+  min-width: 120px;
+  width: auto;
 }
 
-.filter-price--custom input {
-  flex: 1;
-}
-
-.price-range-apply {
-  border: none;
-  background: var(--primary-color, #a1683a);
-  color: #fff;
-  border-radius: 0.65rem;
-  width: 40px;
-  height: 32px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: opacity 0.2s ease;
-}
-
-.price-range-apply:hover {
-  opacity: 0.85;
-}
-
-.price-range-clear {
-  border: none;
-  background: none;
-  color: #8b7a6c;
-  font-size: 0.85rem;
-  text-align: left;
-  padding: 0;
-  cursor: pointer;
-}
-
-.price-range-clear:hover {
-  text-decoration: underline;
+.filter-price span {
+  flex: 0 0 auto;
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: #b8a899;
+  padding: 0 0.25rem;
 }
 
 .filter-checkbox {
@@ -468,15 +387,22 @@ body.dark .result-card .meta {
 }
 
 .global-search__panel::-webkit-scrollbar,
-.results-grid::-webkit-scrollbar,
-.global-search__filters::-webkit-scrollbar {
+.results-grid::-webkit-scrollbar {
   width: 6px;
 }
 
+.global-search__filters::-webkit-scrollbar {
+  width: 4px;
+}
+
 .global-search__panel::-webkit-scrollbar-thumb,
-.results-grid::-webkit-scrollbar-thumb,
-.global-search__filters::-webkit-scrollbar-thumb {
+.results-grid::-webkit-scrollbar-thumb {
   background: rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
+}
+
+.global-search__filters::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
   border-radius: 4px;
 }
 

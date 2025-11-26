@@ -422,20 +422,13 @@ window.addEventListener('load', () => {
           </label>
         </div>
 
-        <div class="filters-section filters-section--price">
+        <div class="filters-section">
           <h4>Precio</h4>
-          <ul class="price-range-list" id="globalPriceRangeList"></ul>
-          <div class="filter-price filter-price--custom">
-            <input type="number" id="globalFilterPriceMin" placeholder="Mínimo">
+          <div class="filter-price">
+            <input type="number" id="globalFilterPriceMin" placeholder="Desde">
             <span>-</span>
-            <input type="number" id="globalFilterPriceMax" placeholder="Máximo">
-            <button type="button" class="price-range-apply" id="globalPriceCustomApply" aria-label="Aplicar rango personalizado">
-              <i class="fas fa-arrow-right"></i>
-            </button>
+            <input type="number" id="globalFilterPriceMax" placeholder="Hasta">
           </div>
-          <button type="button" class="price-range-clear" id="globalPriceClear">
-            Restablecer precio
-          </button>
         </div>
 
         <div class="filters-section">
