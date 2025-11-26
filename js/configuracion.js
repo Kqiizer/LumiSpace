@@ -251,125 +251,35 @@ function selectCurrency(code) {
     closeModal();
 }
 
-function showPrivacyPolicy() {
+function showLegalDocument(title, docPath) {
+    const frameId = `legalDocFrame-${Date.now()}`;
     const content = `
-        <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
-            <div style="background: #f5f5f5; padding: 15px; border-radius: 12px; margin-bottom: 20px;">
-                <strong>Fecha de entrada en vigor: 27 de noviembre de 2025</strong>
+        <div class="modal-body legal-modal">
+            <div class="legal-frame-wrapper">
+                <iframe
+                    id="${frameId}"
+                    class="legal-iframe"
+                    src="${docPath}"
+                    title="${title}"
+                    loading="lazy"
+                    referrerpolicy="no-referrer"
+                ></iframe>
             </div>
-            
-            <h3 style="font-size: 16px; margin-bottom: 15px;">Política de Privacidad de LumiSpace</h3>
-            
-            <p style="font-size: 14px; line-height: 1.7; margin-bottom: 20px;">
-                En LumiSpace, nos comprometemos a proteger tu privacidad y tus datos personales. 
-                Esta política explica cómo recopilamos, usamos y protegemos tu información.
-            </p>
-            
-            <h4 style="font-size: 15px; margin: 20px 0 10px;">1. Información que Recopilamos</h4>
-            <p style="font-size: 14px; line-height: 1.7; margin-bottom: 15px;">
-                • Datos de cuenta (nombre, email, teléfono)<br>
-                • Direcciones de envío<br>
-                • Información de pago (encriptada)<br>
-                • Historial de compras<br>
-                • Preferencias de usuario
-            </p>
-            
-            <h4 style="font-size: 15px; margin: 20px 0 10px;">2. Cómo Usamos tu Información</h4>
-            <p style="font-size: 14px; line-height: 1.7; margin-bottom: 15px;">
-                • Procesar tus pedidos<br>
-                • Mejorar nuestros servicios<br>
-                • Enviarte actualizaciones y promociones<br>
-                • Cumplir con obligaciones legales
-            </p>
-            
-            <h4 style="font-size: 15px; margin: 20px 0 10px;">3. Protección de Datos</h4>
-            <p style="font-size: 14px; line-height: 1.7; margin-bottom: 15px;">
-                Utilizamos encriptación SSL/TLS y medidas de seguridad avanzadas para 
-                proteger tu información personal.
-            </p>
-            
-            <h4 style="font-size: 15px; margin: 20px 0 10px;">4. Tus Derechos</h4>
-            <p style="font-size: 14px; line-height: 1.7; margin-bottom: 15px;">
-                Tienes derecho a acceder, corregir o eliminar tus datos personales en 
-                cualquier momento contactándonos.
-            </p>
-            
-            <h4 style="font-size: 15px; margin: 20px 0 10px;">5. Cookies</h4>
-            <p style="font-size: 14px; line-height: 1.7; margin-bottom: 15px;">
-                Utilizamos cookies para mejorar tu experiencia. Puedes gestionar las 
-                cookies desde la configuración de tu navegador.
-            </p>
-            
-            <p style="font-size: 13px; color: #666; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
-                Para más información, contáctanos en: lumispace0@gmail.com
+            <p class="legal-fallback">
+                ¿No puedes ver el documento? 
+                <a href="${docPath}" target="_blank" rel="noopener">Ábrelo en una nueva pestaña</a>.
             </p>
         </div>
     `;
-    showModal('Política de Privacidad', content);
+    showModal(title, content);
+}
+
+function showPrivacyPolicy() {
+    showLegalDocument('Política de Privacidad', '../docs/politica-privacidad.html');
 }
 
 function showTermsConditions() {
-    const content = `
-        <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
-            <div style="background: #f5f5f5; padding: 15px; border-radius: 12px; margin-bottom: 20px;">
-                <strong>FECHA DE VIGENCIA: 27 de noviembre de 2025</strong>
-            </div>
-            
-            <h3 style="font-size: 16px; margin-bottom: 15px;">Términos y Condiciones de Uso - LumiSpace</h3>
-            
-            <h4 style="font-size: 15px; margin: 20px 0 10px;">1. ACEPTACIÓN DE TÉRMINOS</h4>
-            <p style="font-size: 14px; line-height: 1.7; margin-bottom: 15px;">
-                Al acceder y usar los servicios de LumiSpace, aceptas estar sujeto a estos 
-                términos y condiciones. Si no estás de acuerdo, por favor no uses nuestros servicios.
-            </p>
-            
-            <h4 style="font-size: 15px; margin: 20px 0 10px;">2. USO DE SERVICIOS</h4>
-            <p style="font-size: 14px; line-height: 1.7; margin-bottom: 15px;">
-                • Debes tener al menos 18 años para usar nuestros servicios<br>
-                • Eres responsable de mantener la seguridad de tu cuenta<br>
-                • No puedes usar nuestros servicios para fines ilegales<br>
-                • Nos reservamos el derecho de suspender cuentas que violen estos términos
-            </p>
-            
-            <h4 style="font-size: 15px; margin: 20px 0 10px;">3. COMPRAS Y PAGOS</h4>
-            <p style="font-size: 14px; line-height: 1.7; margin-bottom: 15px;">
-                • Todos los precios están en la moneda seleccionada<br>
-                • Los pagos se procesan de forma segura<br>
-                • Te enviaremos confirmación de cada compra<br>
-                • Consulta nuestra política de devoluciones para más información
-            </p>
-            
-            <h4 style="font-size: 15px; margin: 20px 0 10px;">4. ENVÍOS Y ENTREGAS</h4>
-            <p style="font-size: 14px; line-height: 1.7; margin-bottom: 15px;">
-                • Los tiempos de entrega son estimados<br>
-                • No somos responsables por retrasos del servicio postal<br>
-                • Debes proporcionar información de envío precisa
-            </p>
-            
-            <h4 style="font-size: 15px; margin: 20px 0 10px;">5. PROPIEDAD INTELECTUAL</h4>
-            <p style="font-size: 14px; line-height: 1.7; margin-bottom: 15px;">
-                Todo el contenido de LumiSpace está protegido por derechos de autor y 
-                marcas registradas. No puedes usar nuestro contenido sin permiso expreso.
-            </p>
-            
-            <h4 style="font-size: 15px; margin: 20px 0 10px;">6. LIMITACIÓN DE RESPONSABILIDAD</h4>
-            <p style="font-size: 14px; line-height: 1.7; margin-bottom: 15px;">
-                LumiSpace no será responsable de daños indirectos, incidentales o 
-                consecuentes que surjan del uso de nuestros servicios.
-            </p>
-            
-            <h4 style="font-size: 15px; margin: 20px 0 10px;">7. MODIFICACIONES</h4>
-            <p style="font-size: 14px; line-height: 1.7; margin-bottom: 15px;">
-                Nos reservamos el derecho de modificar estos términos en cualquier momento. 
-                Te notificaremos de cambios importantes.
-            </p>
-            
-            <p style="font-size: 13px; color: #666; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
-                Para consultas sobre estos términos: lumispace0@gmail.com
-            </p>
-        </div>
-    `;
-    showModal('Términos y Condiciones', content);
+    showLegalDocument('Términos y Condiciones', '../docs/terminos-condiciones.html');
 }
 
 //Contacto

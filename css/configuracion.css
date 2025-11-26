@@ -268,6 +268,38 @@ body {
     overflow-y: auto;
 }
 
+.legal-modal {
+    padding: 0;
+    max-height: none;
+}
+
+.legal-frame-wrapper {
+    width: 100%;
+    min-height: clamp(360px, 70vh, 640px);
+    border-top: 1px solid #f1ece4;
+    background: linear-gradient(135deg, rgba(139, 115, 85, 0.04), rgba(193, 153, 112, 0.08));
+}
+
+.legal-iframe {
+    width: 100%;
+    height: clamp(360px, 70vh, 640px);
+    border: none;
+    background: transparent;
+}
+
+.legal-fallback {
+    padding: 16px 20px;
+    font-size: 14px;
+    color: var(--color-text-secondary);
+    border-top: 1px solid #f1ece4;
+    background: #fff;
+}
+
+.legal-fallback a {
+    color: var(--color-primary);
+    font-weight: 600;
+}
+
 @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
