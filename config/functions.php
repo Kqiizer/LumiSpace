@@ -54,11 +54,14 @@ function carritoAgregar(int $producto_id, int $cantidad = 1): void
     // Si ya existe, sumar cantidad
     if (isset($_SESSION['carrito'][$producto_id])) {
         $_SESSION['carrito'][$producto_id]['cantidad'] += $cantidad;
+        // Actualizar subtotal
+        $_SESSION['carrito'][$producto_id]['subtotal'] = (float) $_SESSION['carrito'][$producto_id]['precio'] * $_SESSION['carrito'][$producto_id]['cantidad'];
     } else {
         $producto = getProductoById($producto_id);
         if ($producto) {
             $_SESSION['carrito'][$producto_id] = [
                 'producto_id' => $producto['id'],
+                'id' => $producto['id'],
                 'nombre' => $producto['nombre'],
                 'precio' => (float) $producto['precio'],
                 'imagen' => $producto['imagen'] ?? 'images/default.png',
