@@ -842,13 +842,57 @@ function getCategoryImage($imagen, $BASE) {
   <script src="<?= $BASE ?>js/header.js"></script>
   <script src="<?= $BASE ?>js/search-overlay.js" defer></script>
   <script>
-  // Asegurar que el modo oscuro funcione correctamente
-  document.addEventListener('DOMContentLoaded', function() {
-    // Verificar si hay un tema guardado y aplicarlo
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'dark') {
-      document.body.classList.add('dark');
-    }
+  // Asegurar que el modo oscuro funcione correctamente en categorías
+  // Esperar a que header.js se cargue completamente
+  window.addEventListener('load', function() {
+    // Dar un pequeño delay para asegurar que header.js se ejecutó
+    setTimeout(function() {
+      const themeToggle = document.getElementById('theme-toggle');
+      if (themeToggle) {
+        // Verificar si ya tiene listeners (header.js lo inicializó)
+        const hasListener = themeToggle.getAttribute('data-theme-initialized');
+        
+        if (!hasListener) {
+          // Inicializar manualmente si header.js no lo hizo
+          const themeIcon = themeToggle.querySelector("[data-theme-icon]");
+          const themeText = themeToggle.querySelector("[data-theme-text]");
+          const iconLightMode = themeToggle.dataset.iconLightMode || "";
+          const iconDarkMode = themeToggle.dataset.iconDarkMode || "";
+
+          const syncThemeButton = (isDark) => {
+            const label = isDark ? "Modo Claro" : "Modo Oscuro";
+            if (themeText) {
+              themeText.textContent = label;
+              themeText.classList.add('no-translate');
+            }
+            if (themeIcon) {
+              const nextIcon = isDark ? iconDarkMode : iconLightMode;
+              if (nextIcon) themeIcon.src = nextIcon;
+              themeIcon.alt = label;
+            }
+          };
+
+          const setTheme = (dark) => {
+            document.body.classList.toggle("dark", dark);
+            syncThemeButton(dark);
+            localStorage.setItem("theme", dark ? "dark" : "light");
+          };
+
+          // Cargar tema guardado
+          const isDark = localStorage.getItem("theme") === "dark";
+          setTheme(isDark);
+
+          themeToggle.addEventListener("click", function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const isDark = !document.body.classList.contains("dark");
+            setTheme(isDark);
+          });
+          
+          themeToggle.setAttribute('data-theme-initialized', 'true');
+        }
+      }
+    }, 100);
   });
   </script>
   <script>
