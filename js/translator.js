@@ -20,7 +20,8 @@
   // Qué NO traducir y qué atributos revisar
   const SKIP_SELECTORS = [
     'script','style','noscript','code','pre','kbd','samp','var',
-    '.i18n-skip','.no-translate','.price','.badge','.sku','.email','.tel'
+    '.i18n-skip','.no-translate','.price','.badge','.sku','.email','.tel',
+    '#theme-toggle','[data-theme-text]'
   ];
   const ATTRS = ['title','placeholder','aria-label','alt'];
 

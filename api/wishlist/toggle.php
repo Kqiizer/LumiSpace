@@ -32,29 +32,73 @@ $conn = getDBConnection();
 // );
 
 try {
+  // Verificar si la tabla existe
+  $chk = $conn->query("SHOW TABLES LIKE 'favoritos'");
+  if (!$chk || $chk->num_rows === 0) {
+    http_response_code(500);
+    echo json_encode(["ok"=>false, "msg"=>"La tabla favoritos no existe"]);
+    exit;
+  }
+
   // ¿Existe?
   $stmt = $conn->prepare("SELECT 1 FROM favoritos WHERE usuario_id=? AND producto_id=?");
+  if (!$stmt) {
+    throw new Exception("Error preparando consulta: " . $conn->error);
+  }
   $stmt->bind_param("ii", $usuario_id, $producto_id);
   $stmt->execute();
   $exists = $stmt->get_result()->fetch_row() ? true : false;
+  $stmt->close();
 
   if ($exists) {
     // Borrar
     $del = $conn->prepare("DELETE FROM favoritos WHERE usuario_id=? AND producto_id=?");
+    if (!$del) {
+      throw new Exception("Error preparando DELETE: " . $conn->error);
+    }
     $del->bind_param("ii", $usuario_id, $producto_id);
     $del->execute();
-    $count = getFavoritosCount((int)$usuario_id);
-    echo json_encode(["ok"=>true, "in_wishlist"=>false, "count"=>$count, "msg"=>"❌ Producto eliminado de favoritos."]);
+    $del->close();
+    
+    // Obtener conteo actualizado
+    $countStmt = $conn->prepare("SELECT COUNT(*) as count FROM favoritos WHERE usuario_id=?");
+    $countStmt->bind_param("i", $usuario_id);
+    $countStmt->execute();
+    $countResult = $countStmt->get_result()->fetch_assoc();
+    $count = (int)($countResult['count'] ?? 0);
+    $countStmt->close();
+    
+    echo json_encode(["ok"=>true, "in_wishlist"=>false, "count"=>$count]);
   } else {
-    // Insertar
-    $ins = $conn->prepare("INSERT INTO favoritos (usuario_id, producto_id) VALUES (?, ?)");
+    // Insertar - verificar si la columna creado_en existe
+    $colCheck = $conn->query("SHOW COLUMNS FROM favoritos LIKE 'creado_en'");
+    $hasCreatedAt = $colCheck && $colCheck->num_rows > 0;
+    
+    if ($hasCreatedAt) {
+      $ins = $conn->prepare("INSERT INTO favoritos (usuario_id, producto_id, creado_en) VALUES (?, ?, NOW())");
+    } else {
+      $ins = $conn->prepare("INSERT INTO favoritos (usuario_id, producto_id) VALUES (?, ?)");
+    }
+    
+    if (!$ins) {
+      throw new Exception("Error preparando INSERT: " . $conn->error);
+    }
     $ins->bind_param("ii", $usuario_id, $producto_id);
     $ins->execute();
-    $count = getFavoritosCount((int)$usuario_id);
-    echo json_encode(["ok"=>true, "in_wishlist"=>true, "count"=>$count, "msg"=>"✔ Producto agregado a tus favoritos."]);
+    $ins->close();
+    
+    // Obtener conteo actualizado
+    $countStmt = $conn->prepare("SELECT COUNT(*) as count FROM favoritos WHERE usuario_id=?");
+    $countStmt->bind_param("i", $usuario_id);
+    $countStmt->execute();
+    $countResult = $countStmt->get_result()->fetch_assoc();
+    $count = (int)($countResult['count'] ?? 0);
+    $countStmt->close();
+    
+    echo json_encode(["ok"=>true, "in_wishlist"=>true, "count"=>$count]);
   }
 } catch(Exception $e) {
   error_log("wishlist toggle error: ".$e->getMessage());
   http_response_code(500);
-  echo json_encode(["ok"=>false, "msg"=>"Error de servidor", "count"=>getFavoritosCount((int)$usuario_id)]);
+  echo json_encode(["ok"=>false, "msg"=>"Error de servidor: " . $e->getMessage()]);
 }

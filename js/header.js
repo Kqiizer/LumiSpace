@@ -65,14 +65,22 @@ document.addEventListener("DOMContentLoaded", () => {
   if (themeToggle) {
     const themeIcon = themeToggle.querySelector("[data-theme-icon]");
     const themeText = themeToggle.querySelector("[data-theme-text]");
-    const iconDark = themeToggle.dataset.iconDark || "";
-    const iconLight = themeToggle.dataset.iconLight || "";
+    // Icono para modo claro (muestra luna porque al hacer clic cambiará a oscuro)
+    const iconLightMode = themeToggle.dataset.iconLightMode || "";
+    // Icono para modo oscuro (muestra sol porque al hacer clic cambiará a claro)
+    const iconDarkMode = themeToggle.dataset.iconDarkMode || "";
 
     const syncThemeButton = (isDark) => {
       const label = isDark ? "Modo Claro" : "Modo Oscuro";
-      if (themeText) themeText.textContent = label;
+      if (themeText) {
+        themeText.textContent = label;
+        // Asegurar que no se traduzca
+        themeText.classList.add('no-translate');
+      }
       if (themeIcon) {
-        const nextIcon = isDark ? iconLight : iconDark;
+        // Si está en modo oscuro, mostrar icono de modo claro (sol)
+        // Si está en modo claro, mostrar icono de modo oscuro (luna)
+        const nextIcon = isDark ? iconDarkMode : iconLightMode;
         if (nextIcon) themeIcon.src = nextIcon;
         themeIcon.alt = label;
       }

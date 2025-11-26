@@ -116,6 +116,17 @@
 
                 // Update favorites badge if exists
                 updateFavoritesBadge(data.count);
+                
+                // Si estamos en la página de favoritos y se agregó un favorito, recargar después de un delay
+                const isFavoritesPage = window.location.pathname.includes('favoritos.php') || 
+                                       window.location.pathname.includes('favoritos') ||
+                                       window.location.href.includes('favoritos');
+                
+                if (isFavoritesPage && data.in_wishlist) {
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                }
             } else {
                 throw new Error(data.msg || 'Error al actualizar favoritos');
             }
@@ -154,6 +165,17 @@
                 if (badge && data.count !== undefined) {
                     badge.textContent = data.count;
                     badge.style.display = data.count > 0 ? '' : 'none';
+                }
+                
+                // Si estamos en la página de favoritos, recargar para mostrar el nuevo producto
+                const isFavoritesPage = window.location.pathname.includes('favoritos.php') || 
+                                       window.location.pathname.includes('favoritos') ||
+                                       window.location.href.includes('favoritos');
+                
+                if (isFavoritesPage && data.count > 0) {
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 500);
                 }
             })
             .catch(err => console.error('Error updating favorites badge:', err));

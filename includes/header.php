@@ -295,8 +295,8 @@ window.addEventListener('load', () => {
     id="theme-toggle"
     class="btn"
     type="button"
-    data-icon-dark="<?= ls_menu_icon($BASE, 'modo obscuro-luna.png') ?>"
-    data-icon-light="<?= ls_menu_icon($BASE, 'modo-claro.png') ?>"
+    data-icon-light-mode="<?= ls_menu_icon($BASE, 'modo obscuro-luna.png') ?>"
+    data-icon-dark-mode="<?= ls_menu_icon($BASE, 'modo-claro.png') ?>"
   >
     <img
       src="<?= ls_menu_icon($BASE, 'modo obscuro-luna.png') ?>"
@@ -351,8 +351,14 @@ window.addEventListener('load', () => {
   <hr>
 
   <?php if (!empty($_SESSION['usuario_id'])): ?>
-    <p style="margin:10px 0; font-weight:bold;">👋 Hola, <?= htmlspecialchars($_SESSION['usuario_nombre'] ?? 'Usuario') ?></p>
-    <a href="<?= $BASE ?>logout.php" class="btn">🚪 Cerrar Sesión</a>
+    <div class="btn" style="margin:10px 0; font-weight:bold; cursor: default; opacity: 1;">
+      <img src="<?= ls_menu_icon($BASE, 'usuario.png') ?>" alt="Usuario" class="menu-icon">
+      <span>Hola, <?= htmlspecialchars($_SESSION['usuario_nombre'] ?? 'Usuario') ?></span>
+    </div>
+    <a href="<?= $BASE ?>logout.php" class="btn">
+      <img src="<?= ls_menu_icon($BASE, 'cerrar sesion.png') ?>" alt="Cerrar Sesión" class="menu-icon">
+      <span>Cerrar Sesión</span>
+    </a>
   <?php else: ?>
     <a href="<?= $BASE ?>views/login.php" class="btn">
       <img src="<?= ls_menu_icon($BASE, 'iniciar-sesion.png') ?>" alt="Iniciar Sesión" class="menu-icon">

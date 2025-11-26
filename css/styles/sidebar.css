@@ -190,11 +190,13 @@ body.dark .sidebar {
 }
 
 body.dark .sidebar a.btn,
+body.dark .sidebar button.btn,
 body.dark .sidebar-user {
   color: #ddd;
 }
 
-body.dark .sidebar a.btn:hover {
+body.dark .sidebar a.btn:hover,
+body.dark .sidebar button.btn:hover {
   color: #c7a97a;
 }
 
@@ -203,6 +205,14 @@ body.dark .sidebar a.btn.active {
 }
 
 body.dark .sidebar a.btn.active::before {
+  color: #c7a97a;
+}
+
+body.dark .sidebar button.btn .btn-label {
+  color: #ddd;
+}
+
+body.dark .sidebar button.btn:hover .btn-label {
   color: #c7a97a;
 }
 
