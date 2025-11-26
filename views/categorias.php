@@ -574,6 +574,74 @@ function getCategoryImage($imagen, $BASE) {
         text-align: center;
       }
     }
+
+    /* Modo Oscuro */
+    body.dark {
+      background: #1a1816 !important;
+      color: #f6f1e8;
+    }
+
+    body.dark .catalog-hero {
+      background: linear-gradient(180deg, #1a1816 0%, #2b241d 35%, #1f1c18 100%);
+    }
+
+    body.dark .hero-bg {
+      background: radial-gradient(circle at top right, rgba(160, 137, 107, 0.15), transparent 55%);
+    }
+
+    body.dark .hero-title,
+    body.dark .hero-subtitle {
+      color: #f6f1e8;
+    }
+
+    body.dark .category-card {
+      background: #2b241d;
+      border-color: rgba(160, 137, 107, 0.2);
+    }
+
+    body.dark .category-card:hover {
+      background: #3a3228;
+      border-color: rgba(160, 137, 107, 0.4);
+    }
+
+    body.dark .card-body {
+      background: rgba(43, 36, 29, 0.9);
+    }
+
+    body.dark .card-title {
+      color: #f6f1e8;
+    }
+
+    body.dark .card-count {
+      color: #c9b8a2;
+    }
+
+    body.dark .ghost-btn {
+      background: rgba(160, 137, 107, 0.2);
+      color: #f6f1e8;
+      border-color: rgba(160, 137, 107, 0.3);
+    }
+
+    body.dark .ghost-btn:hover {
+      background: rgba(160, 137, 107, 0.3);
+      border-color: rgba(160, 137, 107, 0.5);
+    }
+
+    body.dark .stats-section {
+      background: linear-gradient(135deg, rgba(43, 36, 29, 0.92), rgba(26, 24, 22, 0.95));
+    }
+
+    body.dark .stat-item {
+      background: rgba(43, 36, 29, 0.6);
+    }
+
+    body.dark .stat-number {
+      color: #f6f1e8;
+    }
+
+    body.dark .stat-label {
+      color: #c9b8a2;
+    }
   </style>
 </head>
 <body data-base="<?= htmlspecialchars($BASE) ?>">
@@ -773,6 +841,16 @@ function getCategoryImage($imagen, $BASE) {
   </script>
   <script src="<?= $BASE ?>js/header.js"></script>
   <script src="<?= $BASE ?>js/search-overlay.js" defer></script>
+  <script>
+  // Asegurar que el modo oscuro funcione correctamente
+  document.addEventListener('DOMContentLoaded', function() {
+    // Verificar si hay un tema guardado y aplicarlo
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+      document.body.classList.add('dark');
+    }
+  });
+  </script>
   <script>
   // Asegurar que el menú funcione después de que header.js se cargue
   window.addEventListener('load', function() {
