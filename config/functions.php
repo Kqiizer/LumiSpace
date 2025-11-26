@@ -2179,7 +2179,7 @@ function getFavoritos(?int $usuario_id): array
         $sql = "
             SELECT " . implode(", ", $parts['select']) . "
             FROM favoritos f
-            JOIN productos p ON f.producto_id = p.id
+            INNER JOIN productos p ON f.producto_id = p.id
             {$parts['join']}
             WHERE f.usuario_id = ?
             ORDER BY f.creado_en DESC
@@ -2193,9 +2193,22 @@ function getFavoritos(?int $usuario_id): array
         $stmt->execute();
         $res = $stmt->get_result();
         $rows = $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
-        return array_map(static fn($row) => array_merge($row, [
-            'imagen' => publicImageUrl($row['imagen'] ?? ''),
-        ]), $rows);
+        $stmt->close();
+        
+        // Asegurar que todos los campos necesarios estén presentes
+        return array_map(static function($row) {
+            return array_merge([
+                'id' => (int)($row['id'] ?? 0),
+                'producto_id' => (int)($row['id'] ?? 0),
+                'nombre' => $row['nombre'] ?? 'Producto sin nombre',
+                'precio' => (float)($row['precio'] ?? 0),
+                'precio_original' => isset($row['precio_original']) && $row['precio_original'] !== null ? (float)$row['precio_original'] : null,
+                'descuento' => (int)($row['descuento'] ?? 0),
+                'stock' => (int)($row['stock'] ?? 0),
+                'categoria' => $row['categoria'] ?? 'Sin categoría',
+                'imagen' => publicImageUrl($row['imagen'] ?? ''),
+            ], $row);
+        }, $rows);
     }
     // fallback sesión
     if (!isset($_SESSION))
