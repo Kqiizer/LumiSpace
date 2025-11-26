@@ -3,6 +3,18 @@ const APP_BASE_PATH = (RAW_BASE_PATH || '').replace(/\/+$/, '') || '';
 const SESSION_STATUS_ENDPOINT = `${APP_BASE_PATH}/api/auth/session-status.php`;
 const DEFAULT_CURRENCY = 'MXN';
 
+syncThemePreference();
+window.addEventListener('storage', (event) => {
+    if (event.key === 'theme') {
+        syncThemePreference();
+    }
+});
+
+function syncThemePreference() {
+    const savedTheme = localStorage.getItem('theme');
+    document.body.classList.toggle('dark', savedTheme === 'dark');
+}
+
 let sessionState = {
     checked: false,
     loggedIn: false,
