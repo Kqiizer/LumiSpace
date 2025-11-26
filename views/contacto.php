@@ -244,7 +244,7 @@ $BASE = defined('BASE_URL') ? rtrim(BASE_URL, '/') . '/' : '/';
                     </div>
                     <div class="team-info">
                         <h3>Fátima Contreras</h3>
-                        <p class="team-role">Front-end</p>
+                        <p class="team-role">programadora front-end</p>
                     </div>
                 </div>
             </div>
