@@ -197,11 +197,6 @@ $BASE = defined('BASE_URL') ? rtrim(BASE_URL, '/') . '/' : '/';
                     <div class="team-image">
                         <img src="<?= $BASE ?>images/imagenes-integrantes/ximena-crv.jpeg" 
                              alt="Ximena Cuevas">
-                        <div class="team-social">
-                            <a href="#"><i class="fab fa-linkedin"></i></a>
-                            <a href="#"><i class="fab fa-twitter"></i></a>
-                            <a href="#"><i class="fab fa-instagram"></i></a>
-                        </div>
                     </div>
                     <div class="team-info">
                         <h3>Ximena Cuevas</h3>
@@ -213,11 +208,6 @@ $BASE = defined('BASE_URL') ? rtrim(BASE_URL, '/') . '/' : '/';
                     <div class="team-image">
                         <img src="<?= $BASE ?>images/imagenes-integrantes/josefina-hdz.jpeg" 
                              alt="Josefina Hernandez">
-                        <div class="team-social">
-                            <a href="#"><i class="fab fa-linkedin"></i></a>
-                            <a href="#"><i class="fab fa-twitter"></i></a>
-                            <a href="#"><i class="fab fa-instagram"></i></a>
-                        </div>
                     </div>
                     <div class="team-info">
                         <h3>Josefina Hernandez</h3>
@@ -229,11 +219,6 @@ $BASE = defined('BASE_URL') ? rtrim(BASE_URL, '/') . '/' : '/';
                     <div class="team-image">
                         <img src="<?= $BASE ?>images/imagenes-integrantes/fernando-arroyo.jpeg" 
                              alt="Fernando Arroyo">
-                        <div class="team-social">
-                            <a href="#"><i class="fab fa-linkedin"></i></a>
-                            <a href="#"><i class="fab fa-twitter"></i></a>
-                            <a href="#"><i class="fab fa-instagram"></i></a>
-                        </div>
                     </div>
                     <div class="team-info">
                         <h3>Fernando Arroyo</h3>
@@ -245,11 +230,6 @@ $BASE = defined('BASE_URL') ? rtrim(BASE_URL, '/') . '/' : '/';
                     <div class="team-image">
                         <img src="<?= $BASE ?>images/imagenes-integrantes/santiago-ballesteros.jpeg" 
                              alt="Santiago Ballesteros">
-                        <div class="team-social">
-                            <a href="#"><i class="fab fa-linkedin"></i></a>
-                            <a href="#"><i class="fab fa-twitter"></i></a>
-                            <a href="#"><i class="fab fa-instagram"></i></a>
-                        </div>
                     </div>
                     <div class="team-info">
                         <h3>Santiago Ballesteros</h3>
