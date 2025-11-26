@@ -187,7 +187,7 @@ body {
 .logout-button {
     width: 100%;
     padding: 16px 24px;
-    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-tertiary) 100%);
+    background: linear-gradient(135deg, #a1663d 0%, #7a4a29 50%, #c37b44 100%);
     border: none;
     border-radius: var(--radius-lg);
     color: var(--color-white);
@@ -195,12 +195,12 @@ body {
     font-weight: 600;
     cursor: pointer;
     transition: var(--transition);
-    box-shadow: 0 4px 16px rgba(139, 115, 85, 0.3);
+    box-shadow: 0 6px 20px rgba(122, 74, 41, 0.45);
 }
 
 .logout-button:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(139, 115, 85, 0.4);
+    box-shadow: 0 10px 30px rgba(122, 74, 41, 0.5);
 }
 
 .logout-button.logout-button--disabled {
