@@ -1470,17 +1470,40 @@ function eliminarProducto(int $id): bool
 {
     $conn = getDBConnection();
 
-    // eliminar inventario asociado
-    $conn->query("DELETE FROM inventario WHERE producto_id=$id");
+    // 🔹 Iniciar transacción
+    $conn->begin_transaction();
 
-    $stmt = $conn->prepare("DELETE FROM productos WHERE id=?");
-    if (!$stmt) {
-        error_log("❌ Error en eliminarProducto prepare(): " . $conn->error);
+    try {
+        // 1️⃣ Eliminar ventas relacionadas
+        $stmt1 = $conn->prepare("DELETE FROM detalle_ventas WHERE producto_id = ?");
+        $stmt1->bind_param("i", $id);
+        $stmt1->execute();
+        $stmt1->close();
+
+        // 2️⃣ Eliminar inventario relacionado
+        $stmt2 = $conn->prepare("DELETE FROM inventario WHERE producto_id = ?");
+        $stmt2->bind_param("i", $id);
+        $stmt2->execute();
+        $stmt2->close();
+
+        // 3️⃣ Eliminar producto
+        $stmt3 = $conn->prepare("DELETE FROM productos WHERE id = ?");
+        $stmt3->bind_param("i", $id);
+        $stmt3->execute();
+        $stmt3->close();
+
+        // ✅ Confirmar cambios
+        $conn->commit();
+        return true;
+
+    } catch (Exception $e) {
+        // ❌ Revertir cambios si algo falla
+        $conn->rollback();
+        error_log("❌ Error al eliminar producto: " . $e->getMessage());
         return false;
     }
-    $stmt->bind_param("i", $id);
-    return $stmt->execute();
 }
+
 
 
 
