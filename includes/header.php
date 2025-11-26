@@ -295,8 +295,8 @@ window.addEventListener('load', () => {
     id="theme-toggle"
     class="btn"
     type="button"
-    data-icon-dark="<?= ls_menu_icon($BASE, 'modo obscuro-luna.png') ?>"
-    data-icon-light="<?= ls_menu_icon($BASE, 'modo-claro.png') ?>"
+    data-icon-light-mode="<?= ls_menu_icon($BASE, 'modo obscuro-luna.png') ?>"
+    data-icon-dark-mode="<?= ls_menu_icon($BASE, 'modo-claro.png') ?>"
   >
     <img
       src="<?= ls_menu_icon($BASE, 'modo obscuro-luna.png') ?>"
