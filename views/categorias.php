@@ -144,6 +144,7 @@ function getCategoryImage($imagen, $BASE) {
       padding: 90px 0 70px;
       position: relative;
       overflow: hidden;
+      transition: background 0.3s ease;
     }
 
     .hero-bg {
@@ -595,52 +596,77 @@ function getCategoryImage($imagen, $BASE) {
     }
 
     body.dark .category-card {
-      background: #2b241d;
-      border-color: rgba(160, 137, 107, 0.2);
+      background: #2b241d !important;
+      border-color: rgba(160, 137, 107, 0.2) !important;
     }
 
     body.dark .category-card:hover {
-      background: #3a3228;
-      border-color: rgba(160, 137, 107, 0.4);
+      background: #3a3228 !important;
+      border-color: rgba(160, 137, 107, 0.4) !important;
     }
 
     body.dark .card-body {
-      background: rgba(43, 36, 29, 0.9);
+      background: rgba(43, 36, 29, 0.9) !important;
     }
 
     body.dark .card-title {
-      color: #f6f1e8;
+      color: #f6f1e8 !important;
     }
 
     body.dark .card-count {
-      color: #c9b8a2;
+      color: #c9b8a2 !important;
+    }
+
+    body.dark .card-pill {
+      color: #c9b8a2 !important;
+    }
+
+    body.dark .card-description {
+      color: #c9b8a2 !important;
+    }
+
+    body.dark .card-badge {
+      background: rgba(43, 36, 29, 0.95) !important;
+      color: #f6f1e8 !important;
     }
 
     body.dark .ghost-btn {
-      background: rgba(160, 137, 107, 0.2);
-      color: #f6f1e8;
-      border-color: rgba(160, 137, 107, 0.3);
+      background: rgba(160, 137, 107, 0.2) !important;
+      color: #f6f1e8 !important;
+      border-color: rgba(160, 137, 107, 0.3) !important;
     }
 
     body.dark .ghost-btn:hover {
-      background: rgba(160, 137, 107, 0.3);
-      border-color: rgba(160, 137, 107, 0.5);
+      background: rgba(160, 137, 107, 0.3) !important;
+      border-color: rgba(160, 137, 107, 0.5) !important;
     }
 
-    body.dark .stats-section {
-      background: linear-gradient(135deg, rgba(43, 36, 29, 0.92), rgba(26, 24, 22, 0.95));
+    body.dark .stats-section,
+    body.dark .statistics {
+      background: linear-gradient(135deg, rgba(43, 36, 29, 0.92), rgba(26, 24, 22, 0.95)) !important;
     }
 
     body.dark .stat-item {
-      background: rgba(43, 36, 29, 0.6);
+      background: rgba(43, 36, 29, 0.6) !important;
     }
 
     body.dark .stat-number {
-      color: #f6f1e8;
+      color: #f6f1e8 !important;
     }
 
     body.dark .stat-label {
-      color: #c9b8a2;
+      color: #c9b8a2 !important;
+    }
+
+    body.dark .filter-chip {
+      background: rgba(43, 36, 29, 0.6) !important;
+      color: #c9b8a2 !important;
+      border-color: rgba(160, 137, 107, 0.3) !important;
+    }
+
+    body.dark .filter-chip.active {
+      background: var(--brand-primary) !important;
+      color: white !important;
     }
   </style>
 </head>
@@ -837,83 +863,8 @@ function getCategoryImage($imagen, $BASE) {
     <?php include __DIR__ . "/../includes/footer.php"; ?>
   </div>
 
-  <script>
-  </script>
-  <script src="<?= $BASE ?>js/header.js"></script>
+  <script src="<?= $BASE ?>js/header.js" defer></script>
   <script src="<?= $BASE ?>js/search-overlay.js" defer></script>
-  <script>
-  // Asegurar que el modo oscuro funcione correctamente en categorías
-  // Esperar a que header.js se cargue completamente
-  window.addEventListener('load', function() {
-    // Dar un pequeño delay para asegurar que header.js se ejecutó
-    setTimeout(function() {
-      const themeToggle = document.getElementById('theme-toggle');
-      if (themeToggle) {
-        // Verificar si ya tiene listeners (header.js lo inicializó)
-        const hasListener = themeToggle.getAttribute('data-theme-initialized');
-        
-        if (!hasListener) {
-          // Inicializar manualmente si header.js no lo hizo
-          const themeIcon = themeToggle.querySelector("[data-theme-icon]");
-          const themeText = themeToggle.querySelector("[data-theme-text]");
-          const iconLightMode = themeToggle.dataset.iconLightMode || "";
-          const iconDarkMode = themeToggle.dataset.iconDarkMode || "";
-
-          const syncThemeButton = (isDark) => {
-            const label = isDark ? "Modo Claro" : "Modo Oscuro";
-            if (themeText) {
-              themeText.textContent = label;
-              themeText.classList.add('no-translate');
-            }
-            if (themeIcon) {
-              const nextIcon = isDark ? iconDarkMode : iconLightMode;
-              if (nextIcon) themeIcon.src = nextIcon;
-              themeIcon.alt = label;
-            }
-          };
-
-          const setTheme = (dark) => {
-            document.body.classList.toggle("dark", dark);
-            syncThemeButton(dark);
-            localStorage.setItem("theme", dark ? "dark" : "light");
-          };
-
-          // Cargar tema guardado
-          const isDark = localStorage.getItem("theme") === "dark";
-          setTheme(isDark);
-
-          themeToggle.addEventListener("click", function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            const isDark = !document.body.classList.contains("dark");
-            setTheme(isDark);
-          });
-          
-          themeToggle.setAttribute('data-theme-initialized', 'true');
-        }
-      }
-    }, 100);
-  });
-  </script>
-  <script>
-  // Asegurar que el menú funcione después de que header.js se cargue
-  window.addEventListener('load', function() {
-    const menuBtn = document.getElementById('menu-btn');
-    if (menuBtn && !menuBtn.onclick) {
-      // Si header.js no se cargó correctamente, inicializar manualmente
-      const sidebar = document.getElementById('sidebar');
-      const overlay = document.getElementById('overlay');
-      if (sidebar && overlay) {
-        menuBtn.addEventListener('click', function() {
-          const isActive = sidebar.classList.toggle('active');
-          overlay.classList.toggle('active', isActive);
-          menuBtn.classList.toggle('open', isActive);
-          document.body.style.overflow = isActive ? 'hidden' : '';
-        });
-      }
-    }
-  });
-  </script>
   <script>
   (()=>{
     const BASE_URL = document.querySelector('.products-grid')?.dataset.base || '/';
