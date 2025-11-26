@@ -211,9 +211,8 @@ $BASE = defined('BASE_URL') ? rtrim(BASE_URL, '/') . '/' : '/';
 
                 <div class="team-card">
                     <div class="team-image">
-                        <div class="image-placeholder">
-                            <i class="fas fa-user"></i>
-                        </div>
+                        <img src="<?= $BASE ?>images/imagenes-integrantes/josefina-hdz.jpeg" 
+                             alt="Josefina Hernandez">
                         <div class="team-social">
                             <a href="#"><i class="fab fa-linkedin"></i></a>
                             <a href="#"><i class="fab fa-twitter"></i></a>
