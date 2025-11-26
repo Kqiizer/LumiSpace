@@ -61,7 +61,7 @@ $exploreForJS = array_map($mapProduct, $exploreRaw);
     <title>Mis Favoritos - Luminarias</title>
     <link rel="stylesheet" href="<?= htmlspecialchars($baseUrl . 'css/styles/favoritos.css', ENT_QUOTES, 'UTF-8'); ?>">
 </head>
-<body class="favorites-page">
+<body>
     
     <div id="notification" class="notification hidden">
         <svg class="notification-icon" viewBox="0 0 24 24" fill="currentColor">
