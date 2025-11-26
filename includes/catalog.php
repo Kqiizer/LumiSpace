@@ -8,34 +8,35 @@ $conn = getDBConnection();
 // Obtener categorías con sus imágenes (usando el mismo sistema que categories.php)
 $categorias_db = getCategorias();
 
-/**
- * Obtiene la URL de la imagen de categoría (MISMO sistema que categories.php)
- */
-function getCategoryImage($imagen, $BASE) {
-  if (empty($imagen) || trim($imagen) === '') {
-    return $BASE . 'images/categorias/default.jpg';
+// La función getCategoryImage() ya está declarada en includes/categories.php
+// Si no existe, la declaramos aquí como fallback
+if (!function_exists('getCategoryImage')) {
+  function getCategoryImage($imagen, $BASE) {
+    if (empty($imagen) || trim($imagen) === '') {
+      return $BASE . 'images/categorias/default.jpg';
+    }
+    
+    $imagen = trim($imagen);
+    
+    // Si ya es una URL completa (http o https), devolverla tal cual
+    if (preg_match('#^https?://#i', $imagen)) {
+      return $imagen;
+    }
+    
+    // Si empieza con /, es una ruta absoluta desde la raíz
+    if (strpos($imagen, '/') === 0) {
+      return $BASE . ltrim($imagen, '/');
+    }
+    
+    // Si la imagen ya contiene una ruta relativa completa (ej: imagenes/lamparas/deco2.jpg)
+    // o empieza con imagenes/ o images/, usarla directamente
+    if (strpos($imagen, 'imagenes/') === 0 || strpos($imagen, 'images/') === 0) {
+      return $BASE . $imagen;
+    }
+    
+    // Si es solo un nombre de archivo, asumir que está en images/categorias/
+    return $BASE . 'images/categorias/' . $imagen;
   }
-  
-  $imagen = trim($imagen);
-  
-  // Si ya es una URL completa (http o https), devolverla tal cual
-  if (preg_match('#^https?://#i', $imagen)) {
-    return $imagen;
-  }
-  
-  // Si empieza con /, es una ruta absoluta desde la raíz
-  if (strpos($imagen, '/') === 0) {
-    return $BASE . ltrim($imagen, '/');
-  }
-  
-  // Si la imagen ya contiene una ruta relativa completa (ej: imagenes/lamparas/deco2.jpg)
-  // o empieza con imagenes/ o images/, usarla directamente
-  if (strpos($imagen, 'imagenes/') === 0 || strpos($imagen, 'images/') === 0) {
-    return $BASE . $imagen;
-  }
-  
-  // Si es solo un nombre de archivo, asumir que está en images/categorias/
-  return $BASE . 'images/categorias/' . $imagen;
 }
 
 // Obtener productos destacados de las primeras 2 categorías
