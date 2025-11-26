@@ -236,6 +236,17 @@ $BASE = defined('BASE_URL') ? rtrim(BASE_URL, '/') . '/' : '/';
                         <p class="team-role">programador back-end</p>
                     </div>
                 </div>
+
+                <div class="team-card">
+                    <div class="team-image">
+                        <img src="<?= $BASE ?>images/imagenes-integrantes/fatima-contreras.jpeg" 
+                             alt="Fátima Contreras">
+                    </div>
+                    <div class="team-info">
+                        <h3>Fátima Contreras</h3>
+                        <p class="team-role">Front-end</p>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
