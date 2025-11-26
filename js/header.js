@@ -70,7 +70,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const syncThemeButton = (isDark) => {
       const label = isDark ? "Modo Claro" : "Modo Oscuro";
-      if (themeText) themeText.textContent = label;
+      if (themeText) {
+        themeText.textContent = label;
+        // Asegurar que no se traduzca
+        themeText.classList.add('no-translate');
+      }
       if (themeIcon) {
         const nextIcon = isDark ? iconLight : iconDark;
         if (nextIcon) themeIcon.src = nextIcon;
