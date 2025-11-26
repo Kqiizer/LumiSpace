@@ -152,6 +152,24 @@ body.search-page {
     background: #fff;
 }
 
+.filter-price-range {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.filter-price-range input {
+    flex: 1;
+    width: auto;
+    min-width: 0;
+}
+
+.filter-price-range span {
+    color: var(--search-muted);
+    font-weight: 600;
+    font-size: 14px;
+}
+
 .filter-badges {
     display: flex;
     flex-wrap: wrap;
