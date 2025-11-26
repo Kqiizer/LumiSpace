@@ -360,6 +360,14 @@ body.dark .modal-body {
 .legal-modal {
     padding: 0;
     max-height: none;
+    background: var(--color-white);
+    border-radius: 0 0 16px 16px;
+    overflow: hidden;
+}
+
+body.dark .legal-modal {
+    background: #1a140f;
+    color: #f6eee4;
 }
 
 .legal-frame-wrapper {
@@ -367,18 +375,24 @@ body.dark .modal-body {
     min-height: clamp(360px, 70vh, 640px);
     border-top: 1px solid #f1ece4;
     background: linear-gradient(135deg, rgba(139, 115, 85, 0.04), rgba(193, 153, 112, 0.08));
+    border-bottom: 1px solid #f1ece4;
 }
 
 body.dark .legal-frame-wrapper {
     border-top: 1px solid rgba(255, 255, 255, 0.08);
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(197, 148, 92, 0.1));
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .legal-iframe {
     width: 100%;
     height: clamp(360px, 70vh, 640px);
     border: none;
-    background: transparent;
+    background: #fff;
+}
+
+body.dark .legal-iframe {
+    background: #18100b;
 }
 
 .legal-fallback {
