@@ -1,10 +1,12 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) session_start();
 require_once __DIR__ . '/../config/functions.php';
-require_once __DIR__ . '/../includes/header.php';
 
+$BASE = defined('BASE_URL') ? rtrim(BASE_URL, '/') . '/' : '/';
 $uid = $_SESSION['usuario_id'] ?? 0;
 $favoritos = getFavoritos($uid);
+
+require_once __DIR__ . '/../includes/header.php';
 ?>
 
 <!DOCTYPE html>
@@ -12,8 +14,8 @@ $favoritos = getFavoritos($uid);
 <head>
     <meta charset="UTF-8">
     <title>Mis Favoritos | LumiSpace</title>
-    <link rel="stylesheet" href="<?= BASE_URL ?>css/styles/reset.css">
-    <link rel="stylesheet" href="<?= BASE_URL ?>css/styles/favoritos.css">
+    <link rel="stylesheet" href="<?= $BASE ?>css/styles/reset.css">
+    <link rel="stylesheet" href="<?= $BASE ?>css/styles/favoritos.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -56,36 +58,45 @@ $favoritos = getFavoritos($uid);
                         Aún no has agregado productos a tus favoritos. 
                         Explora nuestra colección y guarda las piezas que iluminarán tu vida.
                     </p>
-                    <a href="<?= BASE_URL ?>views/catalogo.php" class="btn-hero">
+                    <a href="<?= $BASE ?>views/catalogo.php" class="btn-hero">
                         Explorar Catálogo <i class="fas fa-arrow-right"></i>
                     </a>
                 </div>
             <?php else: ?>
                 <div class="favorites-grid">
-                    <?php foreach ($favoritos as $producto): ?>
+                    <?php foreach ($favoritos as $producto): 
+                        $producto_id = (int)($producto['id'] ?? $producto['producto_id'] ?? 0);
+                        $imagen = $producto['imagen'] ?? '';
+                        $descuento = (int)($producto['descuento'] ?? 0);
+                        $stock = (int)($producto['stock'] ?? 0);
+                        $categoria = $producto['categoria'] ?? 'Sin categoría';
+                        $nombre = $producto['nombre'] ?? 'Producto sin nombre';
+                        $precio = (float)($producto['precio'] ?? 0);
+                        $precio_original = isset($producto['precio_original']) && $producto['precio_original'] > 0 ? (float)$producto['precio_original'] : null;
+                    ?>
                         <article class="fav-card reveal-on-scroll">
                             <div class="card-image-wrapper">
-                                <div class="fav-image" style="background-image: url('<?= $producto['imagen'] ?>');"></div>
+                                <div class="fav-image" style="background-image: url('<?= htmlspecialchars($imagen) ?>');"></div>
                                 <div class="card-overlay">
-                                    <button class="btn-action remove" onclick="toggleFavorito(<?= $producto['id'] ?>, this, true)" title="Eliminar de favoritos">
+                                    <button class="btn-action remove" onclick="toggleFavorito(<?= $producto_id ?>, this, true)" title="Eliminar de favoritos">
                                         <i class="fas fa-times"></i>
                                     </button>
-                                    <button class="btn-action cart" onclick="agregarAlCarrito(<?= $producto['id'] ?>)" <?= $producto['stock'] <= 0 ? 'disabled' : '' ?> title="Agregar al carrito">
+                                    <button class="btn-action cart" onclick="agregarAlCarrito(<?= $producto_id ?>)" <?= $stock <= 0 ? 'disabled' : '' ?> title="Agregar al carrito">
                                         <i class="fas fa-shopping-cart"></i>
                                     </button>
                                 </div>
-                                <?php if ($producto['descuento'] > 0): ?>
-                                    <span class="badge badge-discount">-<?= $producto['descuento'] ?>%</span>
+                                <?php if ($descuento > 0): ?>
+                                    <span class="badge badge-discount">-<?= $descuento ?>%</span>
                                 <?php endif; ?>
-                                <?php if ($producto['stock'] <= 0): ?>
+                                <?php if ($stock <= 0): ?>
                                     <span class="badge badge-out">Agotado</span>
                                 <?php endif; ?>
                             </div>
                             
                             <div class="fav-content">
                                 <div class="fav-meta">
-                                    <span class="category"><?= htmlspecialchars($producto['categoria']) ?></span>
-                                    <?php if ($producto['stock'] > 0): ?>
+                                    <span class="category"><?= htmlspecialchars($categoria) ?></span>
+                                    <?php if ($stock > 0): ?>
                                         <span class="stock-status in-stock"><i class="fas fa-check-circle"></i> Disponible</span>
                                     <?php else: ?>
                                         <span class="stock-status out-stock"><i class="fas fa-times-circle"></i> Agotado</span>
@@ -93,19 +104,19 @@ $favoritos = getFavoritos($uid);
                                 </div>
                                 
                                 <h3 class="fav-title">
-                                    <a href="<?= BASE_URL ?>views/productos-detal.php?id=<?= $producto['id'] ?>">
-                                        <?= htmlspecialchars($producto['nombre']) ?>
+                                    <a href="<?= $BASE ?>views/productos-detal.php?id=<?= $producto_id ?>">
+                                        <?= htmlspecialchars($nombre) ?>
                                     </a>
                                 </h3>
                                 
                                 <div class="fav-footer">
                                     <div class="price-wrapper">
-                                        <span class="price-current">$<?= number_format($producto['precio'], 2) ?></span>
-                                        <?php if ($producto['precio_original']): ?>
-                                            <span class="price-original">$<?= number_format($producto['precio_original'], 2) ?></span>
+                                        <span class="price-current">$<?= number_format($precio, 2) ?></span>
+                                        <?php if ($precio_original && $precio_original > $precio): ?>
+                                            <span class="price-original">$<?= number_format($precio_original, 2) ?></span>
                                         <?php endif; ?>
                                     </div>
-                                    <a href="<?= BASE_URL ?>views/productos-detal.php?id=<?= $producto['id'] ?>" class="details-link">
+                                    <a href="<?= $BASE ?>views/productos-detal.php?id=<?= $producto_id ?>" class="details-link">
                                         Ver Detalles
                                     </a>
                                 </div>
@@ -136,50 +147,61 @@ $favoritos = getFavoritos($uid);
         // Toggle Favorite Logic
         async function toggleFavorito(pid, btn, removeCard = false) {
             try {
-                const formData = new FormData();
-                formData.append('producto_id', pid);
-
-                const res = await fetch('<?= BASE_URL ?>includes/favoritos-toggle.php', {
+                const res = await fetch('<?= $BASE ?>api/wishlist/toggle.php', {
                     method: 'POST',
-                    body: formData
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ producto_id: pid })
                 });
+
+                if (res.status === 401) {
+                    alert('Debes iniciar sesión para gestionar favoritos');
+                    window.location.href = '<?= $BASE ?>views/login.php';
+                    return;
+                }
+
                 const data = await res.json();
 
                 if (data.ok) {
                     // Update header badge
                     const badge = document.getElementById('fav-badge');
                     if (badge) {
-                        badge.innerText = data.count;
-                        badge.style.display = data.count > 0 ? 'flex' : 'none';
+                        badge.innerText = data.count || 0;
+                        badge.style.display = (data.count || 0) > 0 ? 'flex' : 'none';
                     }
 
                     // Update section count
                     const countBadge = document.querySelector('.count-badge');
                     if (countBadge) {
-                        countBadge.innerText = data.count;
+                        countBadge.innerText = data.count || 0;
                     }
 
                     if (removeCard) {
                         const card = btn.closest('.fav-card');
-                        card.style.transform = 'scale(0.9) translateY(20px)';
-                        card.style.opacity = '0';
-                        setTimeout(() => {
-                            card.remove();
-                            if (document.querySelectorAll('.fav-card').length === 0) {
-                                location.reload();
-                            }
-                        }, 400);
+                        if (card) {
+                            card.style.transition = 'all 0.4s ease';
+                            card.style.transform = 'scale(0.9) translateY(20px)';
+                            card.style.opacity = '0';
+                            setTimeout(() => {
+                                card.remove();
+                                if (document.querySelectorAll('.fav-card').length === 0) {
+                                    location.reload();
+                                }
+                            }, 400);
+                        }
                     }
+                } else {
+                    alert(data.msg || 'Error al actualizar favoritos');
                 }
             } catch (e) {
-                console.error(e);
+                console.error('Error en toggleFavorito:', e);
+                alert('Error al actualizar favoritos. Por favor, intenta de nuevo.');
             }
         }
 
         // Add to Cart Logic
         async function agregarAlCarrito(id) {
             try {
-                const res = await fetch('<?= BASE_URL ?>api/carrito/add.php', {
+                const res = await fetch('<?= $BASE ?>api/carrito/add.php', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ producto_id: id, cantidad: 1 })
