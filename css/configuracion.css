@@ -300,6 +300,121 @@ body {
     font-weight: 600;
 }
 
+/* Dark mode */
+body.dark {
+    background: radial-gradient(circle at top, rgba(255, 244, 232, 0.08), transparent 45%), linear-gradient(135deg, #0f0b08 0%, #1d140e 100%);
+    color: #f8f1e8;
+}
+
+body.dark .container {
+    background: #1c1611;
+    box-shadow: 0 0 80px rgba(0, 0, 0, 0.45);
+}
+
+body.dark .header {
+    background: linear-gradient(180deg, rgba(32, 25, 19, 0.95) 0%, rgba(21, 16, 12, 0.92) 100%);
+    border-bottom-color: rgba(255, 255, 255, 0.05);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+}
+
+body.dark .back-button {
+    color: var(--color-light);
+}
+
+body.dark .back-button:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+body.dark .header-title,
+body.dark .section-title,
+body.dark .item-label {
+    color: #f8f1e8;
+}
+
+body.dark .section-title {
+    color: rgba(247, 241, 234, 0.8);
+}
+
+body.dark .settings-item {
+    background: rgba(33, 26, 21, 0.95);
+    border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+
+body.dark .settings-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+body.dark .item-icon {
+    background: linear-gradient(135deg, rgba(139, 115, 85, 0.35), rgba(193, 153, 112, 0.25));
+    color: var(--color-light);
+}
+
+body.dark .item-value,
+body.dark .item-right span {
+    color: rgba(247, 241, 234, 0.75);
+}
+
+body.dark .chevron {
+    color: rgba(247, 241, 234, 0.7);
+}
+
+body.dark .settings-item:hover .chevron {
+    color: var(--color-light);
+}
+
+body.dark .logout-section {
+    background: linear-gradient(180deg, rgba(24, 18, 14, 0.8), transparent);
+}
+
+body.dark .logout-button {
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+}
+
+body.dark .modal-content,
+body.dark .confirm-modal-content {
+    background: #1f1813;
+    color: #f8f1e8;
+}
+
+body.dark .modal-header {
+    background: #1c1511;
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+body.dark .modal-body {
+    background: #1f1813;
+    color: #f8f1e8;
+}
+
+body.dark .legal-frame-wrapper {
+    background: linear-gradient(135deg, rgba(193, 153, 112, 0.08), rgba(139, 115, 85, 0.04));
+    border-color: rgba(255, 255, 255, 0.05);
+}
+
+body.dark .legal-fallback {
+    background: #1c1511;
+    border-color: rgba(255, 255, 255, 0.05);
+    color: rgba(247, 241, 234, 0.75);
+}
+
+body.dark .legal-fallback a {
+    color: var(--color-light);
+}
+
+body.dark .social-card {
+    background: rgba(33, 26, 21, 0.95);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+
+body.dark .confirm-btn-cancel {
+    background: rgba(255, 255, 255, 0.08);
+    color: #f8f1e8;
+}
+
+body.dark .confirm-btn-cancel:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
 @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
