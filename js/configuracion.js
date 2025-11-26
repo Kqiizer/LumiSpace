@@ -365,37 +365,44 @@ function showContactUs() {
 
 function showAbout() {
     const content = `
-        <div class="modal-body">
-            <div style="text-align: center; margin-bottom: 30px;">
-                <h2 style="font-size: 24px; margin-bottom: 10px;">LumiSpace</h2>
-                <p style="color: #666; font-size: 14px;">Versión 2.0.0</p>
-            </div>
-            
-            <div style="background: linear-gradient(135deg, var(--color-light), var(--color-secondary)); 
-                        padding: 25px; border-radius: 16px; margin-bottom: 25px; color: white;">
-                <h3 style="font-size: 18px; margin-bottom: 10px;">Nuestra Misión</h3>
-                <p style="font-size: 14px; line-height: 1.7; opacity: 0.95;">
-                    En LumiSpace, nos dedicamos a brindarte los mejores productos con una 
-                    experiencia de compra excepcional. Innovación, calidad y satisfacción 
-                    del cliente son nuestros pilares fundamentales.
-                </p>
-            </div>
-            
-            <div style="padding: 20px; background: #f9f9f9; border-radius: 12px; margin-bottom: 20px;">
-                <h4 style="font-size: 16px; margin-bottom: 15px;">¿Por qué elegirnos?</h4>
-                <div style="font-size: 14px; line-height: 2;">
-                    ✓ Productos de alta calidad<br>
-                    ✓ Envío rápido y seguro<br>
-                    ✓ Atención al cliente 24/7<br>
-                    ✓ Garantía de satisfacción<br>
-                    ✓ Pagos seguros
+        <div class="modal-body about-modal">
+            <div class="about-hero-card">
+                <div>
+                    <p class="about-hero-label">Sobre nosotros</p>
+                    <h2>LumiSpace</h2>
+                    <p class="about-version">Versión 2.0.0</p>
+                </div>
+                <div class="about-hero-badge">
+                    <span>Desde</span>
+                    <strong>2025</strong>
                 </div>
             </div>
             
-            <div style="text-align: center; padding: 20px; border-top: 1px solid #eee;">
-                <p style="font-size: 13px; color: #666; line-height: 1.6;">
-                    © 2025 LumiSpace. Todos los derechos reservados.<br>
+            <div class="about-highlight-card">
+                <h3>Nuestra misión</h3>
+                <p>
+                    En LumiSpace, nos dedicamos a brindarte los mejores productos con una experiencia de compra
+                    excepcional. Innovación, calidad y satisfacción del cliente son nuestros pilares fundamentales.
                 </p>
+            </div>
+            
+            <div class="about-list-card">
+                <div class="about-list-header">
+                    <h4>¿Por qué elegirnos?</h4>
+                    <p>Beneficios que nos distinguen</p>
+                </div>
+                <ul>
+                    <li>Productos de alta calidad</li>
+                    <li>Envío rápido y seguro</li>
+                    <li>Atención al cliente 24/7</li>
+                    <li>Garantía de satisfacción</li>
+                    <li>Pagos seguros</li>
+                </ul>
+            </div>
+            
+            <div class="about-footer-card">
+                <p>© 2025 LumiSpace. Todos los derechos reservados.</p>
+                <small>Diseñado con luz y dedicación desde México.</small>
             </div>
         </div>
     `;
