@@ -7,7 +7,7 @@ require_once __DIR__ . "/../../config/functions.php";
 $usuario_id = $_SESSION['usuario_id'] ?? 0;
 if (!$usuario_id) {
   http_response_code(401);
-  echo json_encode(["ok"=>false, "msg"=>"No autenticado"]);
+  echo json_encode(["ok"=>false, "msg"=>"No autenticado", "count"=>0]);
   exit;
 }
 
@@ -16,7 +16,7 @@ $producto_id = (int)($payload['producto_id'] ?? 0);
 
 if ($producto_id <= 0) {
   http_response_code(400);
-  echo json_encode(["ok"=>false, "msg"=>"Producto inválido"]);
+  echo json_encode(["ok"=>false, "msg"=>"Producto inválido", "count"=>getFavoritosCount((int)$usuario_id)]);
   exit;
 }
 
@@ -43,16 +43,18 @@ try {
     $del = $conn->prepare("DELETE FROM favoritos WHERE usuario_id=? AND producto_id=?");
     $del->bind_param("ii", $usuario_id, $producto_id);
     $del->execute();
-    echo json_encode(["ok"=>true, "in_wishlist"=>false]);
+    $count = getFavoritosCount((int)$usuario_id);
+    echo json_encode(["ok"=>true, "in_wishlist"=>false, "count"=>$count, "msg"=>"❌ Producto eliminado de favoritos."]);
   } else {
     // Insertar
     $ins = $conn->prepare("INSERT INTO favoritos (usuario_id, producto_id) VALUES (?, ?)");
     $ins->bind_param("ii", $usuario_id, $producto_id);
     $ins->execute();
-    echo json_encode(["ok"=>true, "in_wishlist"=>true]);
+    $count = getFavoritosCount((int)$usuario_id);
+    echo json_encode(["ok"=>true, "in_wishlist"=>true, "count"=>$count, "msg"=>"✔ Producto agregado a tus favoritos."]);
   }
 } catch(Exception $e) {
   error_log("wishlist toggle error: ".$e->getMessage());
   http_response_code(500);
-  echo json_encode(["ok"=>false, "msg"=>"Error de servidor"]);
+  echo json_encode(["ok"=>false, "msg"=>"Error de servidor", "count"=>getFavoritosCount((int)$usuario_id)]);
 }
