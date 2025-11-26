@@ -80,7 +80,7 @@ function isGroupActive(array $pages, string $current): string {
         </a>
       </div>
     </div>
-//ya quedo pero no se por que no sale vlv
+//ya quedo pero no se por que no sale vlvljBSHDVLISHBVlibv
     <!-- Catálogo -->
     <div class="menu-group">
       <button class="menu-item has-submenu <?= isGroupActive(['productos.php','inventario.php','proveedores.php','categorias.php'], $currentPage) ?>">
