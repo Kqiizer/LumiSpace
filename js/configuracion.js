@@ -1,6 +1,7 @@
 const RAW_BASE_PATH = window.APP_BASE_PATH || '/LumiSpace';
 const APP_BASE_PATH = (RAW_BASE_PATH || '').replace(/\/+$/, '') || '';
 const SESSION_STATUS_ENDPOINT = `${APP_BASE_PATH}/api/auth/session-status.php`;
+const DEFAULT_CURRENCY = 'MXN';
 
 let sessionState = {
     checked: false,
@@ -26,12 +27,17 @@ function initializeApp() {
         userSettings = JSON.parse(savedSettings);
     }
     
-    // Cargar moneda guardada
-    const savedCurrency = localStorage.getItem('lumispace_currency');
-    if (savedCurrency) {
-        document.getElementById('currencyValue').textContent = savedCurrency;
-    }
+    // Forzar moneda predeterminada
+    applyDefaultCurrency();
 }
+function applyDefaultCurrency() {
+    const currencyElement = document.getElementById('currencyValue');
+    if (currencyElement) {
+        currencyElement.textContent = DEFAULT_CURRENCY;
+    }
+    localStorage.setItem('lumispace_currency', DEFAULT_CURRENCY);
+}
+
 
 // Guardar configuraciones
 function saveSettings() {
@@ -218,37 +224,33 @@ function deletePayment(index) {
 
 // Moneda
 function showCurrencySelector() {
-    const currencies = [
-        {code: 'MXN', symbol: '$', name: 'Peso Mexicano'}
-    ];
-    
-    const currentCurrency = localStorage.getItem('lumispace_currency') || 'MXN';
-    
     const content = `
         <div class="modal-body">
-            ${currencies.map(currency => `
-                <div class="settings-item" style="margin-bottom: 5px; cursor: pointer; border-radius: 8px;" 
-                     onclick="selectCurrency('${currency.code}')">
-                    <div style="display: flex; flex-direction: column;">
-                        <span style="font-weight: 600;">${currency.code}</span>
-                        <span style="color: #666; font-size: 13px;">${currency.name}</span>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 15px;">
-                        <span style="color: #666; font-size: 18px;">${currency.symbol}</span>
-                        ${currentCurrency === currency.code ? '<span style="color: var(--color-primary); font-size: 20px;">✓</span>' : ''}
-                    </div>
+            <div class="settings-item" style="cursor: default; border-radius: 12px; opacity: 0.9;">
+                <div style="display: flex; flex-direction: column;">
+                    <span style="font-weight: 600;">${DEFAULT_CURRENCY}</span>
+                    <span style="color: #666; font-size: 13px;">Peso Mexicano</span>
                 </div>
-            `).join('')}
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <span style="color: #666; font-size: 18px;">$</span>
+                    <span style="color: var(--color-primary); font-size: 20px;">✓</span>
+                </div>
+            </div>
+            <p style="margin-top: 15px; font-size: 14px; color: #666; line-height: 1.6;">
+                Por ahora todas las operaciones se realizan únicamente en pesos mexicanos (MXN).
+            </p>
+            <button class="btn-primary" style="margin-top: 15px; width: 100%;" onclick="closeModal()">Entendido</button>
         </div>
     `;
     showModal('Moneda', content);
 }
 
 function selectCurrency(code) {
-    localStorage.setItem('lumispace_currency', code);
-    document.getElementById('currencyValue').textContent = code;
-    showSuccessMessage(`Moneda cambiada a ${code}`);
-    closeModal();
+    applyDefaultCurrency();
+    showInfoModal(
+        'Moneda fija',
+        'Actualmente solo manejamos MXN como moneda predeterminada.'
+    );
 }
 
 function showLegalDocument(title, docPath) {
