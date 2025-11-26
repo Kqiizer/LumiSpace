@@ -417,16 +417,6 @@ window.addEventListener('load', () => {
         </div>
 
         <div class="filters-section">
-          <h4>Marca</h4>
-          <label class="filter-label">
-            <span>Filtra por marca</span>
-            <select id="globalFilterBrand">
-              <option value="">Todas</option>
-            </select>
-          </label>
-        </div>
-
-        <div class="filters-section">
           <h4>Color y Tamaño</h4>
           <label class="filter-label">
             <span>Color</span>

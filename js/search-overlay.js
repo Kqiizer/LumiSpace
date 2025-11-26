@@ -19,7 +19,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const filterControls = {
     category: document.getElementById('globalFilterCategory'),
-    brand: document.getElementById('globalFilterBrand'),
     color: document.getElementById('globalFilterColor'),
     size: document.getElementById('globalFilterSize'),
     priceMin: document.getElementById('globalFilterPriceMin'),
@@ -99,7 +98,6 @@ document.addEventListener('DOMContentLoaded', () => {
   function getFilters() {
     return {
       category: filterControls.category?.value || '',
-      brand: filterControls.brand?.value || '',
       color: filterControls.color?.value || '',
       size: filterControls.size?.value || '',
       min_price: filterControls.priceMin?.value || '',
@@ -284,7 +282,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function updateFiltersFromFacets(facets) {
     populateSelect(filterControls.category, facets.categories);
-    populateSelect(filterControls.brand, facets.brands);
     populateSelect(filterControls.color, facets.colors);
     populateSelect(filterControls.size, facets.sizes);
     if (facets.price) {
