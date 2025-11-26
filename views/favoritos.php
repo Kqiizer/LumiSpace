@@ -6,6 +6,11 @@ $BASE = defined('BASE_URL') ? rtrim(BASE_URL, '/') . '/' : '/';
 $uid = $_SESSION['usuario_id'] ?? 0;
 $favoritos = getFavoritos($uid);
 
+// Debug: verificar que los favoritos se obtengan correctamente
+if (empty($favoritos) && $uid > 0) {
+    error_log("⚠️ No se encontraron favoritos para usuario ID: " . $uid);
+}
+
 require_once __DIR__ . '/../includes/header.php';
 ?>
 
@@ -65,14 +70,17 @@ require_once __DIR__ . '/../includes/header.php';
             <?php else: ?>
                 <div class="favorites-grid">
                     <?php foreach ($favoritos as $producto): 
+                        // Asegurar que tenemos el ID correcto
                         $producto_id = (int)($producto['id'] ?? $producto['producto_id'] ?? 0);
-                        $imagen = $producto['imagen'] ?? '';
-                        $descuento = (int)($producto['descuento'] ?? 0);
-                        $stock = (int)($producto['stock'] ?? 0);
-                        $categoria = $producto['categoria'] ?? 'Sin categoría';
-                        $nombre = $producto['nombre'] ?? 'Producto sin nombre';
-                        $precio = (float)($producto['precio'] ?? 0);
-                        $precio_original = isset($producto['precio_original']) && $producto['precio_original'] > 0 ? (float)$producto['precio_original'] : null;
+                        if ($producto_id <= 0) continue; // Saltar si no hay ID válido
+                        
+                        $imagen = !empty($producto['imagen']) ? $producto['imagen'] : ($BASE . 'images/default.png');
+                        $descuento = isset($producto['descuento']) ? (int)$producto['descuento'] : 0;
+                        $stock = isset($producto['stock']) ? (int)$producto['stock'] : 0;
+                        $categoria = !empty($producto['categoria']) ? $producto['categoria'] : 'Sin categoría';
+                        $nombre = !empty($producto['nombre']) ? $producto['nombre'] : 'Producto sin nombre';
+                        $precio = isset($producto['precio']) ? (float)$producto['precio'] : 0.0;
+                        $precio_original = (isset($producto['precio_original']) && $producto['precio_original'] !== null && $producto['precio_original'] > 0) ? (float)$producto['precio_original'] : null;
                     ?>
                         <article class="fav-card reveal-on-scroll">
                             <div class="card-image-wrapper">
