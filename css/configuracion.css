@@ -85,8 +85,17 @@ body.dark .header {
     height: 40px;
 }
 
+.back-button svg path {
+    stroke: currentColor;
+    transition: stroke 0.3s ease;
+}
+
 body.dark .back-button {
     color: #f8f0e3;
+}
+
+body.dark .back-button svg path {
+    stroke: #fff6da;
 }
 
 .back-button:hover {
