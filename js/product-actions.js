@@ -47,6 +47,14 @@
 
                 // Update cart badge if exists
                 updateCartBadge();
+                
+                // Si estamos en la página del carrito, recargar para mostrar el nuevo producto
+                if (window.location.pathname.includes('carrito.php') || window.location.pathname.includes('carrito')) {
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 500);
+                }
+                
                 return true;
             } else {
                 throw new Error(data.msg || 'Error al agregar al carrito');
