@@ -254,7 +254,7 @@ window.addEventListener('load', () => {
     <!-- 🔹 Menú de escritorio -->
     <ul class="nav-menu">
       <li><a href="<?= $BASE ?>index.php" class="<?= $currentPage === 'index.php' ? 'active' : '' ?>">Inicio</a></li>
-      <li><a href="/tienda/categorias" class="<?= $currentPage === 'categorias.php' ? 'active' : '' ?>">Categorías</a></li>
+      <li><a href="<?= $BASE ?>views/categorias.php" class="<?= $currentPage === 'categorias.php' ? 'active' : '' ?>">Categorías</a></li>
       <li><a href="<?= $BASE ?>views/catalogo.php" class="<?= $currentPage === 'catalogo.php' ? 'active' : '' ?>">Catálogo</a></li>
       <li><a href="<?= $BASE ?>views/marcas.php" class="<?= $currentPage === 'marcas.php' ? 'active' : '' ?>">Marcas</a></li>
       <li><a href="<?= $BASE ?>views/blog.php" class="<?= $currentPage === 'blog.php' ? 'active' : '' ?>">Blog</a></li>
@@ -312,7 +312,7 @@ window.addEventListener('load', () => {
     <img src="<?= ls_menu_icon($BASE, 'inicio.png') ?>" alt="Inicio" class="menu-icon">
     <span class="t" data-i18n="nav.home" data-i18n-es="Inicio">Inicio</span>
   </a>
-  <a href="/tienda/categorias" class="btn <?= $currentPage === 'categorias.php' ? 'active' : '' ?>">
+  <a href="<?= $BASE ?>views/categorias.php" class="btn <?= $currentPage === 'categorias.php' ? 'active' : '' ?>">
     <img src="<?= ls_menu_icon($BASE, 'categorias.png') ?>" alt="Categorías" class="menu-icon">
     <span class="t" data-i18n="nav.categories" data-i18n-es="Categorías">Categorías</span>
   </a>
