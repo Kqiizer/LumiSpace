@@ -41,24 +41,41 @@ function getCategoryImage($imagen, $BASE) {
 // Obtener productos destacados de las primeras 2 categorías
 $productos = [];
 if (!empty($categorias_db) && is_array($categorias_db)) {
+  // Verificar qué columnas existen en la tabla productos
+  $check_activo = $conn->query("SHOW COLUMNS FROM productos LIKE 'activo'");
+  $has_activo = $check_activo && $check_activo->num_rows > 0;
+  $check_estado = $conn->query("SHOW COLUMNS FROM productos LIKE 'estado'");
+  $has_estado = $check_estado && $check_estado->num_rows > 0;
+  
   // Tomar las primeras 2 categorías
   $categorias_mostrar = array_slice($categorias_db, 0, 2);
   
   foreach ($categorias_mostrar as $cat) {
     $cat_id = (int)($cat['id'] ?? 0);
     
-    // Obtener un producto destacado de esta categoría
+    // Construir la consulta SQL dinámicamente según las columnas disponibles
+    $where_conditions = ["p.categoria_id = ?"];
+    $types = "i";
+    $params = [$cat_id];
+    
+    if ($has_activo) {
+      $where_conditions[] = "p.activo = 1";
+    } elseif ($has_estado) {
+      $where_conditions[] = "p.estado = 'activo'";
+    }
+    
     $sql = "SELECT p.*, c.nombre AS categoria
             FROM productos p
             LEFT JOIN categorias c ON p.categoria_id = c.id
-            WHERE p.categoria_id = ? 
-            AND (p.activo = 1 OR p.estado = 'activo')
+            WHERE " . implode(" AND ", $where_conditions) . "
             ORDER BY p.id DESC
             LIMIT 1";
     
     $stmt = $conn->prepare($sql);
     if ($stmt) {
-      $stmt->bind_param("i", $cat_id);
+      if ($params) {
+        $stmt->bind_param($types, ...$params);
+      }
       $stmt->execute();
       $result = $stmt->get_result();
       $producto = $result->fetch_assoc();
@@ -77,7 +94,39 @@ if (!empty($categorias_db) && is_array($categorias_db)) {
   }
 }
 
-// Si no hay productos, usar las categorías directamente como productos
+// Si no hay productos de categorías específicas, obtener productos destacados generales
+if (empty($productos)) {
+  // Verificar qué columnas existen
+  $check_activo = $conn->query("SHOW COLUMNS FROM productos LIKE 'activo'");
+  $has_activo = $check_activo && $check_activo->num_rows > 0;
+  $check_estado = $conn->query("SHOW COLUMNS FROM productos LIKE 'estado'");
+  $has_estado = $check_estado && $check_estado->num_rows > 0;
+  
+  $where_conditions = [];
+  if ($has_activo) {
+    $where_conditions[] = "p.activo = 1";
+  } elseif ($has_estado) {
+    $where_conditions[] = "p.estado = 'activo'";
+  }
+  
+  $where_sql = !empty($where_conditions) ? "WHERE " . implode(" AND ", $where_conditions) : "";
+  
+  $sql = "SELECT p.*, c.nombre AS categoria
+          FROM productos p
+          LEFT JOIN categorias c ON p.categoria_id = c.id
+          $where_sql
+          ORDER BY p.id DESC
+          LIMIT 2";
+  
+  $res = $conn->query($sql);
+  if ($res) {
+    while ($row = $res->fetch_assoc()) {
+      $productos[] = $row;
+    }
+  }
+}
+
+// Si aún no hay productos, usar las categorías directamente como productos
 if (empty($productos) && !empty($categorias_db)) {
   $categorias_mostrar = array_slice($categorias_db, 0, 2);
   foreach ($categorias_mostrar as $cat) {
