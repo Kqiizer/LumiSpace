@@ -252,3 +252,92 @@ body.dark .room-items {
 body.dark .room-price {
   background-color: #6e5b43;
 }
+
+/* ==== RESPONSIVE BREAKPOINTS ==== */
+@media (max-width: 1200px) {
+  .hero {
+    padding: 60px 0;
+  }
+  .hero .container {
+    gap: 35px;
+  }
+  .hero-title {
+    font-size: 42px;
+  }
+}
+
+@media (max-width: 992px) {
+  .hero .container {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+  .hero-content {
+    order: 2;
+  }
+  .hero-images {
+    order: 1;
+    justify-content: center;
+  }
+  .hero-buttons {
+    justify-content: center;
+  }
+  .hero-rating {
+    justify-content: center;
+  }
+  .room-card {
+    max-width: 320px;
+    margin: 0 auto;
+  }
+  .nav-arrows {
+    position: static;
+    justify-content: center;
+    margin-top: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .hero {
+    padding: 50px 0;
+  }
+  .hero-title {
+    font-size: 34px;
+  }
+  .hero-subtitle {
+    font-size: 15px;
+  }
+  .hero-buttons {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .btn-primary,
+  .btn-secondary {
+    width: 100%;
+    justify-content: center;
+  }
+  .hero-images {
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+  }
+  .room-card {
+    max-width: 100%;
+  }
+  .room-image {
+    height: 220px;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero-title {
+    font-size: 30px;
+  }
+  .hero {
+    padding: 40px 0;
+  }
+  .room-image {
+    height: 200px;
+  }
+  .room-card {
+    border-radius: 16px;
+  }
+}

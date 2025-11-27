@@ -221,6 +221,12 @@ $checkoutUrl = $USER_ID
   </main>
 
   <script>
+    // Definir BASE_URL para product-actions.js (igual que en catálogo)
+    const bodyBase = document.body.getAttribute('data-base');
+    window.BASE_URL = bodyBase || '/';
+  </script>
+  <script src="<?= $BASE ?>js/product-actions.js"></script>
+  <script>
     document.addEventListener('DOMContentLoaded', () => {
       const base = document.body.dataset.base;
 

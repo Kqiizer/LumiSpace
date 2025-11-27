@@ -45,8 +45,13 @@ if (session_status() === PHP_SESSION_NONE)
   </div>
 
   <!-- ✅ Scripts (deben ir al final del body) -->
+  <script>
+    // Definir BASE_URL para product-actions.js
+    const bodyBase = document.body.getAttribute('data-base');
+    window.BASE_URL = bodyBase || '/';
+  </script>
   <script src="js/header.js" defer></script>
-  <script src="js/product-actions.js" defer></script>
+  <script src="js/product-actions.js"></script>
   <script src="js/script.js" defer></script>
 </body>
 

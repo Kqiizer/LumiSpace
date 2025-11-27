@@ -66,14 +66,13 @@ require_once __DIR__ . '/../includes/header.php';
                             <div class="empty-ripple"></div>
                             <div class="empty-ripple"></div>
                         </div>
-                        <h2 class="empty-title">Tu lista de deseos está vacía</h2>
+                        <h2 class="empty-title">Aún no tienes favoritos</h2>
                         <p class="empty-description">
-                            Aún no has guardado productos en tus favoritos.<br>
-                            Explora nuestra colección y descubre las piezas perfectas para iluminar tu espacio.
+                            Comienza a explorar y guarda tus luminarias favoritas
                         </p>
                         <a href="<?= $BASE ?>views/catalogo.php" class="empty-cta">
                             <i class="fas fa-search"></i>
-                            <span>Explorar Catálogo</span>
+                            <span>Explorar más productos</span>
                         </a>
                     </div>
                 </div>
