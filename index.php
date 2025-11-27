@@ -46,7 +46,7 @@ if (session_status() === PHP_SESSION_NONE)
 
   <!-- ✅ Scripts (deben ir al final del body) -->
   <script src="js/header.js" defer></script>
-  <script src="js/product-actions.js" defer></script>
+  <script src="js/product-actions.js"></script>
   <script src="js/script.js" defer></script>
 </body>
 
