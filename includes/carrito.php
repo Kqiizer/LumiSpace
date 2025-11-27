@@ -110,12 +110,13 @@ $checkoutUrl = $USER_ID
             $qty = (int)($item['cantidad'] ?? 1);
             $precio = (float)($item['precio'] ?? 0);
             $nombre = htmlspecialchars($item['nombre'] ?? 'Producto sin nombre');
-            $imagen = htmlspecialchars(publicImageUrl($item['imagen'] ?? 'images/default.png'));
+            // carritoObtener() ya procesa la imagen con publicImageUrl(), así que la usamos directamente
+            $imagen = htmlspecialchars($item['imagen'] ?? $BASE . 'images/default.png');
             $totalItem = $precio * $qty;
           ?>
           <div class="product-item" data-id="<?= $id ?>">
             <div class="product-image">
-              <img src="<?= $imagen ?>" alt="<?= $nombre ?>">
+              <img src="<?= $imagen ?>" alt="<?= $nombre ?>" onerror="this.src='<?= $BASE ?>images/default.png'">
             </div>
             <div class="product-details">
               <div class="product-name"><?= $nombre ?></div>

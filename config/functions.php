@@ -83,12 +83,14 @@ function carritoObtener(): array
             continue;
 
         $subtotal = $item['precio'] * $item['cantidad'];
+        $imagenRaw = $item['imagen'] ?? '';
         $resultado[] = [
             'producto_id' => $id,
-            'nombre' => $item['nombre'],
+            'nombre' => $item['nombre'] ?? 'Producto sin nombre',
             'precio' => $item['precio'],
-            'imagen' => publicImageUrl($item['imagen']),
+            'imagen' => publicImageUrl($imagenRaw ?: 'images/default.png'),
             'cantidad' => $item['cantidad'],
+            'categoria' => $item['categoria'] ?? '',
             'subtotal' => $subtotal
         ];
     }
