@@ -20,11 +20,19 @@ if (session_status() === PHP_SESSION_NONE) {
 require_once __DIR__ . "/../../config/functions.php";
 require_once __DIR__ . "/../../config/funciones/roles.php";
 
+// ✅ BASE URL segura
+if (defined('BASE_URL')) {
+    $BASE = rtrim(BASE_URL, '/') . '/';
+} else {
+    $root = rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'] ?? '/')), '/');
+    $BASE = ($root === '' ? '/' : $root . '/');
+}
+
 // ====================================
 // 🔐 Autenticación
 // ====================================
 if (!isset($_SESSION['usuario_id']) || ($_SESSION['usuario_rol'] ?? '') !== 'admin') {
-    header("Location: ../login.php?error=unauthorized");
+    header("Location: {$BASE}admin/login.php?error=unauthorized");
     exit();
 }
 
@@ -34,7 +42,7 @@ if (!isset($_SESSION['usuario_id']) || ($_SESSION['usuario_rol'] ?? '') !== 'adm
 $rolId = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
 if (!$rolId || $rolId <= 0) {
     $_SESSION['error_message'] = "ID de rol inválido.";
-    header("Location: roles.php?error=invalid_id");
+    header("Location: {$BASE}admin/roles/roles.php?error=invalid_id");
     exit();
 }
 
@@ -42,7 +50,7 @@ if (!$rolId || $rolId <= 0) {
 $rol = getRolById($rolId);
 if (!$rol) {
     $_SESSION['error_message'] = "El rol no existe o fue eliminado.";
-    header("Location: roles.php?error=not_found");
+    header("Location: {$BASE}admin/roles/roles.php?error=not_found");
     exit();
 }
 
@@ -85,7 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($actualizado) {
             $_SESSION['success_message'] = "✅ Rol actualizado correctamente.";
-            header("Location: roles.php?msg=" . urlencode("Rol actualizado exitosamente."));
+            header("Location: {$BASE}admin/roles/roles.php?msg=" . urlencode("Rol actualizado exitosamente."));
             exit();
         } else {
             $errors['general'] = "No se pudo actualizar. Puede que ya exista otro rol con ese nombre.";
@@ -113,41 +121,6 @@ $rol['creado_en'] = $rol['creado_en'] ?? date('Y-m-d');
 <title>Editar Rol - LumiSpace</title>
 <link rel="stylesheet" href="../../css/dashboard.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-<style>
-:root {
-  --act1:#a1683a; --act2:#8f5e4b;
-  --warn1:#f6d365; --warn2:#fda085;
-  --radius:12px;
-}
-section.content.wide{max-width:900px;margin:0 auto;padding:20px;}
-.page-header{background:linear-gradient(135deg,var(--warn1),var(--warn2));color:#fff;padding:24px;border-radius:16px;margin-bottom:24px;box-shadow:0 8px 20px rgba(0,0,0,.15);}
-.page-header h2{margin:0;display:flex;align-items:center;gap:10px;font-size:1.8rem;}
-.page-header .badge{display:inline-block;background:rgba(255,255,255,.2);padding:6px 12px;border-radius:20px;font-size:.85rem;margin-top:8px;}
-.form-card{background:#fff;border-radius:16px;padding:32px;box-shadow:0 4px 16px rgba(0,0,0,.1);}
-.alert{padding:16px 20px;border-radius:10px;margin-bottom:20px;display:flex;align-items:center;gap:12px;}
-.alert--error{background:#f8d7da;color:#721c24;border-left:4px solid #dc3545;}
-.alert--warning{background:#fff3cd;color:#856404;border-left:4px solid #ffc107;}
-.form-group{margin-bottom:24px;}
-label{font-weight:600;margin-bottom:8px;display:block;}
-input,textarea{width:100%;padding:12px 16px;border:2px solid #e0d9cf;border-radius:10px;font-size:1rem;}
-input:focus,textarea:focus{border-color:#f6d365;box-shadow:0 0 0 3px rgba(246,211,101,.2);outline:none;}
-textarea{resize:vertical;min-height:100px;}
-.form-actions{display:flex;gap:12px;justify-content:flex-end;padding-top:24px;border-top:1px solid #eee;}
-.btn{padding:12px 24px;border-radius:10px;font-weight:600;cursor:pointer;border:none;transition:.3s ease;display:flex;align-items:center;gap:8px;}
-.btn-primary{background:linear-gradient(135deg,var(--warn1),var(--warn2));color:#fff;}
-.btn-primary:hover{transform:translateY(-2px);box-shadow:0 6px 14px rgba(246,211,101,.4);}
-.btn-secondary{background:#6c757d;color:#fff;}
-.btn-danger{background:#dc3545;color:#fff;}
-.info-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px;}
-.stat-item{background:#f8f9fa;padding:16px;border-radius:10px;border-left:4px solid var(--act1);}
-.permissions-section{background:#fff;border-radius:16px;padding:32px;box-shadow:0 4px 16px rgba(0,0,0,.1);}
-.permission-module{background:#fafafa;padding:16px;border-radius:10px;border-left:3px solid var(--act1);}
-.permission-module strong{color:var(--act1);display:block;margin-bottom:6px;}
-.permission-item{display:flex;align-items:center;gap:8px;padding:6px;background:#fff;border-radius:8px;margin-bottom:6px;}
-.permission-item i{color:#28a745;}
-.quick-actions{display:flex;gap:12px;margin-top:24px;padding-top:24px;border-top:1px solid #eee;}
-@media(max-width:768px){.form-actions,.quick-actions{flex-direction:column}.btn{width:100%;justify-content:center}}
-</style>
 </head>
 <body>
 <?php include(__DIR__ . "/../../includes/sidebar-admin.php"); ?>
@@ -194,8 +167,15 @@ textarea{resize:vertical;min-height:100px;}
   </div>
 
   <div class="form-actions">
-    <a href="roles.php" class="btn btn-secondary"><i class="fas fa-times"></i> Cancelar</a>
-    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Guardar Cambios</button>
+
+    <!-- ✅ BOTÓN CANCELAR CORREGIDO -->
+    <a href="<?= $BASE ?>admin/roles/roles.php" class="btn btn-secondary">
+      <i class="fas fa-times"></i> Cancelar
+    </a>
+
+    <button type="submit" class="btn btn-primary">
+      <i class="fas fa-save"></i> Guardar Cambios
+    </button>
   </div>
 </form>
 </div>

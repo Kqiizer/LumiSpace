@@ -16,11 +16,19 @@ require_once __DIR__ . "/../../config/functions.php";
 require_once __DIR__ . "/../../config/db.php";
 require_once __DIR__ . "/../../config/funciones/roles.php";
 
+// ✅ BASE URL segura
+if (defined('BASE_URL')) {
+  $BASE = rtrim(BASE_URL, '/') . '/';
+} else {
+  $root = rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'] ?? '/')), '/');
+  $BASE = ($root === '' ? '/' : $root . '/');
+}
+
 // ====================================
 // 🔐 AUTENTICACIÓN
 // ====================================
 if (!isset($_SESSION['usuario_id']) || ($_SESSION['usuario_rol'] ?? '') !== 'admin') {
-    header("Location: ../login.php?error=unauthorized");
+    header("Location: {$BASE}views/login.php?error=unauthorized");
     exit();
 }
 
@@ -79,40 +87,17 @@ function getRoleIcon(string $role): string {
 <title>Gestión de Roles - LumiSpace</title>
 <link rel="stylesheet" href="../../css/dashboard.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<!-- ✅ FIX para asegurar que el botón sea clickeable -->
 <style>
-:root {
-  --act1:#8b7355;--act2:#cbbca4;--shadow-md:0 4px 16px rgba(0,0,0,.12);
-}
-.page-header{display:flex;justify-content:space-between;align-items:center;background:linear-gradient(135deg,var(--act1),var(--act2));color:#fff;padding:24px;border-radius:16px;box-shadow:var(--shadow-md);margin-bottom:24px;}
-.btn-add{background:#fff;color:var(--act1);border:none;font-weight:600;padding:12px 24px;border-radius:12px;display:flex;align-items:center;gap:8px;transition:.3s;text-decoration:none;}
-.btn-add:hover{background:var(--act1);color:#fff;transform:translateY(-2px);}
-.table-wrapper{background:#fff;border-radius:12px;box-shadow:var(--shadow-md);overflow:hidden;}
-.table{width:100%;border-collapse:collapse;}
-.table th,.table td{padding:16px 20px;border-bottom:1px solid #e0e0e0;text-align:left;}
-.table th{background:#f8f9fa;text-transform:uppercase;font-size:.85rem;}
-.role-badge{display:inline-flex;align-items:center;gap:8px;color:#fff;border-radius:20px;padding:8px 14px;font-size:.9rem;font-weight:600;}
-.role-badge--danger{background:linear-gradient(135deg,#f093fb,#f5576c);}
-.role-badge--info{background:linear-gradient(135deg,#4facfe,#00f2fe);}
-.role-badge--success{background:linear-gradient(135deg,#11998e,#38ef7d);}
-.role-badge--primary{background:linear-gradient(135deg,var(--act1),var(--act2));}
-.role-badge--secondary{background:linear-gradient(135deg,#868f96,#596164);}
-.actions{display:flex;gap:6px;}
-.btn-action{width:36px;height:36px;border:none;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.3s;text-decoration:none;}
-.btn-action--edit{background:#fff3cd;color:#856404;}
-.btn-action--edit:hover{background:#ffc107;color:#fff;}
-.btn-action--perm{background:#e2f0ff;color:#004085;}
-.btn-action--perm:hover{background:#007bff;color:#fff;}
-.btn-action--delete{background:#f8d7da;color:#721c24;}
-.btn-action--delete:hover{background:#dc3545;color:#fff;}
-.count-badge{background:#f4f4f4;padding:4px 10px;border-radius:10px;font-size:.8rem;}
-.alert{margin-bottom:15px;padding:15px 20px;border-radius:10px;display:flex;align-items:center;gap:10px;}
-.alert--success{background:#d4edda;color:#155724;border-left:4px solid #28a745;}
-.alert--error{background:#f8d7da;color:#721c24;border-left:4px solid #dc3545;}
-.empty-state{text-align:center;padding:80px 20px;color:#888;}
-.empty-state i{font-size:3rem;opacity:.3;margin-bottom:10px;}
-.current-role{background:#fff3cd;border-left:4px solid #ffc107;padding:14px 20px;border-radius:10px;display:flex;align-items:center;gap:10px;margin-bottom:15px;font-weight:600;color:#856404;}
-.current-role i{color:#ffc107;}
+  .btn-add {
+    position: relative;
+    z-index: 10;
+    pointer-events: auto !important;
+    cursor: pointer !important;
+  }
 </style>
+
 </head>
 <body>
 <?php include(__DIR__ . "/../../includes/sidebar-admin.php"); ?>
@@ -125,7 +110,11 @@ function getRoleIcon(string $role): string {
       <h2><i class="fa-solid fa-user-shield"></i> Gestión de Roles</h2>
       <p>Administra los roles y permisos del sistema LumiSpace</p>
     </div>
-    <a href="roles-agregar.php" class="btn-add"><i class="fa fa-plus-circle"></i> Nuevo Rol</a>
+
+    <!-- ✅ MISMO DISEÑO, PERO FUNCIONAL -->
+    <a href="<?= $BASE ?>admin/roles/roles-agregar.php" class="btn-add">
+      <i class="fa fa-plus-circle"></i> Nuevo Rol
+    </a>
   </div>
 
   <!-- 🔹 Rol actual -->
@@ -174,7 +163,9 @@ function getRoleIcon(string $role): string {
               <i class="fa fa-user-shield"></i>
               <h3>No hay roles registrados</h3>
               <p>Crea tu primer rol para comenzar la gestión de usuarios.</p>
-              <a href="roles-agregar.php" class="btn-add"><i class="fa fa-plus-circle"></i> Crear Rol</a>
+              <a href="<?= $BASE ?>views/roles/roles-agregar.php" class="btn-add">
+                <i class="fa fa-plus-circle"></i> Crear Rol
+              </a>
             </div>
           </td></tr>
         <?php endif; ?>
