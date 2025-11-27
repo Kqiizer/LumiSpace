@@ -1,6 +1,10 @@
 <?php
 if (session_status() === PHP_SESSION_NONE)
   session_start();
+
+// Definir BASE igual que en header.php
+$root = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? '/'), '/');
+$BASE = ($root === '' || $root === '/') ? '/' : $root . '/';
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -46,13 +50,12 @@ if (session_status() === PHP_SESSION_NONE)
 
   <!-- ✅ Scripts (deben ir al final del body) -->
   <script>
-    // Definir BASE_URL para product-actions.js
-    const bodyBase = document.body.getAttribute('data-base');
-    window.BASE_URL = bodyBase || '/';
+    // Definir BASE_URL para product-actions.js (igual que en catálogo)
+    window.BASE_URL = "<?= $BASE ?>";
   </script>
-  <script src="js/header.js" defer></script>
-  <script src="js/product-actions.js"></script>
-  <script src="js/script.js" defer></script>
+  <script src="<?= $BASE ?>js/product-actions.js"></script>
+  <script src="<?= $BASE ?>js/header.js" defer></script>
+  <script src="<?= $BASE ?>js/script.js" defer></script>
 </body>
 
 </html>
