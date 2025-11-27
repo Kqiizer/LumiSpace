@@ -41,48 +41,6 @@
         
         // Animar cards al cargar
         animateCards();
-        
-        // Escuchar cuando se agreguen favoritos desde otras páginas
-        listenForFavoritesUpdates();
-    }
-
-    // Escuchar actualizaciones de favoritos desde otras páginas
-    function listenForFavoritesUpdates() {
-        // Solo verificar si estamos en estado vacío
-        if (favoritesData.length === 0) {
-            // Verificar periódicamente si se agregaron favoritos desde otras páginas
-            const checkInterval = setInterval(async () => {
-                try {
-                    const response = await fetch(`${BASE}api/wishlist/count.php`, {
-                        cache: 'no-store'
-                    });
-                    const data = await response.json();
-                    const count = parseInt(data.count || 0, 10);
-                    
-                    // Si hay favoritos ahora, recargar la página
-                    if (count > 0) {
-                        clearInterval(checkInterval);
-                        const emptyContainer = document.getElementById('emptyStateContainer');
-                        if (emptyContainer) {
-                            emptyContainer.style.opacity = '0';
-                            emptyContainer.style.transition = 'opacity 0.3s ease';
-                            setTimeout(() => {
-                                window.location.reload();
-                            }, 300);
-                        } else {
-                            window.location.reload();
-                        }
-                    }
-                } catch (error) {
-                    console.warn('Error verificando favoritos:', error);
-                }
-            }, 1500); // Verificar cada 1.5 segundos
-            
-            // Limpiar intervalo después de 5 minutos para no consumir recursos
-            setTimeout(() => {
-                clearInterval(checkInterval);
-            }, 300000);
-        }
     }
 
     // ========================================
