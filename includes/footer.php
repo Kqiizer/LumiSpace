@@ -2,23 +2,16 @@
 <?php
 $BASE = defined('BASE_URL') ? rtrim(BASE_URL, '/') . '/' : '/';
 
-// Obtener ID de la categoría "Exterior" para el enlace
-$categoria_exterior_id = null;
-if (function_exists('getDBConnection')) {
+// Obtener categorías para los enlaces del footer
+$categorias_footer = [];
+if (function_exists('getCategorias')) {
     try {
-        $conn = getDBConnection();
-        // Buscar categoría que contenga "Exterior" en el nombre
-        $stmt = $conn->prepare("SELECT id FROM categorias WHERE nombre LIKE ? LIMIT 1");
-        $nombre_exterior = '%Exterior%';
-        $stmt->bind_param("s", $nombre_exterior);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        if ($row = $result->fetch_assoc()) {
-            $categoria_exterior_id = (int)$row['id'];
-        }
-        $stmt->close();
+        $categorias_footer = getCategorias();
+        // Limitar a las primeras 3 categorías para el footer
+        $categorias_footer = array_slice($categorias_footer, 0, 3);
     } catch (Exception $e) {
-        // Si hay error, dejar null
+        // Si hay error, dejar vacío
+        $categorias_footer = [];
     }
 }
 ?>
@@ -37,13 +30,15 @@ if (function_exists('getDBConnection')) {
             <span>LumiSpace</span>
           </div>
           <p class="footer-description">
-            Ilumina tu hogar con estilo ✨. Diseños modernos y funcionales que transforman cualquier espacio.
+            Ilumina tu hogar con estilo
+            <img src="<?= $BASE ?>imagenes/estrellas.png" alt="Decoración de estrellas" class="footer-stars">
+            Diseños modernos y funcionales que transforman cualquier espacio.
           </p>
           <div class="footer-social">
-            <a href="#" class="social-link"><i class="fab fa-facebook-f"></i></a>
-            <a href="#" class="social-link"><i class="fab fa-twitter"></i></a>
-            <a href="#" class="social-link"><i class="fab fa-instagram"></i></a>
-            <a href="#" class="social-link"><i class="fab fa-youtube"></i></a>
+            <a href="https://www.facebook.com/profile.php?id=61582646287277&sk=about_contact_and_basic_info" class="social-link" target="_blank" rel="noopener"><i class="fab fa-facebook-f"></i></a>
+            <a href="https://twitter.com/LumiSapce_" class="social-link" target="_blank" rel="noopener"><i class="fab fa-twitter"></i></a>
+            <a href="https://www.instagram.com/lumi_space0/?utm_source=ig_web_button_share_sheet" class="social-link" target="_blank" rel="noopener"><i class="fab fa-instagram"></i></a>
+            <a href="https://www.youtube.com/@LumiSpace0" class="social-link" target="_blank" rel="noopener"><i class="fab fa-youtube"></i></a>
           </div>
         </div>
 
@@ -53,8 +48,6 @@ if (function_exists('getDBConnection')) {
           <ul class="footer-links">
             <li><a href="../index.php">Inicio</a></li>
             <li><a href="../views/catalogo.php">Catálogo</a></li>
-            <li><a href="../views/proyectos.php">Proyectos</a></li>
-            <li><a href="../views/servicios.php">Servicios</a></li>
             <li><a href="../views/contacto.php">Contacto</a></li>
           </ul>
         </div>
@@ -63,11 +56,13 @@ if (function_exists('getDBConnection')) {
         <div class="footer-section">
           <h4 class="footer-title">Categorías</h4>
           <ul class="footer-links">
-            <li><a href="#">Interior</a></li>
-            <li><a href="<?= $categoria_exterior_id ? $BASE . 'views/catalogo.php?categoria=' . $categoria_exterior_id : '#' ?>">Exterior</a></li>
-            <li><a href="#">Decorativo</a></li>
-            <li><a href="#">Iluminación LED</a></li>
-            <li><a href="#">Smart Home</a></li>
+            <?php if (!empty($categorias_footer)): ?>
+              <?php foreach ($categorias_footer as $cat): ?>
+                <li><a href="<?= $BASE ?>views/catalogo.php?categoria=<?= (int)$cat['id'] ?>"><?= htmlspecialchars($cat['nombre']) ?></a></li>
+              <?php endforeach; ?>
+            <?php else: ?>
+              <li><a href="<?= $BASE ?>views/catalogo.php">Ver catálogo</a></li>
+            <?php endif; ?>
           </ul>
         </div>
 
@@ -108,24 +103,6 @@ if (function_exists('getDBConnection')) {
     </div>
   </div>
 
-  <!-- Newsletter -->
-  <div class="newsletter-section">
-    <div class="container">
-      <div class="newsletter-content">
-        <div class="newsletter-text">
-          <h3>Suscríbete a nuestro boletín</h3>
-          <p>Recibe ofertas exclusivas y las últimas novedades en iluminación</p>
-        </div>
-        <form class="newsletter-form">
-          <input type="email" placeholder="Tu correo electrónico" class="newsletter-input" required>
-          <button type="submit" class="newsletter-btn">
-            Suscribirse <i class="fas fa-paper-plane"></i>
-          </button>
-        </form>
-      </div>
-    </div>
-  </div>
-
   <!-- Bottom -->
   <div class="footer-bottom">
     <div class="container">
@@ -138,16 +115,14 @@ if (function_exists('getDBConnection')) {
           <div class="payment-icons">
             <i class="fab fa-cc-visa"></i>
             <i class="fab fa-cc-mastercard"></i>
-            <i class="fab fa-cc-paypal"></i>
-            <i class="fab fa-cc-amex"></i>
           </div>
         </div>
         <div class="footer-policies">
-          <a href="#">Política de Privacidad</a>
+          <a href="<?= $BASE ?>docs/politica-privacidad.html" target="_blank" rel="noopener">Política de Privacidad</a>
           <span>|</span>
-          <a href="#">Términos de Uso</a>
+          <a href="<?= $BASE ?>docs/terminos-condiciones.html" target="_blank" rel="noopener">Términos de Uso</a>
           <span>|</span>
-          <a href="#">Cookies</a>
+          <a href="<?= $BASE ?>docs/politica-privacidad.html#cookies" target="_blank" rel="noopener">Cookies</a>
         </div>
       </div>
     </div>

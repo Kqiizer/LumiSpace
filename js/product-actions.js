@@ -9,6 +9,11 @@
     'use strict';
 
     const BASE = window.BASE_URL || document.body.dataset.base || '/';
+    const FAVORITE_MESSAGES = {
+        added: '✔ Producto agregado a tus favoritos.',
+        removed: '❌ Producto eliminado de favoritos.',
+        login: 'Debes iniciar sesión para guardar productos en favoritos.'
+    };
 
     // Toast notification
     function showToast(message, type = 'success') {
@@ -83,7 +88,7 @@
             });
 
             if (response.status === 401) {
-                showToast('Debes iniciar sesión para agregar favoritos', 'warning');
+                showToast(FAVORITE_MESSAGES.login, 'warning');
                 setTimeout(() => {
                     const next = encodeURIComponent(window.location.pathname + window.location.search);
                     window.location.href = `${BASE}views/login.php?next=${next}`;
@@ -94,18 +99,23 @@
             const data = await response.json();
 
             if (data.ok) {
-                button.classList.toggle('active', data.in_wishlist);
-                const icon = button.querySelector('i');
-                if (icon) {
-                    icon.className = data.in_wishlist ? 'fas fa-heart' : 'far fa-heart';
+                if (button) {
+                    button.classList.toggle('active', data.in_wishlist);
+                    const icon = button.querySelector('i');
+                    if (icon) {
+                        icon.className = data.in_wishlist ? 'fas fa-heart' : 'far fa-heart';
+                    }
+                    button.setAttribute('aria-pressed', data.in_wishlist ? 'true' : 'false');
+                    button.title = data.in_wishlist ? 'Quitar de favoritos' : 'Agregar a favoritos';
                 }
+
                 showToast(
-                    data.in_wishlist ? '❤️ Agregado a favoritos' : 'Eliminado de favoritos',
-                    'success'
+                    data.in_wishlist ? FAVORITE_MESSAGES.added : FAVORITE_MESSAGES.removed,
+                    data.in_wishlist ? 'success' : 'warning'
                 );
 
                 // Update favorites badge if exists
-                updateFavoritesBadge();
+                updateFavoritesBadge(data.count);
                 
                 // Si estamos en la página de favoritos y se agregó un favorito, recargar después de un delay
                 const isFavoritesPage = window.location.pathname.includes('favoritos.php') || 
@@ -141,11 +151,17 @@
     }
 
     // Update favorites badge
-    function updateFavoritesBadge() {
+    function updateFavoritesBadge(nextCount) {
+        const badge = document.querySelector('#fav-badge, .fav-badge');
+        if (badge && typeof nextCount === 'number') {
+            badge.textContent = nextCount;
+            badge.style.display = nextCount > 0 ? '' : 'none';
+            return;
+        }
+
         fetch(BASE + 'api/wishlist/count.php')
             .then(res => res.json())
             .then(data => {
-                const badge = document.querySelector('#fav-badge, .fav-badge');
                 if (badge && data.count !== undefined) {
                     badge.textContent = data.count;
                     badge.style.display = data.count > 0 ? '' : 'none';

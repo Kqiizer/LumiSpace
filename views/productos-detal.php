@@ -143,6 +143,23 @@ if (ls_table_exists($conn, 'producto_imagenes')) {
 }
 $thumbs = array_values(array_unique(array_filter($thumbs)));
 
+/* ---------------- Favoritos ---------------- */
+$favoriteIds = [];
+$isFavorite = false;
+if ($USER_ID > 0 && favoritosAvailable()) {
+  if ($favStmt = $conn->prepare("SELECT producto_id FROM favoritos WHERE usuario_id=?")) {
+    $favStmt->bind_param("i", $USER_ID);
+    if ($favStmt->execute()) {
+      $favRes = $favStmt->get_result();
+      while ($row = $favRes->fetch_assoc()) {
+        $favoriteIds[] = (int)$row['producto_id'];
+      }
+    }
+    $favStmt->close();
+  }
+  $isFavorite = in_array($id, $favoriteIds, true);
+}
+
 /* ---------------- Relacionados ---------------- */
 $rel = [];
 $relCols = ["id", "nombre"];
@@ -300,7 +317,15 @@ if ($q) {
             </div>
 
             <div class="secondary-actions">
-              <button class="wishlist-btn" id="wishlistBtn"><i class="far fa-heart"></i> Add to Wishlist</button>
+              <button
+                class="wishlist-btn js-wish <?= $isFavorite ? 'active' : '' ?>"
+                id="wishlistBtn"
+                data-id="<?= (int)$prod['id'] ?>"
+                type="button"
+              >
+                <i class="<?= $isFavorite ? 'fas' : 'far' ?> fa-heart"></i>
+                <?= $isFavorite ? 'En tus favoritos' : 'Agregar a favoritos' ?>
+              </button>
               <button class="compare-btn" id="compareBtn"><i class="fas fa-sync-alt"></i> Compare</button>
               <button class="share-btn" id="shareBtn"><i class="fas fa-share-alt"></i> Share</button>
             </div>
@@ -404,8 +429,14 @@ if ($q) {
           <div class="product-card">
             <div class="product-image" style="background-image:url('<?= htmlspecialchars($rp['img']) ?>')">
               <div class="product-actions">
-                <button class="action-btn rel-wish" data-id="<?= (int) $rp['id'] ?>" title="Add to Wishlist"><i
-                    class="fas fa-heart"></i></button>
+                <?php $relFavorite = in_array((int)$rp['id'], $favoriteIds, true); ?>
+                <button
+                  class="action-btn js-wish <?= $relFavorite ? 'active' : '' ?>"
+                  data-id="<?= (int)$rp['id'] ?>"
+                  title="<?= $relFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos' ?>"
+                >
+                  <i class="<?= $relFavorite ? 'fas' : 'far' ?> fa-heart"></i>
+                </button>
                 <a class="action-btn" title="Quick View"
                   href="<?= $BASE ?>views/productos-detal.php?id=<?= (int) $rp['id'] ?>"><i class="fas fa-eye"></i></a>
                 <button class="action-btn rel-comp" data-id="<?= (int) $rp['id'] ?>" title="Compare"><i
@@ -553,35 +584,6 @@ if ($q) {
         await addToCart(qty, true); // redirige dentro
       });
 
-      /* ---------- Wishlist ---------- */
-      const wishBtn = document.getElementById('wishlistBtn');
-      wishBtn?.addEventListener('click', async () => {
-        if (!USER) {
-          const next = location.pathname + location.search;
-          location.href = BASE + 'views/login.php?next=' + encodeURIComponent(next);
-          return;
-        }
-        wishBtn.disabled = true;
-        try {
-          const res = await fetch(BASE + 'api/wishlist/toggle.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ producto_id: pid })
-          });
-          if (res.status === 401) {
-            const next = location.pathname + location.search;
-            location.href = BASE + 'views/login.php?next=' + encodeURIComponent(next);
-            return;
-          }
-          const data = await res.json();
-          if (!data.ok) throw new Error(data.msg || 'Error');
-          if (data.in_wishlist) location.href = BASE + 'index/favoritos.php';
-        } catch (e) {
-          alert('No se pudo actualizar tu lista de favoritos.');
-          console.error(e);
-        } finally { wishBtn.disabled = false; }
-      });
-
       /* ---------- Compare (localStorage) ---------- */
       const LS_COMP = 'ls_compare';
       const compBtn = document.getElementById('compareBtn');
@@ -598,35 +600,12 @@ if ($q) {
       /* ---------- Relacionados: solo wish/comp; el ojo (<a>) navega normal ---------- */
       const relWrap = document.querySelector('.related-products');
       relWrap?.addEventListener('click', async (e) => {
-        const wish = e.target.closest('.rel-wish');
         const comp = e.target.closest('.rel-comp');
-        if (!wish && !comp) return;
+        if (!comp) return;
 
         e.preventDefault();
         e.stopPropagation();
-
-        if (comp) { toggleCompare(comp.dataset.id); return; }
-
-        if (wish) {
-          if (!USER) {
-            const next = location.pathname + location.search;
-            location.href = BASE + 'views/login.php?next=' + encodeURIComponent(next);
-            return;
-          }
-          wish.disabled = true;
-          try {
-            const res = await fetch(BASE + 'api/wishlist/toggle.php', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ producto_id: parseInt(wish.dataset.id || '0', 10) })
-            });
-            const data = await res.json();
-            if (!data.ok) throw new Error(data.msg || 'Error');
-            if (data.in_wishlist) location.href = BASE + 'index/favoritos.php';
-          } catch (e) {
-            alert('No se pudo actualizar tu lista de favoritos.');
-          } finally { wish.disabled = false; }
-        }
+        toggleCompare(comp.dataset.id);
       });
 
       /* ---------- Tabs ---------- */
@@ -660,6 +639,7 @@ if ($q) {
 
   </script>
 
+  <script src="<?= $BASE ?>js/product-actions.js?v=<?= time() ?>"></script>
   <script src="<?= $BASE ?>js/header.js?v=<?= time() ?>"></script>
   <!-- Nota: NO cargamos productos-detal.js externo para evitar duplicar listeners -->
 </body>

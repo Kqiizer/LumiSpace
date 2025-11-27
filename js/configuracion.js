@@ -1,6 +1,19 @@
 const RAW_BASE_PATH = window.APP_BASE_PATH || '/LumiSpace';
 const APP_BASE_PATH = (RAW_BASE_PATH || '').replace(/\/+$/, '') || '';
 const SESSION_STATUS_ENDPOINT = `${APP_BASE_PATH}/api/auth/session-status.php`;
+const DEFAULT_CURRENCY = 'MXN';
+
+syncThemePreference();
+window.addEventListener('storage', (event) => {
+    if (event.key === 'theme') {
+        syncThemePreference();
+    }
+});
+
+function syncThemePreference() {
+    const savedTheme = localStorage.getItem('theme');
+    document.body.classList.toggle('dark', savedTheme === 'dark');
+}
 
 let sessionState = {
     checked: false,
@@ -26,12 +39,17 @@ function initializeApp() {
         userSettings = JSON.parse(savedSettings);
     }
     
-    // Cargar moneda guardada
-    const savedCurrency = localStorage.getItem('lumispace_currency');
-    if (savedCurrency) {
-        document.getElementById('currencyValue').textContent = savedCurrency;
-    }
+    // Forzar moneda predeterminada
+    applyDefaultCurrency();
 }
+function applyDefaultCurrency() {
+    const currencyElement = document.getElementById('currencyValue');
+    if (currencyElement) {
+        currencyElement.textContent = DEFAULT_CURRENCY;
+    }
+    localStorage.setItem('lumispace_currency', DEFAULT_CURRENCY);
+}
+
 
 // Guardar configuraciones
 function saveSettings() {
@@ -218,160 +236,64 @@ function deletePayment(index) {
 
 // Moneda
 function showCurrencySelector() {
-    const currencies = [
-        {code: 'MXN', symbol: '$', name: 'Peso Mexicano'},
-        {code: 'USD', symbol: '$', name: 'Dólar Estadounidense'},
-        {code: 'CAD', symbol: '$', name: 'Dólar Canadiense'}
-    ];
-    
-    const currentCurrency = localStorage.getItem('lumispace_currency') || 'MXN';
-    
     const content = `
         <div class="modal-body">
-            ${currencies.map(currency => `
-                <div class="settings-item" style="margin-bottom: 5px; cursor: pointer; border-radius: 8px;" 
-                     onclick="selectCurrency('${currency.code}')">
-                    <div style="display: flex; flex-direction: column;">
-                        <span style="font-weight: 600;">${currency.code}</span>
-                        <span style="color: #666; font-size: 13px;">${currency.name}</span>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 15px;">
-                        <span style="color: #666; font-size: 18px;">${currency.symbol}</span>
-                        ${currentCurrency === currency.code ? '<span style="color: var(--color-primary); font-size: 20px;">✓</span>' : ''}
-                    </div>
+            <div class="settings-item" style="cursor: default; border-radius: 12px; opacity: 0.9;">
+                <div style="display: flex; flex-direction: column;">
+                    <span style="font-weight: 600;">${DEFAULT_CURRENCY}</span>
+                    <span style="color: #666; font-size: 13px;">Peso Mexicano</span>
                 </div>
-            `).join('')}
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <span style="color: #666; font-size: 18px;">$</span>
+                    <span style="color: var(--color-primary); font-size: 20px;">✓</span>
+                </div>
+            </div>
+            <p style="margin-top: 15px; font-size: 14px; color: #666; line-height: 1.6;">
+                Por ahora todas las operaciones se realizan únicamente en pesos mexicanos (MXN).
+            </p>
+            <button class="btn-primary" style="margin-top: 15px; width: 100%;" onclick="closeModal()">Entendido</button>
         </div>
     `;
     showModal('Moneda', content);
 }
 
 function selectCurrency(code) {
-    localStorage.setItem('lumispace_currency', code);
-    document.getElementById('currencyValue').textContent = code;
-    showSuccessMessage(`Moneda cambiada a ${code}`);
-    closeModal();
+    applyDefaultCurrency();
+    showInfoModal(
+        'Moneda fija',
+        'Actualmente solo manejamos MXN como moneda predeterminada.'
+    );
+}
+
+function showLegalDocument(title, docPath) {
+    const frameId = `legalDocFrame-${Date.now()}`;
+    const content = `
+        <div class="modal-body legal-modal">
+            <div class="legal-frame-wrapper">
+                <iframe
+                    id="${frameId}"
+                    class="legal-iframe"
+                    src="${docPath}"
+                    title="${title}"
+                    loading="lazy"
+                    referrerpolicy="no-referrer"
+                ></iframe>
+            </div>
+            <p class="legal-fallback">
+                ¿No puedes ver el documento? 
+                <a href="${docPath}" target="_blank" rel="noopener">Ábrelo en una nueva pestaña</a>.
+            </p>
+        </div>
+    `;
+    showModal(title, content);
 }
 
 function showPrivacyPolicy() {
-    const content = `
-        <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
-            <div style="background: #f5f5f5; padding: 15px; border-radius: 12px; margin-bottom: 20px;">
-                <strong>Fecha de entrada en vigor: 27 de noviembre de 2025</strong>
-            </div>
-            
-            <h3 style="font-size: 16px; margin-bottom: 15px;">Política de Privacidad de LumiSpace</h3>
-            
-            <p style="font-size: 14px; line-height: 1.7; margin-bottom: 20px;">
-                En LumiSpace, nos comprometemos a proteger tu privacidad y tus datos personales. 
-                Esta política explica cómo recopilamos, usamos y protegemos tu información.
-            </p>
-            
-            <h4 style="font-size: 15px; margin: 20px 0 10px;">1. Información que Recopilamos</h4>
-            <p style="font-size: 14px; line-height: 1.7; margin-bottom: 15px;">
-                • Datos de cuenta (nombre, email, teléfono)<br>
-                • Direcciones de envío<br>
-                • Información de pago (encriptada)<br>
-                • Historial de compras<br>
-                • Preferencias de usuario
-            </p>
-            
-            <h4 style="font-size: 15px; margin: 20px 0 10px;">2. Cómo Usamos tu Información</h4>
-            <p style="font-size: 14px; line-height: 1.7; margin-bottom: 15px;">
-                • Procesar tus pedidos<br>
-                • Mejorar nuestros servicios<br>
-                • Enviarte actualizaciones y promociones<br>
-                • Cumplir con obligaciones legales
-            </p>
-            
-            <h4 style="font-size: 15px; margin: 20px 0 10px;">3. Protección de Datos</h4>
-            <p style="font-size: 14px; line-height: 1.7; margin-bottom: 15px;">
-                Utilizamos encriptación SSL/TLS y medidas de seguridad avanzadas para 
-                proteger tu información personal.
-            </p>
-            
-            <h4 style="font-size: 15px; margin: 20px 0 10px;">4. Tus Derechos</h4>
-            <p style="font-size: 14px; line-height: 1.7; margin-bottom: 15px;">
-                Tienes derecho a acceder, corregir o eliminar tus datos personales en 
-                cualquier momento contactándonos.
-            </p>
-            
-            <h4 style="font-size: 15px; margin: 20px 0 10px;">5. Cookies</h4>
-            <p style="font-size: 14px; line-height: 1.7; margin-bottom: 15px;">
-                Utilizamos cookies para mejorar tu experiencia. Puedes gestionar las 
-                cookies desde la configuración de tu navegador.
-            </p>
-            
-            <p style="font-size: 13px; color: #666; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
-                Para más información, contáctanos en: lumispace0@gmail.com
-            </p>
-        </div>
-    `;
-    showModal('Política de Privacidad', content);
+    showLegalDocument('Política de Privacidad', '../docs/politica-privacidad.html');
 }
 
 function showTermsConditions() {
-    const content = `
-        <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
-            <div style="background: #f5f5f5; padding: 15px; border-radius: 12px; margin-bottom: 20px;">
-                <strong>FECHA DE VIGENCIA: 27 de noviembre de 2025</strong>
-            </div>
-            
-            <h3 style="font-size: 16px; margin-bottom: 15px;">Términos y Condiciones de Uso - LumiSpace</h3>
-            
-            <h4 style="font-size: 15px; margin: 20px 0 10px;">1. ACEPTACIÓN DE TÉRMINOS</h4>
-            <p style="font-size: 14px; line-height: 1.7; margin-bottom: 15px;">
-                Al acceder y usar los servicios de LumiSpace, aceptas estar sujeto a estos 
-                términos y condiciones. Si no estás de acuerdo, por favor no uses nuestros servicios.
-            </p>
-            
-            <h4 style="font-size: 15px; margin: 20px 0 10px;">2. USO DE SERVICIOS</h4>
-            <p style="font-size: 14px; line-height: 1.7; margin-bottom: 15px;">
-                • Debes tener al menos 18 años para usar nuestros servicios<br>
-                • Eres responsable de mantener la seguridad de tu cuenta<br>
-                • No puedes usar nuestros servicios para fines ilegales<br>
-                • Nos reservamos el derecho de suspender cuentas que violen estos términos
-            </p>
-            
-            <h4 style="font-size: 15px; margin: 20px 0 10px;">3. COMPRAS Y PAGOS</h4>
-            <p style="font-size: 14px; line-height: 1.7; margin-bottom: 15px;">
-                • Todos los precios están en la moneda seleccionada<br>
-                • Los pagos se procesan de forma segura<br>
-                • Te enviaremos confirmación de cada compra<br>
-                • Consulta nuestra política de devoluciones para más información
-            </p>
-            
-            <h4 style="font-size: 15px; margin: 20px 0 10px;">4. ENVÍOS Y ENTREGAS</h4>
-            <p style="font-size: 14px; line-height: 1.7; margin-bottom: 15px;">
-                • Los tiempos de entrega son estimados<br>
-                • No somos responsables por retrasos del servicio postal<br>
-                • Debes proporcionar información de envío precisa
-            </p>
-            
-            <h4 style="font-size: 15px; margin: 20px 0 10px;">5. PROPIEDAD INTELECTUAL</h4>
-            <p style="font-size: 14px; line-height: 1.7; margin-bottom: 15px;">
-                Todo el contenido de LumiSpace está protegido por derechos de autor y 
-                marcas registradas. No puedes usar nuestro contenido sin permiso expreso.
-            </p>
-            
-            <h4 style="font-size: 15px; margin: 20px 0 10px;">6. LIMITACIÓN DE RESPONSABILIDAD</h4>
-            <p style="font-size: 14px; line-height: 1.7; margin-bottom: 15px;">
-                LumiSpace no será responsable de daños indirectos, incidentales o 
-                consecuentes que surjan del uso de nuestros servicios.
-            </p>
-            
-            <h4 style="font-size: 15px; margin: 20px 0 10px;">7. MODIFICACIONES</h4>
-            <p style="font-size: 14px; line-height: 1.7; margin-bottom: 15px;">
-                Nos reservamos el derecho de modificar estos términos en cualquier momento. 
-                Te notificaremos de cambios importantes.
-            </p>
-            
-            <p style="font-size: 13px; color: #666; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
-                Para consultas sobre estos términos: lumispace0@gmail.com
-            </p>
-        </div>
-    `;
-    showModal('Términos y Condiciones', content);
+    showLegalDocument('Términos y Condiciones', '../docs/terminos-condiciones.html');
 }
 
 //Contacto
@@ -402,9 +324,9 @@ function showContactUs() {
     
     const content = `
         <div class="modal-body">
-            <div style="text-align: center; margin-bottom: 25px;">
-                <h3 style="font-size: 18px; margin-bottom: 10px;">Estamos aquí para ayudarte</h3>
-                <p style="color: #666; font-size: 14px;">Conéctate con nosotros en redes sociales</p>
+            <div class="contact-modal-header">
+                <h3>Estamos aquí para ayudarte</h3>
+                <p>Conéctate con nosotros en redes sociales</p>
             </div>
             
             ${socials.map(social => `
@@ -427,12 +349,12 @@ function showContactUs() {
                 </div>
             `).join('')}
             
-            <div style="margin-top: 30px; padding: 20px; background: #f5f5f5; border-radius: 12px; text-align: center;">
-                <h4 style="font-size: 15px; margin-bottom: 10px;">Soporte por Email</h4>
-                <p style="font-size: 14px; color: #666; margin-bottom: 10px;">
+            <div class="support-email-card">
+                <h4>Soporte por Email</h4>
+                <p class="support-email-text">
                     ¿Necesitas ayuda? Escríbenos a:
                 </p>
-                <a href="mailto:lumispace0@gmail.com" style="color: var(--color-primary); font-weight: 600; text-decoration: none;">
+                <a class="support-email-link" href="mailto:lumispace0@gmail.com">
                     lumispace0@gmail.com
                 </a>
             </div>
@@ -443,37 +365,44 @@ function showContactUs() {
 
 function showAbout() {
     const content = `
-        <div class="modal-body">
-            <div style="text-align: center; margin-bottom: 30px;">
-                <h2 style="font-size: 24px; margin-bottom: 10px;">LumiSpace</h2>
-                <p style="color: #666; font-size: 14px;">Versión 2.0.0</p>
-            </div>
-            
-            <div style="background: linear-gradient(135deg, var(--color-light), var(--color-secondary)); 
-                        padding: 25px; border-radius: 16px; margin-bottom: 25px; color: white;">
-                <h3 style="font-size: 18px; margin-bottom: 10px;">Nuestra Misión</h3>
-                <p style="font-size: 14px; line-height: 1.7; opacity: 0.95;">
-                    En LumiSpace, nos dedicamos a brindarte los mejores productos con una 
-                    experiencia de compra excepcional. Innovación, calidad y satisfacción 
-                    del cliente son nuestros pilares fundamentales.
-                </p>
-            </div>
-            
-            <div style="padding: 20px; background: #f9f9f9; border-radius: 12px; margin-bottom: 20px;">
-                <h4 style="font-size: 16px; margin-bottom: 15px;">¿Por qué elegirnos?</h4>
-                <div style="font-size: 14px; line-height: 2;">
-                    ✓ Productos de alta calidad<br>
-                    ✓ Envío rápido y seguro<br>
-                    ✓ Atención al cliente 24/7<br>
-                    ✓ Garantía de satisfacción<br>
-                    ✓ Pagos seguros
+        <div class="modal-body about-modal">
+            <div class="about-hero-card">
+                <div>
+                    <p class="about-hero-label">Sobre nosotros</p>
+                    <h2>LumiSpace</h2>
+                    <p class="about-version">Versión 2.0.0</p>
+                </div>
+                <div class="about-hero-badge">
+                    <span>Desde</span>
+                    <strong>2025</strong>
                 </div>
             </div>
             
-            <div style="text-align: center; padding: 20px; border-top: 1px solid #eee;">
-                <p style="font-size: 13px; color: #666; line-height: 1.6;">
-                    © 2025 LumiSpace. Todos los derechos reservados.<br>
+            <div class="about-highlight-card">
+                <h3>Nuestra misión</h3>
+                <p>
+                    En LumiSpace, nos dedicamos a brindarte los mejores productos con una experiencia de compra
+                    excepcional. Innovación, calidad y satisfacción del cliente son nuestros pilares fundamentales.
                 </p>
+            </div>
+            
+            <div class="about-list-card">
+                <div class="about-list-header">
+                    <h4>¿Por qué elegirnos?</h4>
+                    <p>Beneficios que nos distinguen</p>
+                </div>
+                <ul>
+                    <li>Productos de alta calidad</li>
+                    <li>Envío rápido y seguro</li>
+                    <li>Atención al cliente 24/7</li>
+                    <li>Garantía de satisfacción</li>
+                    <li>Pagos seguros</li>
+                </ul>
+            </div>
+            
+            <div class="about-footer-card">
+                <p>© 2025 LumiSpace. Todos los derechos reservados.</p>
+                <small>Diseñado con luz y dedicación desde México.</small>
             </div>
         </div>
     `;

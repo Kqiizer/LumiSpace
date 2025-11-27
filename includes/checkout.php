@@ -15,13 +15,9 @@ if (!function_exists('computeTotals')) {
             $cantidad = max(1, (int)($item['cantidad'] ?? 1));
             $subtotal += $precio * $cantidad;
         }
-        $iva = $subtotal * 0.16;
-        $envio = $subtotal > 0 ? 50.0 : 0.0;
-        $total = $subtotal + $iva + $envio;
+        $total = $subtotal;
         return [
             'subtotal' => round($subtotal, 2),
-            'iva'      => round($iva, 2),
-            'envio'    => round($envio, 2),
             'total'    => round($total, 2),
         ];
     }
@@ -30,9 +26,9 @@ if (!function_exists('computeTotals')) {
 // ====================================
 // ⚙️ VALIDAR CARRITO
 // ====================================
-$carrito = $_SESSION['carrito'] ?? [];
+$carrito = carritoObtener();
 if (empty($carrito)) {
-    header("Location: carrito.php");
+    header("Location: " . (defined('BASE_URL') ? BASE_URL : '/') . "includes/carrito.php");
     exit;
 }
 
@@ -41,9 +37,16 @@ if (empty($carrito)) {
 // ====================================
 $totals = computeTotals($carrito);
 $subtotal = $totals['subtotal'];
-$iva      = $totals['iva'];
-$envio    = $totals['envio'];
 $total    = $totals['total'];
+
+$BASE = defined('BASE_URL') ? rtrim(BASE_URL, '/') . '/' : '/';
+$USER_ID = (int)($_SESSION['usuario_id'] ?? 0);
+
+// Obtener datos del usuario si está logueado
+$usuario = null;
+if ($USER_ID > 0) {
+    $usuario = getUsuarioPorId($USER_ID);
+}
 
 $stripePublishable = '';
 $stripeConfigError = '';
@@ -62,42 +65,6 @@ $stripeReady = $stripePublishable !== '' && $stripeConfigError === '';
 // 📅 FECHA DE ENTREGA (5 días hábiles)
 // ====================================
 $fechaEntrega = date('Y-m-d', strtotime('+5 weekdays'));
-
-// ====================================
-// 📦 PROCESAR COMPRA
-// ====================================
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'confirmar_compra') {
-
-    $nombre   = trim($_POST['nombre'] ?? '');
-    $correo   = trim($_POST['correo'] ?? '');
-    $direccion = trim($_POST['direccion'] ?? '');
-    $metodo   = trim($_POST['metodo_pago'] ?? 'Desconocido');
-    $usuario_id = $_SESSION['usuario_id'] ?? null;
-
-    if ($nombre && $correo && $direccion) {
-        // Registrar venta en BD usando tus funciones LumiSpace
-        $venta_id = registrarVenta(
-            null,           // cliente_id (si manejas clientes aparte)
-            $usuario_id,    // usuario_id actual
-            $carrito,       // items
-            $metodo,        // método de pago
-            $total          // total
-        );
-
-        if ($venta_id) {
-            // Limpiar carrito
-            $_SESSION['carrito'] = [];
-
-            // Redirigir a página de confirmación
-            header("Location: confirmacion.php?id=" . $venta_id);
-            exit;
-        } else {
-            $error = "Hubo un error al registrar la venta.";
-        }
-    } else {
-        $error = "Por favor completa todos los campos requeridos.";
-    }
-}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -105,128 +72,182 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Finalizar Compra - LumiSpace</title>
-    <link rel="stylesheet" href="../css/carrito.css?v=<?= time() ?>">
+    <link rel="stylesheet" href="<?= $BASE ?>css/carrito.css?v=<?= time() ?>">
+    <link rel="stylesheet" href="<?= $BASE ?>css/checkout.css?v=<?= time() ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <script src="https://js.stripe.com/v3/"></script>
 </head>
-<body>
-<div class="container">
-    <div class="page-header">
+<body data-base="<?= htmlspecialchars($BASE) ?>">
+<div class="checkout-container">
+    <div class="checkout-header">
         <h1><i class="fas fa-shopping-bag"></i> Finalizar Compra</h1>
         <p>Completa tu pedido y recibe tus productos en la comodidad de tu hogar</p>
     </div>
 
-    <?php if (!empty($error)): ?>
-        <div style="background:#ffefef; color:#b00020; padding:10px; border-radius:6px; margin-bottom:20px;">
-            <?= htmlspecialchars($error) ?>
-        </div>
-    <?php endif; ?>
-
     <?php if ($stripeConfigError): ?>
-        <div style="background:#fff4e5; color:#8a4c12; padding:12px 16px; border-radius:8px; margin-bottom:20px; border:1px solid #f7d7af;">
-            ⚠️ <?= htmlspecialchars($stripeConfigError) ?>
+        <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle"></i>
+            <?= htmlspecialchars($stripeConfigError) ?>
         </div>
     <?php endif; ?>
 
     <form 
         id="checkout-form" 
         method="POST" 
-        data-stripe-key="<?= htmlspecialchars($stripePublishable) ?>" 
-        data-create-session="../api/stripe/create-checkout-session.php"
+        data-stripe-key="<?= htmlspecialchars($stripePublishable) ?>"
     >
-        <input type="hidden" name="action" value="confirmar_compra">
-        <input type="hidden" name="metodo_pago" value="Stripe - Tarjeta">
-
         <div class="checkout-grid">
             <!-- LEFT: Información del cliente y productos -->
-            <div>
-                <div class="card">
-                    <h2 class="section-title"><i class="fas fa-user-circle"></i> Información del Cliente</h2>
-                    <div class="info-grid">
-                        <div class="info-field">
+            <div class="checkout-left">
+                <!-- Información del Cliente -->
+                <div class="checkout-card">
+                    <h2 class="checkout-section-title">
+                        <i class="fas fa-user-circle"></i> Información del Cliente
+                    </h2>
+                    <div class="checkout-form-grid">
+                        <div class="form-field">
                             <label>Nombre completo *</label>
-                            <input type="text" name="nombre" placeholder="Juan Pérez García" required>
+                            <input 
+                                type="text" 
+                                name="nombre" 
+                                placeholder="Juan Pérez García" 
+                                value="<?= htmlspecialchars($usuario['nombre'] ?? '') ?>"
+                                required
+                            >
                         </div>
-                        <div class="info-field">
+                        <div class="form-field">
                             <label>Correo electrónico *</label>
-                            <input type="email" name="correo" placeholder="correo@ejemplo.com" required>
+                            <input 
+                                type="email" 
+                                name="correo" 
+                                placeholder="correo@ejemplo.com" 
+                                value="<?= htmlspecialchars($usuario['email'] ?? '') ?>"
+                                required
+                            >
                         </div>
-                        <div class="info-field full-width">
+                        <div class="form-field full-width">
                             <label>Dirección de entrega *</label>
-                            <input type="text" name="direccion" placeholder="Calle, número, colonia, ciudad, C.P." required>
+                            <textarea 
+                                name="direccion" 
+                                placeholder="Calle, número, colonia, ciudad, C.P." 
+                                rows="3"
+                                required
+                            ></textarea>
                         </div>
-                        <div class="info-field">
+                        <div class="form-field">
                             <label>País</label>
                             <input type="text" value="México" readonly>
                         </div>
-                        <div class="info-field">
+                        <div class="form-field">
                             <label>Fecha estimada de entrega</label>
                             <input type="date" value="<?= $fechaEntrega ?>" readonly>
                         </div>
                     </div>
                 </div>
 
-                <!-- 🛍 Productos -->
-                <div class="card">
-                    <h2 class="section-title"><i class="fas fa-box-open"></i> Productos en tu Pedido (<?= count($carrito) ?>)</h2>
-                    <?php foreach ($carrito as $item): ?>
-                        <div class="product-item">
-                            <div class="product-image">
-                                <img src="<?= htmlspecialchars($item['imagen']) ?>" alt="<?= htmlspecialchars($item['nombre']) ?>">
-                            </div>
-                            <div class="product-details">
-                                <div class="product-name"><?= htmlspecialchars($item['nombre']) ?></div>
-                                <div class="product-type"><?= htmlspecialchars($item['detalles'] ?? '') ?></div>
-                            </div>
-                            <div class="product-actions">
-                                <div class="quantity-control"><i class="fas fa-times"></i> <?= $item['cantidad'] ?></div>
-                                <div class="product-price">
-                                    <div class="unit-price">$<?= number_format($item['precio'], 2) ?> c/u</div>
-                                    <div class="total-price">$<?= number_format($item['precio'] * $item['cantidad'], 2) ?></div>
+                <!-- Información de Pago -->
+                <?php if ($stripeReady): ?>
+                <div class="checkout-card">
+                    <h2 class="checkout-section-title">
+                        <i class="fas fa-credit-card"></i> Información de Pago
+                    </h2>
+                    <div class="stripe-card-container">
+                        <div id="card-element">
+                            <!-- Stripe Elements se montará aquí -->
+                        </div>
+                        <div id="card-errors" role="alert"></div>
+                    </div>
+                    <div class="payment-security">
+                        <i class="fas fa-shield-alt"></i>
+                        <span>Tu información de pago está protegida y encriptada</span>
+                    </div>
+                </div>
+                <?php endif; ?>
+
+                <!-- Productos -->
+                <div class="checkout-card">
+                    <h2 class="checkout-section-title">
+                        <i class="fas fa-box-open"></i> Productos en tu Pedido (<?= count($carrito) ?>)
+                    </h2>
+                    <div class="checkout-products-list">
+                        <?php foreach ($carrito as $item): ?>
+                            <div class="checkout-product-item">
+                                <div class="checkout-product-image">
+                                    <img 
+                                        src="<?= htmlspecialchars($item['imagen']) ?>" 
+                                        alt="<?= htmlspecialchars($item['nombre']) ?>"
+                                        onerror="this.src='<?= $BASE ?>images/default.png'"
+                                    >
+                                </div>
+                                <div class="checkout-product-details">
+                                    <div class="checkout-product-name"><?= htmlspecialchars($item['nombre']) ?></div>
+                                    <?php if (!empty($item['categoria'])): ?>
+                                        <div class="checkout-product-category"><?= htmlspecialchars($item['categoria']) ?></div>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="checkout-product-price">
+                                    <div class="checkout-product-qty">Cantidad: <?= $item['cantidad'] ?></div>
+                                    <div class="checkout-product-total">
+                                        $<?= number_format($item['precio'] * $item['cantidad'], 2) ?>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    <?php endforeach; ?>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
             </div>
 
             <!-- RIGHT: Resumen -->
-            <div>
-                <div class="card order-summary">
-                    <h2 class="section-title"><i class="fas fa-receipt"></i> Resumen del Pedido</h2>
-                    <div class="summary-row"><span>Subtotal</span><span>$<?= number_format($subtotal, 2) ?></span></div>
-                    <div class="summary-row"><span>IVA (16%)</span><span>$<?= number_format($iva, 2) ?></span></div>
-                    <div class="summary-row"><span>Envío</span><span>$<?= number_format($envio, 2) ?></span></div>
-                    <div class="summary-row total"><span>Total</span><span>$<?= number_format($total, 2) ?></span></div>
-
-                    <div class="info-field full-width" style="margin-top:15px;">
-                        <label>Pago seguro</label>
-                        <input type="text" value="Tarjeta (Stripe)" readonly>
-                        <small style="display:block;color:#7a6a58;margin-top:6px;">
-                            Se abrirá la ventana de Stripe para ingresar tus datos de tarjeta.
-                        </small>
+            <div class="checkout-right">
+                <div class="checkout-summary-card">
+                    <h2 class="checkout-section-title">
+                        <i class="fas fa-receipt"></i> Resumen del Pedido
+                    </h2>
+                    <div class="checkout-summary-details">
+                        <div class="summary-divider"></div>
+                        <div class="summary-row total">
+                            <span>Total</span>
+                            <span>$<?= number_format($total, 2) ?></span>
+                        </div>
                     </div>
 
-                    <div id="stripe-error" style="display:none;background:#ffefef;color:#8b2131;padding:10px;border-radius:8px;margin-top:12px;"></div>
+                    <div id="stripe-error" class="stripe-error" style="display:none;"></div>
 
                     <button 
-                        class="pay-button" 
+                        class="checkout-pay-button" 
                         type="submit"
                         id="stripe-pay-button"
                         <?= $stripeReady ? '' : 'disabled' ?>
                     >
-                        <i class="fas fa-lock"></i> Pagar con Stripe
+                        <i class="fas fa-lock"></i> 
+                        <span>Pagar $<?= number_format($total, 2) ?></span>
                     </button>
+                    
                     <?php if (!$stripeReady): ?>
-                        <small style="display:block;color:#a8322d;margin-top:6px;">
+                        <small class="checkout-disabled-notice">
                             Configura tus claves de Stripe para habilitar este botón.
                         </small>
                     <?php endif; ?>
+
+                    <div class="checkout-trust-badges">
+                        <div class="trust-badge">
+                            <i class="fas fa-shield-alt"></i>
+                            <span>Pago Seguro</span>
+                        </div>
+                        <div class="trust-badge">
+                            <i class="fas fa-truck"></i>
+                            <span>Envío Rápido</span>
+                        </div>
+                        <div class="trust-badge">
+                            <i class="fas fa-undo"></i>
+                            <span>Devoluciones</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </form>
 </div>
-<script src="../js/checkout-stripe.js"></script>
+<script src="<?= $BASE ?>js/checkout-stripe.js"></script>
 </body>
 </html>

@@ -9,11 +9,7 @@
  * @version    2.0.1
  */
 
-// Prevenir acceso directo
-if (!defined('BASE_URL')) {
-    $envBase = getenv('BASE_URL');
-    define('BASE_URL', $envBase !== false ? $envBase : '/LumiSpace/');
-}
+require_once __DIR__ . '/base_url.php';
 
 /**
  * Obtener conexión a la base de datos (Singleton)
