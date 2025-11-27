@@ -74,7 +74,30 @@ $select = ["p.id", "p.nombre", "p.precio"];
 $select[] = ls_column_exists($conn, 'productos', 'descripcion') ? "p.descripcion" : "NULL AS descripcion";
 $select[] = ls_column_exists($conn, 'productos', 'precio_original') ? "p.precio_original" : "NULL AS precio_original";
 $select[] = ls_column_exists($conn, 'productos', 'descuento') ? "p.descuento" : "NULL AS descuento";
-$select[] = ls_column_exists($conn, 'productos', 'stock') ? "p.stock" : "0 AS stock";
+
+// Calcular stock real desde inventario si existe la tabla
+$hasInventario = ls_table_exists($conn, 'inventario');
+if ($hasInventario) {
+  $select[] = "COALESCE(SUM(i.cantidad), 0) AS stock";
+} elseif (ls_table_exists($conn, 'movimientos_inventario')) {
+  // Calcular desde movimientos_inventario
+  $select[] = "COALESCE((
+    SELECT SUM(
+      CASE m.tipo
+        WHEN 'entrada' THEN m.cantidad
+        WHEN 'ajuste' THEN m.cantidad
+        WHEN 'salida' THEN -m.cantidad
+        ELSE 0
+      END
+    )
+    FROM movimientos_inventario m
+    WHERE m.producto_id = p.id
+  ), 0) AS stock";
+} else {
+  // Fallback a columna stock directa
+  $select[] = ls_column_exists($conn, 'productos', 'stock') ? "COALESCE(p.stock, 0) AS stock" : "999 AS stock";
+}
+
 $select[] = ls_column_exists($conn, 'productos', 'imagen') ? "p.imagen" : "'' AS imagen";
 
 $join = "";
@@ -100,7 +123,15 @@ if (ls_table_exists($conn, 'proveedores') && ls_column_exists($conn, 'productos'
   $select[] = "NULL AS marca";
 }
 
-$sql = "SELECT " . implode(",", $select) . " FROM productos p{$join} WHERE p.id=? LIMIT 1";
+// Agregar JOIN de inventario si existe
+if ($hasInventario) {
+  $join .= " LEFT JOIN inventario i ON i.producto_id = p.id";
+  $groupBy = " GROUP BY p.id";
+} else {
+  $groupBy = "";
+}
+
+$sql = "SELECT " . implode(",", $select) . " FROM productos p{$join} WHERE p.id=?{$groupBy} LIMIT 1";
 $stmt = $conn->prepare($sql);
 if (!$stmt) {
   http_response_code(500);
@@ -114,6 +145,48 @@ if (!$prod) {
   http_response_code(404);
   echo "Producto no encontrado.";
   exit;
+}
+
+// Asegurar que el stock sea un número válido y calcularlo correctamente
+$prod['stock'] = max(0, (int)($prod['stock'] ?? 0));
+
+// Si el stock es 0 y existe la tabla inventario, intentar calcular desde ahí
+if ($prod['stock'] == 0 && $hasInventario) {
+  $stockStmt = $conn->prepare("SELECT COALESCE(SUM(cantidad), 0) AS stock_total FROM inventario WHERE producto_id = ?");
+  if ($stockStmt) {
+    $stockStmt->bind_param("i", $id);
+    $stockStmt->execute();
+    $stockRes = $stockStmt->get_result()->fetch_assoc();
+    if ($stockRes && isset($stockRes['stock_total'])) {
+      $prod['stock'] = max(0, (int)$stockRes['stock_total']);
+    }
+    $stockStmt->close();
+  }
+}
+
+// Si aún es 0, verificar movimientos_inventario
+if ($prod['stock'] == 0 && ls_table_exists($conn, 'movimientos_inventario')) {
+  $movStmt = $conn->prepare("
+    SELECT SUM(
+      CASE tipo
+        WHEN 'entrada' THEN cantidad
+        WHEN 'ajuste' THEN cantidad
+        WHEN 'salida' THEN -cantidad
+        ELSE 0
+      END
+    ) AS stock_calc
+    FROM movimientos_inventario
+    WHERE producto_id = ?
+  ");
+  if ($movStmt) {
+    $movStmt->bind_param("i", $id);
+    $movStmt->execute();
+    $movRes = $movStmt->get_result()->fetch_assoc();
+    if ($movRes && isset($movRes['stock_calc']) && $movRes['stock_calc'] !== null) {
+      $prod['stock'] = max(0, (int)$movRes['stock_calc']);
+    }
+    $movStmt->close();
+  }
 }
 
 /* ---------------- Precios ---------------- */
@@ -244,7 +317,8 @@ if ($q) {
 
         <!-- Info -->
         <div class="product-info" data-id="<?= (int) $prod['id'] ?>" data-name="<?= htmlspecialchars($prod['nombre']) ?>"
-          data-price="<?= number_format((float) $prod['precio'], 2, '.', '') ?>" data-stock="<?= (int) $prod['stock'] ?>"
+          data-price="<?= number_format((float) $prod['precio'], 2, '.', '') ?>" 
+          data-stock="<?= max(0, (int) $prod['stock']) ?>"
           data-img="<?= htmlspecialchars($imgPrincipal) ?>">
 
           <div class="product-header">
@@ -305,12 +379,20 @@ if ($q) {
                 <input type="number" class="qty-input" id="qtyInput" value="1" min="1" max="<?= (int) $prod['stock'] ?>">
                 <button class="qty-btn plus" id="qtyPlus">+</button>
               </div>
-              <span class="stock-info"
-                id="stockInfo"><?= (int) $prod['stock'] > 0 ? (int) $prod['stock'] . ' in stock' : 'Sin stock' ?></span>
+              <span class="stock-info" id="stockInfo">
+                <?php 
+                $stockDisplay = (int) $prod['stock'];
+                if ($stockDisplay > 0) {
+                  echo $stockDisplay . ' en stock';
+                } else {
+                  echo 'Sin stock';
+                }
+                ?>
+              </span>
             </div>
 
             <div class="action-buttons">
-              <button class="add-to-cart-btn js-cart" id="addToCartBtn" data-id="<?= (int)$prod['id'] ?>" <?= (int) $prod['stock'] <= 0 ? 'disabled' : '' ?>>
+              <button class="add-to-cart-btn" id="addToCartBtn" data-id="<?= (int)$prod['id'] ?>" data-product-id="<?= (int)$prod['id'] ?>" <?= (int) $prod['stock'] <= 0 ? 'disabled' : '' ?>>
                 <i class="fas fa-shopping-cart"></i> Add to Cart - $<?= number_format((float) $prod['precio'], 2) ?>
               </button>
               <button class="buy-now-btn" id="buyNowBtn" <?= (int) $prod['stock'] <= 0 ? 'disabled' : '' ?>>Buy Now</button>
@@ -508,10 +590,87 @@ if ($q) {
         document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && zoomModal.classList.contains('active')) { zoomModal.classList.remove('active'); document.body.style.overflow = ''; } });
       }
 
+      /* ---------- Función Toast ---------- */
+      function showToast(message, type = 'success') {
+        // Remover toast anterior si existe
+        const existingToast = document.querySelector('.product-detail-toast');
+        if (existingToast) {
+          existingToast.remove();
+        }
+        
+        const toast = document.createElement('div');
+        toast.className = `product-detail-toast ${type}`;
+        toast.innerHTML = `
+          <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+          <span>${message}</span>
+        `;
+        
+        // Agregar estilos si no existen
+        if (!document.getElementById('product-detail-toast-styles')) {
+          const style = document.createElement('style');
+          style.id = 'product-detail-toast-styles';
+          style.textContent = `
+            .product-detail-toast {
+              position: fixed;
+              bottom: 30px;
+              right: 30px;
+              background: white;
+              color: #333;
+              padding: 16px 24px;
+              border-radius: 8px;
+              box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+              display: flex;
+              align-items: center;
+              gap: 12px;
+              z-index: 10000;
+              animation: slideInToast 0.3s ease;
+              max-width: 350px;
+              border-left: 4px solid #8b7355;
+            }
+            .product-detail-toast.success { border-left-color: #22c55e; }
+            .product-detail-toast.error { border-left-color: #ef4444; }
+            .product-detail-toast i { font-size: 1.2rem; }
+            .product-detail-toast.success i { color: #22c55e; }
+            .product-detail-toast.error i { color: #ef4444; }
+            @keyframes slideInToast {
+              from { opacity: 0; transform: translateY(20px); }
+              to { opacity: 1; transform: translateY(0); }
+            }
+            body.dark .product-detail-toast {
+              background: #262018;
+              color: #f6f1e8;
+            }
+          `;
+          document.head.appendChild(style);
+        }
+        
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+          toast.style.animation = 'slideInToast 0.3s ease reverse';
+          setTimeout(() => toast.remove(), 300);
+        }, 3000);
+      }
+
       /* ---------- Cantidad ---------- */
       const info = document.querySelector('.product-info');
       const pid = parseInt(info?.dataset.id || '0', 10);
       const stockMax = parseInt(info?.dataset.stock || '0', 10);
+      
+      // Debug: verificar stock
+      console.log('Stock del producto:', stockMax);
+      
+      // Actualizar el texto del stock en la página
+      const stockInfo = document.getElementById('stockInfo');
+      if (stockInfo) {
+        if (stockMax > 0) {
+          stockInfo.textContent = stockMax + ' en stock';
+          stockInfo.style.color = '#22c55e';
+        } else {
+          stockInfo.textContent = 'Sin stock';
+          stockInfo.style.color = '#ef4444';
+        }
+      }
       const qtyInput = document.getElementById('qtyInput');
       const qtyMinus = document.getElementById('qtyMinus');
       const qtyPlus = document.getElementById('qtyPlus');
@@ -612,60 +771,84 @@ if ($q) {
         }
       }
 
-      // Override del evento del botón para usar cantidad del input
-      addBtn?.addEventListener('click', async function(e) {
-        // Prevenir que product-actions.js maneje este evento
-        e.preventDefault();
-        e.stopPropagation();
-        
-        if (!pid) {
-          console.error('Error: Producto no válido');
+      // Handler del botón de agregar al carrito (con máxima prioridad)
+      // Usar una función anónima inmediata para evitar conflictos
+      (function() {
+        const addBtnElement = document.getElementById('addToCartBtn');
+        if (!addBtnElement) {
+          console.warn('Botón addToCartBtn no encontrado');
           return;
         }
         
-        const qty = getQty();
-        if (qty <= 0) {
-          alert('Por favor selecciona una cantidad válida');
+        // Remover cualquier listener previo clonando el botón
+        const newBtn = addBtnElement.cloneNode(true);
+        addBtnElement.parentNode.replaceChild(newBtn, addBtnElement);
+        const finalBtn = document.getElementById('addToCartBtn');
+        
+        if (!finalBtn) {
+          console.error('Error al clonar botón');
           return;
         }
         
-        const original = addBtn.innerHTML;
-        addBtn.disabled = true;
-        addBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Agregando...';
-        
-        try {
-          const ok = await addToCartWithQuantity(qty, false);
+        // Agregar listener con máxima prioridad
+        finalBtn.addEventListener('click', async function(e) {
+          // Prevenir que otros handlers manejen este evento
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
           
-          if (ok) {
-            addBtn.innerHTML = '<i class="fas fa-check"></i> ¡Agregado!';
+          console.log('Botón Add to Cart clickeado, PID:', pid);
+          
+          if (!pid || pid <= 0) {
+            console.error('Error: Producto no válido, PID:', pid);
+            alert('Error: Producto no válido');
+            return;
+          }
+          
+          const qty = getQty();
+          console.log('Cantidad seleccionada:', qty);
+          
+          if (qty <= 0) {
+            alert('Por favor selecciona una cantidad válida');
+            return;
+          }
+          
+          const original = finalBtn.innerHTML;
+          finalBtn.disabled = true;
+          finalBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Agregando...';
+          
+          try {
+            console.log('Llamando a addToCartWithQuantity con qty:', qty);
+            const ok = await addToCartWithQuantity(qty, false);
+            console.log('Resultado de addToCartWithQuantity:', ok);
             
-            // Mostrar notificación toast si está disponible
-            if (typeof showToast === 'function') {
+            if (ok) {
+              finalBtn.innerHTML = '<i class="fas fa-check"></i> ¡Agregado!';
+              
+              // Mostrar notificación toast
               showToast('Producto agregado al carrito', 'success');
+              
+              setTimeout(() => { 
+                finalBtn.innerHTML = original; 
+                finalBtn.disabled = false; 
+              }, 1500);
+            } else {
+              throw new Error('No se pudo agregar al carrito');
             }
+          } catch (error) {
+            console.error('Error al agregar al carrito:', error);
+            finalBtn.innerHTML = '<i class="fas fa-exclamation-circle"></i> Error';
+            
+            // Mostrar notificación de error
+            showToast('Error al agregar al carrito. Intenta de nuevo.', 'error');
             
             setTimeout(() => { 
-              addBtn.innerHTML = original; 
-              addBtn.disabled = false; 
-            }, 1500);
-          } else {
-            throw new Error('No se pudo agregar al carrito');
+              finalBtn.innerHTML = original; 
+              finalBtn.disabled = false; 
+            }, 2000);
           }
-        } catch (error) {
-          console.error('Error al agregar al carrito:', error);
-          addBtn.innerHTML = '<i class="fas fa-exclamation-circle"></i> Error';
-          
-          // Mostrar notificación de error si está disponible
-          if (typeof showToast === 'function') {
-            showToast('Error al agregar al carrito. Intenta de nuevo.', 'error');
-          }
-          
-          setTimeout(() => { 
-            addBtn.innerHTML = original; 
-            addBtn.disabled = false; 
-          }, 2000);
-        }
-      }, true); // Usar capture phase para ejecutar antes que product-actions.js
+        }, true); // Usar capture phase para ejecutar antes que product-actions.js
+      })();
 
       buyBtn?.addEventListener('click', async function(e) {
         // Prevenir que otros handlers manejen este evento
