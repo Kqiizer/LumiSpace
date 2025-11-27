@@ -102,10 +102,26 @@
                     body: formData
                 });
 
-                const data = await response.json();
+                // Verificar si la respuesta es JSON válido
+                let data;
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    data = await response.json();
+                } else {
+                    // Si no es JSON, leer como texto para ver el error
+                    const text = await response.text();
+                    console.error('Respuesta no JSON:', text);
+                    throw new Error('Error del servidor: La respuesta no es válida. Revisa la consola para más detalles.');
+                }
 
                 if (!response.ok || data.error) {
-                    throw new Error(data.error || 'Error al crear el pago');
+                    const errorMsg = data.error || `Error ${response.status}: ${response.statusText}`;
+                    console.error('Error del servidor:', {
+                        status: response.status,
+                        statusText: response.statusText,
+                        data: data
+                    });
+                    throw new Error(errorMsg);
                 }
 
                 paymentIntentClientSecret = data.clientSecret;

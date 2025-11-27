@@ -11,7 +11,61 @@ if (!file_exists($autoloadPath)) {
     );
 }
 
+// Cargar autoload
 require_once $autoloadPath;
+
+// Verificar que Stripe esté disponible después de cargar autoload
+if (!class_exists('\Stripe\StripeClient', false)) {
+    // Registrar autoloader personalizado para Stripe como fallback
+    spl_autoload_register(function ($class) {
+        if (strpos($class, 'Stripe\\') === 0) {
+            $stripeLibPath = __DIR__ . '/../vendor/stripe/stripe-php/lib';
+            $classPath = str_replace('\\', '/', substr($class, 7)); // Remover 'Stripe\'
+            $filePath = $stripeLibPath . '/' . $classPath . '.php';
+            if (file_exists($filePath)) {
+                require_once $filePath;
+                return true;
+            }
+        }
+        return false;
+    }, true, true); // Prepend = true para que se ejecute primero
+    
+    // Verificar nuevamente después de registrar el autoloader
+    if (!class_exists('\Stripe\StripeClient', false)) {
+        $stripeLibPath = __DIR__ . '/../vendor/stripe/stripe-php/lib';
+        $stripeClientPath = $stripeLibPath . '/StripeClient.php';
+        $stripeDir = __DIR__ . '/../vendor/stripe/stripe-php';
+        
+        // Verificar si la carpeta existe y tiene contenido
+        $stripeDirExists = is_dir($stripeDir);
+        $stripeDirEmpty = $stripeDirExists && count(array_diff(scandir($stripeDir), ['.', '..'])) === 0;
+        
+        if (!$stripeDirExists || $stripeDirEmpty) {
+            throw new RuntimeException(
+                'Stripe PHP SDK no está instalado físicamente en el servidor. ' . PHP_EOL .
+                'SOLUCIÓN PARA HOSTINGER:' . PHP_EOL .
+                '1. Accede por SSH a tu servidor' . PHP_EOL .
+                '2. Navega a: cd public_html/LumiSpace (o tu ruta)' . PHP_EOL .
+                '3. Ejecuta: composer install' . PHP_EOL .
+                '4. Si no tienes SSH, contacta al soporte de Hostinger' . PHP_EOL .
+                '   y pídeles que ejecuten: composer install en tu proyecto'
+            );
+        } elseif (!file_exists($stripeClientPath)) {
+            throw new RuntimeException(
+                'StripeClient.php no encontrado. El autoload no está funcionando correctamente. ' . PHP_EOL .
+                'SOLUCIÓN: Ejecuta en el servidor: composer dump-autoload'
+            );
+        } else {
+            throw new RuntimeException(
+                'Stripe PHP SDK está instalado pero no se puede cargar. ' . PHP_EOL .
+                'Posibles causas:' . PHP_EOL .
+                '1. El autoload no se regeneró después de instalar' . PHP_EOL .
+                '2. Permisos de archivos incorrectos' . PHP_EOL .
+                'SOLUCIÓN: Ejecuta: composer dump-autoload'
+            );
+        }
+    }
+}
 
 // ============================================================
 //  Cargar variables de entorno (.env)

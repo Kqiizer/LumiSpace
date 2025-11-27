@@ -33,11 +33,11 @@
     });
 
     function initializeApp() {
-        setupEventListeners();
-        renderCategories();
-        renderProducts();
+    setupEventListeners();
+    renderCategories();
+    renderProducts();
         updateFavoritesCount();
-        refreshCartCount();
+    refreshCartCount();
         
         // Animar cards al cargar
         animateCards();
@@ -46,7 +46,7 @@
     // ========================================
     // EVENT LISTENERS
     // ========================================
-    function setupEventListeners() {
+function setupEventListeners() {
         // Búsqueda
         const searchInput = document.getElementById('favorites-search');
         if (searchInput) {
@@ -60,7 +60,7 @@
 
         // Ordenamiento
         const sortSelect = document.getElementById('sortSelect');
-        if (sortSelect) {
+    if (sortSelect) {
             sortSelect.addEventListener('change', handleSort);
         }
 
@@ -215,7 +215,7 @@
     // ========================================
     // CATEGORÍAS
     // ========================================
-    function renderCategories() {
+function renderCategories() {
         const container = document.getElementById('categoriesFilter');
         if (!container) return;
 
@@ -226,9 +226,9 @@
             if (!categories[cat]) {
                 categories[cat] = {
                     name: product.categoria || 'Sin categoría',
-                    count: 0
-                };
-            }
+                count: 0
+            };
+        }
             categories[cat].count++;
         });
 
@@ -242,29 +242,29 @@
         ];
 
         container.innerHTML = categoriesArray.map(cat => `
-            <button 
+        <button 
                 class="category-chip ${currentCategory === cat.id ? 'active' : ''}"
                 data-category="${cat.id}"
-            >
+        >
                 <span>${escapeHtml(cat.name)}</span>
                 <span class="category-chip-count">${cat.count}</span>
-            </button>
-        `).join('');
+        </button>
+    `).join('');
 
         // Event listeners
         container.querySelectorAll('.category-chip').forEach(chip => {
             chip.addEventListener('click', () => {
                 currentCategory = chip.dataset.category;
-                renderCategories();
-                renderProducts();
+    renderCategories();
+    renderProducts();
             });
         });
-    }
+}
 
     // ========================================
     // RENDERIZADO DE PRODUCTOS
     // ========================================
-    function renderProducts() {
+function renderProducts() {
         const grid = document.getElementById('favoritesGrid');
         const emptySearch = document.getElementById('emptySearchState');
         
@@ -282,7 +282,7 @@
         }
 
         // Filtro por búsqueda
-        if (searchTerm) {
+    if (searchTerm) {
             filtered = filtered.filter(p => {
                 const name = (p.nombre || '').toLowerCase();
                 const category = (p.categoria || '').toLowerCase();
@@ -298,9 +298,9 @@
             grid.style.display = 'none';
             if (emptySearch) {
                 emptySearch.style.display = 'block';
-            }
-            return;
         }
+        return;
+    }
 
         grid.style.display = 'grid';
         if (emptySearch) {
@@ -345,11 +345,11 @@
                     
                     <div class="card-badges">
                         ${descuento > 0 ? `
-                            <span class="badge badge-discount">
+                        <span class="badge badge-discount">
                                 <i class="fas fa-tag"></i>
                                 <span>-${descuento}%</span>
-                            </span>
-                        ` : ''}
+                        </span>
+                    ` : ''}
                         ${isOutOfStock ? `
                             <span class="badge badge-out">
                                 <i class="fas fa-times-circle"></i>
@@ -360,9 +360,9 @@
                                 <i class="fas fa-exclamation-triangle"></i>
                                 <span>Últimos ${stock}</span>
                             </span>
-                        ` : ''}
-                    </div>
-
+                    ` : ''}
+                </div>
+                
                     <div class="card-actions">
                         <button 
                             class="action-btn action-remove" 
@@ -380,7 +380,7 @@
                             ${isOutOfStock ? 'disabled' : ''}
                         >
                             <i class="fas fa-shopping-cart"></i>
-                        </button>
+                </button>
                         <a 
                             href="${BASE}views/productos-detal.php?id=${id}" 
                             class="action-btn action-view"
@@ -390,8 +390,8 @@
                             <i class="fas fa-eye"></i>
                         </a>
                     </div>
-                </div>
-                
+            </div>
+            
                 <div class="card-content">
                     <div class="card-meta">
                         <span class="card-category">${categoria}</span>
@@ -399,8 +399,8 @@
                             <i class="fas fa-${isOutOfStock ? 'times-circle' : 'check-circle'}"></i>
                             <span>${isOutOfStock ? 'Agotado' : 'Disponible'}</span>
                         </span>
-                    </div>
-                    
+                </div>
+                
                     <h3 class="card-title">
                         <a href="${BASE}views/productos-detal.php?id=${id}">
                             ${nombre}
@@ -412,18 +412,18 @@
                             <span class="price-current">$${precio.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                             ${precioOriginal && precioOriginal > precio ? `
                                 <span class="price-original">$${precioOriginal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                            ` : ''}
-                        </div>
-                        <button 
+                    ` : ''}
+                </div>
+                    <button 
                             class="card-add-btn ${isOutOfStock ? 'disabled' : ''}" 
                             data-product-id="${id}"
                             ${isOutOfStock ? 'disabled' : ''}
                         >
                             <i class="fas fa-shopping-cart"></i>
                             <span>Agregar</span>
-                        </button>
-                    </div>
+                    </button>
                 </div>
+            </div>
             </article>
         `;
     }
@@ -503,8 +503,8 @@
                 setTimeout(() => {
                     window.location.href = `${BASE}views/login.php?next=${encodeURIComponent(window.location.pathname)}`;
                 }, 1500);
-                return;
-            }
+        return;
+    }
 
             const data = await response.json();
 
@@ -791,12 +791,12 @@
             closeModal();
             if (onConfirm) {
                 onConfirm();
-            }
-        });
-    }
+        }
+    });
+}
 
     function closeModal() {
-        const modal = document.getElementById('confirmModal');
+    const modal = document.getElementById('confirmModal');
         if (modal) {
             modal.style.display = 'none';
         }
