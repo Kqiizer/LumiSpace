@@ -17,7 +17,7 @@ $BASE = defined('BASE_URL') ? rtrim(BASE_URL, '/') . '/' : '/';
             <span>LumiSpace</span>
           </div>
           <p class="footer-description">
-            Ilumina tu hogar con estilo ✨. Diseños modernos y funcionales que transforman cualquier espacio.
+            Ilumina tu hogar con estilo. Diseños modernos y funcionales que transforman cualquier espacio.
           </p>
           <div class="footer-social">
             <a href="#" class="social-link"><i class="fab fa-facebook-f"></i></a>
@@ -88,11 +88,11 @@ $BASE = defined('BASE_URL') ? rtrim(BASE_URL, '/') . '/' : '/';
           </div>
         </div>
         <div class="footer-policies">
-          <a href="#">Política de Privacidad</a>
+          <a href="<?= $BASE ?>docs/politica-privacidad.html" target="_blank" rel="noopener">Política de Privacidad</a>
           <span>|</span>
-          <a href="#">Términos de Uso</a>
+          <a href="<?= $BASE ?>docs/terminos-condiciones.html" target="_blank" rel="noopener">Términos de Uso</a>
           <span>|</span>
-          <a href="#">Cookies</a>
+          <a href="<?= $BASE ?>docs/politica-privacidad.html#cookies" target="_blank" rel="noopener">Cookies</a>
         </div>
       </div>
     </div>
