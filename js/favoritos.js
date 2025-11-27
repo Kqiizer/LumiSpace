@@ -33,11 +33,26 @@
     });
 
     function initializeApp() {
-    setupEventListeners();
-    renderCategories();
-    renderProducts();
+        setupEventListeners();
+        renderCategories();
+        renderProducts();
         updateFavoritesCount();
-    refreshCartCount();
+        refreshCartCount();
+        
+        // Controlar visibilidad del estado vacío inicial
+        const emptyState = document.getElementById('emptyState');
+        const productsGrid = document.getElementById('productsGrid');
+        
+        if (emptyState && productsGrid) {
+            // Solo mostrar emptyState si realmente no hay favoritos
+            if (favoritesData.length === 0) {
+                emptyState.classList.remove('hidden');
+                productsGrid.style.display = 'none';
+            } else {
+                emptyState.classList.add('hidden');
+                productsGrid.style.display = 'grid';
+            }
+        }
         
         // Animar cards al cargar
         animateCards();
@@ -294,15 +309,35 @@ function renderProducts() {
         filtered = sortProducts(filtered, currentSort);
 
         // Mostrar/ocultar estados vacíos
+        const emptyState = document.getElementById('emptyState');
+        
         if (filtered.length === 0) {
             grid.style.display = 'none';
+            
+            // Si no hay favoritos en absoluto, mostrar emptyState
+            if (favoritesData.length === 0 && emptyState) {
+                emptyState.classList.remove('hidden');
+            } else if (emptyState) {
+                // Si hay favoritos pero el filtro no muestra nada, ocultar emptyState
+                emptyState.classList.add('hidden');
+            }
+            
+            // Mostrar emptySearch solo cuando hay búsqueda/filtros activos
             if (emptySearch) {
-                emptySearch.style.display = 'block';
+                if (searchTerm || currentCategory !== 'all') {
+                    emptySearch.style.display = 'block';
+                } else {
+                    emptySearch.style.display = 'none';
+                }
+            }
+            return;
         }
-        return;
-    }
 
+        // Hay productos filtrados, ocultar estados vacíos
         grid.style.display = 'grid';
+        if (emptyState) {
+            emptyState.classList.add('hidden');
+        }
         if (emptySearch) {
             emptySearch.style.display = 'none';
         }
