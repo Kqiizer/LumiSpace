@@ -41,9 +41,9 @@ $BASE = defined('BASE_URL') ? rtrim(BASE_URL, '/') . '/' : '/';
         <div class="footer-section">
           <h4 class="footer-title">Categorías</h4>
           <ul class="footer-links">
-            <li><a href="#">Interior</a></li>
-            <li><a href="#">Exterior</a></li>
-            <li><a href="#">Decorativo</a></li>
+            <li><a href="<?= $BASE ?>views/catalogo.php?categoria=interior">Interior</a></li>
+            <li><a href="<?= $BASE ?>views/catalogo.php?categoria=exterior">Exterior</a></li>
+            <li><a href="<?= $BASE ?>views/catalogo.php?categoria=decorativo">Decorativo</a></li>
           </ul>
         </div>
 
