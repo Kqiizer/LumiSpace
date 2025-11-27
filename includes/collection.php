@@ -733,7 +733,11 @@ function getRating($prodId, $conn) {
                 </div>
                 
                 <div class="acciones-hover">
-                    <button class="accion-btn btn-fav <?= $esFav ? 'fav-active' : '' ?>" data-id="<?= $id ?>" title="Favorito">
+                    <button class="accion-btn btn-fav js-wish <?= $esFav ? 'fav-active active' : '' ?>" 
+                            data-id="<?= $id ?>" 
+                            title="<?= $esFav ? 'Quitar de favoritos' : 'Agregar a favoritos' ?>"
+                            aria-label="Agregar a favoritos"
+                            aria-pressed="<?= $esFav ? 'true' : 'false' ?>">
                         <i class="fas fa-heart"></i>
                     </button>
                     <a href="<?= $BASE ?>views/productos-detal.php?id=<?= $id ?>" class="accion-btn" title="Ver">
@@ -891,8 +895,8 @@ grid.addEventListener('click', async e => {
     const card = e.target.closest('.producto');
     if (!card) return;
     
-    // Favoritos
-    const favBtn = e.target.closest('.btn-fav');
+    // Favoritos - Manejar tanto .btn-fav como .js-wish
+    const favBtn = e.target.closest('.btn-fav, .js-wish');
     if (favBtn) {
         e.preventDefault();
         e.stopPropagation();
@@ -926,6 +930,18 @@ grid.addEventListener('click', async e => {
             const data = await res.json();
             if (data.ok) {
                 favBtn.classList.toggle('fav-active', data.in_wishlist);
+                favBtn.classList.toggle('active', data.in_wishlist);
+                
+                // Actualizar icono
+                const icon = favBtn.querySelector('i');
+                if (icon) {
+                    icon.className = data.in_wishlist ? 'fas fa-heart' : 'far fa-heart';
+                }
+                
+                // Actualizar atributos ARIA
+                favBtn.setAttribute('aria-pressed', data.in_wishlist ? 'true' : 'false');
+                favBtn.title = data.in_wishlist ? 'Quitar de favoritos' : 'Agregar a favoritos';
+                
                 toast(data.in_wishlist ? 'Agregado a favoritos' : 'Eliminado de favoritos', 'success');
             } else {
                 throw new Error(data.msg || 'Error al actualizar favoritos');

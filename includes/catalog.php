@@ -4,6 +4,22 @@ require_once __DIR__ . "/../config/functions.php";
 
 $BASE = defined('BASE_URL') ? rtrim(BASE_URL, '/') . '/' : '/';
 $conn = getDBConnection();
+$usuario_id = $_SESSION['usuario_id'] ?? 0;
+
+// Obtener favoritos del usuario
+$favoritosSet = [];
+if ($usuario_id && $conn) {
+    $stmt = $conn->prepare("SELECT producto_id FROM favoritos WHERE usuario_id = ?");
+    if ($stmt) {
+        $stmt->bind_param("i", $usuario_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        while ($row = $result->fetch_assoc()) {
+            $favoritosSet[(int)$row['producto_id']] = true;
+        }
+        $stmt->close();
+    }
+}
 
 // Obtener categorías con sus imágenes (usando el mismo sistema que categories.php)
 $categorias_db = getCategorias();
@@ -164,6 +180,14 @@ if (empty($productos) && !empty($categorias_db)) {
               <img src="<?= htmlspecialchars($imagen, ENT_QUOTES, 'UTF-8') ?>" 
                    alt="<?= $nombre ?>"
                    loading="lazy">
+              
+              <!-- Botón de favoritos -->
+              <button class="catalog-fav-btn js-wish <?= isset($favoritosSet[$producto_id]) ? 'active' : '' ?>" 
+                      data-id="<?= $producto_id ?>"
+                      title="<?= isset($favoritosSet[$producto_id]) ? 'Quitar de favoritos' : 'Agregar a favoritos' ?>"
+                      aria-label="Agregar a favoritos">
+                <i class="<?= isset($favoritosSet[$producto_id]) ? 'fas' : 'far' ?> fa-heart"></i>
+              </button>
             </div>
             <h3 class="catalog-card-title"><?= $nombre ?></h3>
             <?php if ($precio > 0): ?>
@@ -266,6 +290,58 @@ if (empty($productos) && !empty($categorias_db)) {
   align-items: center;
   justify-content: center;
   position: relative;
+}
+
+/* Botón de favoritos */
+.catalog-fav-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.95);
+  color: #8b7355;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 1.1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 10;
+  opacity: 0;
+  transform: translateY(-10px) scale(0.9);
+}
+
+.catalog-card:hover .catalog-fav-btn {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.catalog-fav-btn:hover {
+  background: #fff;
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.catalog-fav-btn.active {
+  background: #dc3545;
+  color: white;
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.catalog-fav-btn.active:hover {
+  background: #c82333;
+  transform: scale(1.1);
+}
+
+.catalog-fav-btn i {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .catalog-card-image img {
@@ -379,6 +455,16 @@ if (empty($productos) && !empty($categorias_db)) {
     padding: 10px 20px;
     min-width: 120px;
   }
+  
+  .catalog-fav-btn {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    top: 12px;
+    right: 12px;
+    width: 38px;
+    height: 38px;
+    font-size: 1rem;
+  }
 }
 
 /* ==========================================
@@ -407,6 +493,20 @@ body.dark .catalog-card-price {
 
 body.dark .catalog-card-price:hover {
   background: #f2e7d9;
+}
+
+body.dark .catalog-fav-btn {
+  background: rgba(30, 25, 18, 0.95);
+  color: #f6f1e8;
+}
+
+body.dark .catalog-fav-btn:hover {
+  background: rgba(30, 25, 18, 1);
+}
+
+body.dark .catalog-fav-btn.active {
+  background: #dc3545;
+  color: white;
 }
 </style>
 
