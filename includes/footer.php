@@ -85,8 +85,6 @@ $BASE = defined('BASE_URL') ? rtrim(BASE_URL, '/') . '/' : '/';
           <div class="payment-icons">
             <i class="fab fa-cc-visa"></i>
             <i class="fab fa-cc-mastercard"></i>
-            <i class="fab fa-cc-paypal"></i>
-            <i class="fab fa-cc-amex"></i>
           </div>
         </div>
         <div class="footer-policies">
