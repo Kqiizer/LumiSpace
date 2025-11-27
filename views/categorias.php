@@ -1005,6 +1005,51 @@ function getCategoryImage($imagen, $BASE) {
         }
       });
     }
+
+    // Asegurar que el botón de modo oscuro/claro funcione en categorías
+    const themeToggle = document.getElementById('theme-toggle');
+    if (themeToggle) {
+      const themeIcon = themeToggle.querySelector('[data-theme-icon]');
+      const themeText = themeToggle.querySelector('[data-theme-text]');
+      const iconLightMode = themeToggle.dataset.iconLightMode || '';
+      const iconDarkMode = themeToggle.dataset.iconDarkMode || '';
+
+      const syncThemeButton = (isDark) => {
+        const label = isDark ? 'Modo Claro' : 'Modo Oscuro';
+        if (themeText) {
+          themeText.textContent = label;
+          themeText.classList.add('no-translate');
+        }
+        if (themeIcon) {
+          const nextIcon = isDark ? iconDarkMode : iconLightMode;
+          if (nextIcon) themeIcon.src = nextIcon;
+          themeIcon.alt = label;
+        }
+      };
+
+      const setTheme = (dark) => {
+        if (dark) {
+          document.body.classList.add('dark');
+        } else {
+          document.body.classList.remove('dark');
+        }
+        syncThemeButton(dark);
+        localStorage.setItem('theme', dark ? 'dark' : 'light');
+      };
+
+      // Cargar tema guardado
+      const savedTheme = localStorage.getItem('theme');
+      const isDark = savedTheme === 'dark';
+      setTheme(isDark);
+
+      // Evento del botón
+      themeToggle.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const currentIsDark = document.body.classList.contains('dark');
+        setTheme(!currentIsDark);
+      });
+    }
   });
   </script>
   <script src="<?= $BASE ?>js/translator.js" defer></script>
