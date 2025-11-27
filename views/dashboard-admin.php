@@ -1,3814 +1,658 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) session_start();
-require_once __DIR__ . "/../config/functions.php";
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
-// 🚨 Validación: solo rol admin
+require_once __DIR__ . '/../config/functions.php';
+
+// Solo administradores acceden
 if (!isset($_SESSION['usuario_id']) || ($_SESSION['usuario_rol'] ?? '') !== 'admin') {
-    header("Location: ../views/login.php?error=unauthorized");
+    header('Location: ../views/login.php?error=unauthorized');
     exit();
 }
 
-/* ======================================================
-   DATOS DESDE LA BD
-   ====================================================== */
+// Métricas básicas
 $totalUsuarios     = getTotalUsuarios();
 $totalGestores     = getTotalGestores();
 $totalProductos    = getTotalProductos();
 $ingresosMes       = getIngresosMes();
-$usuariosRecientes = getUsuariosRecientes(5);
+$usuariosRecientes = getUsuariosRecientes(6);
 $inventarioResumen = getInventarioResumen();
 $usuariosMensuales = getUsuariosMensuales();
 $ventasMensuales   = getVentasMensuales();
 
-// 📌 Última conexión
+// Datos avanzados para gráficas
+$ventasPorCategoriaRaw = getVentasPorCategoria();
+$ventasPorCategoria = array_map(static function (array $row): array {
+    return [
+        'categoria' => $row['categoria'] ?: 'Sin categoría',
+        'monto'     => (float) ($row['monto_total'] ?? 0),
+    ];
+}, $ventasPorCategoriaRaw ?? []);
+
+$productosPopularesRaw = getProductosMasVendidos(5);
+$productosPopulares = array_map(static function (array $row): array {
+    return [
+        'nombre'   => $row['nombre'] ?? 'Producto',
+        'cantidad' => (int) ($row['total_vendido'] ?? 0),
+    ];
+}, $productosPopularesRaw ?? []);
+
+$ingresosPorDiaRaw = getVentasPorDiaMesActual();
+$ingresosPorDia = array_map(static function (array $row): array {
+    $dia = isset($row['dia']) ? (int) $row['dia'] : 0;
+    return [
+        'fecha' => sprintf('Día %02d', $dia),
+        'total' => (float) ($row['total'] ?? 0),
+    ];
+}, $ingresosPorDiaRaw ?? []);
+
+// Última conexión almacenada en sesión
 if (!isset($_SESSION['ultima_conexion'])) {
     $_SESSION['ultima_conexion'] = date('Y-m-d H:i:s');
 }
 $ultimaConexion = $_SESSION['ultima_conexion'];
+
+// Cálculo de crecimiento de usuarios vs mes anterior
+$crecimientoUsuarios = 0;
+$usuariosCount = count($usuariosMensuales);
+if ($usuariosCount > 1) {
+    $mesActual    = (int) $usuariosMensuales[$usuariosCount - 1]['total'];
+    $mesAnterior  = (int) $usuariosMensuales[$usuariosCount - 2]['total'];
+    $crecimientoUsuarios = $mesAnterior === 0
+        ? ($mesActual > 0 ? 100 : 0)
+        : (($mesActual - $mesAnterior) / $mesAnterior) * 100;
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard Admin - LumiSpace</title>
-  <link rel="stylesheet" href="../css/dashboard.css" />
+  <link rel="stylesheet" href="../css/dashboard.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <!-- Font Awesome para iconos del sidebar -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    /* ===== MEJORAS PROFESIONALES ===== */
+    :root {
+      --bg: #f6f3ef;
+      --card-bg: #ffffff;
+      --card-bg-soft: #faf7f3;
+      --card-border: #e0d7cf;
+      --text: #2d1f16;
+      --muted: #7a6f65;
+      --accent: #a1683a;
+      --accent-2: #c7925b;
+      --success: #1abc9c;
+      --shadow: 0 20px 45px rgba(29, 16, 5, 0.08);
+    }
+
     body {
       font-family: 'Inter', "Segoe UI", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
     }
-    
-    .content { 
-      padding: 24px;
-      animation: fadeIn 0.6s ease;
+
+    .main {
+      min-height: 100vh;
+      background: var(--bg);
     }
-    
+
+    .content {
+      padding: 32px;
+      animation: fadeIn 0.5s ease;
+    }
+
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: translateY(0); }
     }
-    
+
+    .page-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
     .page-title {
       font-size: 2rem;
       font-weight: 800;
-      margin-bottom: 24px;
-      background: linear-gradient(135deg, var(--act1), var(--act2));
+      margin: 0;
+      background: linear-gradient(120deg, var(--accent), var(--accent-2));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      background-clip: text;
-      letter-spacing: -0.5px;
     }
 
-    /* ===== GRID & CARDS MEJORADOS ===== */
-    .grid { display: grid; gap: 20px; }
-    .grid-4 { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
-    .grid-2 { grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); }
+    .page-subtitle {
+      color: var(--muted);
+      margin: 4px 0 0 0;
+      font-size: 0.95rem;
+    }
 
-    .card {
-      background: var(--card-bg-1);
-      border: 1px solid var(--card-bd);
-      border-radius: 16px;
+    .badge-pill {
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: rgba(161, 104, 58, 0.1);
+      color: var(--accent);
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .grid {
+      display: grid;
+      gap: 20px;
+    }
+
+    .grid-4 {
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+
+    .grid-2 {
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    }
+
+    .metric-card,
+    .chart-card,
+    .list-card,
+    .quick-actions {
+      background: var(--card-bg);
+      border-radius: 18px;
       padding: 20px;
+      border: 1px solid var(--card-border);
       box-shadow: var(--shadow);
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .metric-card {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
       position: relative;
       overflow: hidden;
     }
-    
-    .card::before {
-      content: '';
+
+    .metric-card::after {
+      content: "";
       position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 3px;
-      background: linear-gradient(90deg, var(--act1), var(--act2));
-      transform: scaleX(0);
-      transform-origin: left;
-      transition: transform 0.3s ease;
-    }
-    
-    .card:hover {
-      transform: translateY(-6px);
-      box-shadow: 0 12px 28px rgba(0,0,0,0.15);
-    }
-    
-    .card:hover::before {
-      transform: scaleX(1);
+      inset: 0;
+      background: linear-gradient(135deg, rgba(161,104,58,0.12), rgba(199,146,91,0));
+      pointer-events: none;
     }
 
-    /* ===== MÉTRICAS PREMIUM ===== */
-    .metric { 
-      text-align: center;
-      padding: 24px 20px;
+    .metric-label {
+      font-size: 0.9rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.6px;
     }
-    
-    .metric-title { 
+
+    .metric-value {
+      font-size: 2.2rem;
+      font-weight: 800;
+      margin: 0;
+    }
+
+    .metric-trend {
       font-size: 0.85rem;
       font-weight: 600;
-      color: var(--muted);
-      margin-bottom: 12px;
-      display: block;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    
-    .metric-val { 
-      font-size: 2.5rem;
-      font-weight: 800;
-      background: linear-gradient(135deg, var(--act1), var(--act2));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      line-height: 1;
-      margin: 12px 0;
-    }
-    
-    .metric-val::after {
-      content: "";
-      display: block;
-      height: 3px;
-      width: 50px;
-      background: linear-gradient(90deg, var(--act1), var(--act2));
-      margin: 12px auto 0;
-      border-radius: 3px;
+      color: var(--success);
     }
 
-    /* ===== TÍTULOS DE SECCIÓN ===== */
-    .card h3 {
-      font-size: 1.1rem;
+    .chart-card h3,
+    .list-card h3 {
+      margin: 0 0 16px 0;
+      font-size: 1.05rem;
       font-weight: 700;
-      margin: 0 0 20px 0;
-      color: var(--text);
       display: flex;
       align-items: center;
       gap: 8px;
-      padding-bottom: 12px;
-      border-bottom: 2px solid var(--card-bd);
     }
 
-    /* ===== LISTAS MEJORADAS ===== */
-    .list { 
-      list-style: none;
-      margin: 0;
-      padding: 0;
+    .chart-wrapper {
+      position: relative;
+      height: 260px;
     }
-    
-    .list li {
+
+    .list-card .list-item {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 12px;
-      border-radius: 10px;
-      margin-bottom: 8px;
-      transition: all 0.2s ease;
-      border: 1px solid transparent;
+      padding: 14px 0;
+      border-bottom: 1px solid rgba(0,0,0,0.05);
     }
-    
-    .list li:hover {
-      background: var(--card-bg-2);
-      border-color: var(--card-bd);
-      transform: translateX(4px);
-    }
-    
-    .ava {
-      width: 44px;
-      height: 44px;
+
+    .list-avatar {
+      width: 48px;
+      height: 48px;
       border-radius: 12px;
-      background: linear-gradient(135deg, var(--act1), var(--act2));
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
       color: #fff;
-      display: flex;
+      display: inline-flex;
       align-items: center;
       justify-content: center;
       font-weight: 700;
-      font-size: 1rem;
-      box-shadow: 0 4px 12px rgba(161, 104, 58, 0.3);
     }
-    
-    .pill {
-      background: linear-gradient(135deg, var(--act1), var(--act2));
-      color: #fff;
-      font-size: 0.8rem;
+
+    .inventory-item + .inventory-item {
+      margin-top: 12px;
+    }
+
+    .inventory-bar {
+      width: 100%;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--card-bg-soft);
+      overflow: hidden;
+    }
+
+    .inventory-fill {
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    }
+
+    .quick-actions {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 16px;
+      margin-top: 24px;
+    }
+
+    .quick-action {
+      background: var(--card-bg-soft);
+      border-radius: 16px;
+      padding: 16px;
+      text-align: center;
       font-weight: 600;
-      padding: 6px 14px;
-      border-radius: 20px;
-      box-shadow: 0 2px 8px rgba(161, 104, 58, 0.25);
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
 
-    /* ===== CHARTS PROFESIONALES ===== */
-    .chart-container {
-      position: relative;
-      padding: 20px;
-    }
-    
-    canvas {
-      background: transparent !important;
-      border: none !important;
-      border-radius: 0 !important;
-      padding: 0 !important;
+    .quick-action:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow);
     }
 
-    /* ===== UTILIDADES ===== */
-    .mt-16 { margin-top: 24px; }
-    
-    /* ===== RESPONSIVE ===== */
     @media (max-width: 768px) {
-      .grid-4,
-      .grid-2 {
-        grid-template-columns: 1fr;
+      .content {
+        padding: 24px 16px;
       }
-      
       .page-title {
-        font-size: 1.5rem;
+        font-size: 1.6rem;
       }
-      
-      .metric-val {
-        font-size: 2rem;
-      }
-    }
-
-    /* ===== MODO OSCURO MEJORADO ===== */
-    body.dark .card {
-      background: var(--card-bg-1);
-      border: 1px solid var(--card-bd);
-    }
-    
-    body.dark .card:hover {
-      box-shadow: 0 12px 28px rgba(0,0,0,0.4);
-    }
-    
-    body.dark .ava {
-      background: linear-gradient(135deg, #d4a373, #c7925b);
-      box-shadow: 0 4px 12px rgba(212, 163, 115, 0.4);
-    }
-    
-    body.dark .pill {
-      background: linear-gradient(135deg, #d4a373, #c7925b);
-    }
-    
-    body.dark .list li:hover {
-      background: rgba(255, 255, 255, 0.05);
     }
   </style>
 </head>
 <body>
-  <?php include("../includes/sidebar-admin.php"); ?>
+  <?php include '../includes/sidebar-admin.php'; ?>
   <main class="main">
-    <?php include("../includes/header-admin.php"); ?>
-
-    <section class="content">
-      <h1 class="page-title">📊 Panel de Control</h1>
-
-      <!-- MÉTRICAS -->
+    <?php include '../includes/header-admin.php'; ?>
       <div class="grid grid-4">
-        <article class="card metric">
-          <span class="metric-title">Usuarios Totales</span>
-          <div class="metric-val"><?= $totalUsuarios ?></div>
+        <article class="metric-card">
+          <span class="metric-label">Usuarios Totales</span>
+          <p class="metric-value"><?= number_format($totalUsuarios) ?></p>
+          <span class="metric-trend">
+            <?= $crecimientoUsuarios >= 0 ? '▲' : '▼' ?>
+            <?= number_format(abs($crecimientoUsuarios), 1) ?>% vs mes anterior
+          </span>
         </article>
-        <article class="card metric">
-          <span class="metric-title">Gestores Activos</span>
-          <div class="metric-val"><?= $totalGestores ?></div>
+
+        <article class="metric-card">
+          <span class="metric-label">Gestores Activos</span>
+          <p class="metric-value"><?= number_format($totalGestores) ?></p>
+          <span class="metric-trend">✓ Operativos</span>
         </article>
-        <article class="card metric">
-          <span class="metric-title">Productos</span>
-          <div class="metric-val"><?= $totalProductos ?></div>
+
+        <article class="metric-card">
+          <span class="metric-label">Productos</span>
+          <p class="metric-value"><?= number_format($totalProductos) ?></p>
+          <span class="metric-trend">Inventario controlado</span>
         </article>
-        <article class="card metric">
-          <span class="metric-title">Ingresos Mes</span>
-          <div class="metric-val"><?= formatCurrency($ingresosMes) ?></div>
+
+        <article class="metric-card">
+          <span class="metric-label">Ingresos del Mes</span>
+          <p class="metric-value"><?= formatCurrency($ingresosMes) ?></p>
+          <span class="metric-trend">Meta mensual en progreso</span>
         </article>
       </div>
 
-      <!-- GRÁFICOS -->
-      <div class="grid grid-2 mt-16">
-        <article class="card">
+      <div class="grid grid-2" style="margin-top:24px;">
+        <article class="chart-card">
           <h3>📈 Crecimiento de Usuarios</h3>
-          <div class="chart-container">
-            <canvas id="usuariosChart" height="120"></canvas>
+          <div class="chart-wrapper">
+            <canvas id="usuariosChart" height="220"></canvas>
           </div>
         </article>
-        <article class="card">
+        <article class="chart-card">
           <h3>💵 Ventas Mensuales</h3>
-          <div class="chart-container">
-            <canvas id="ventasChart" height="120"></canvas>
+          <div class="chart-wrapper">
+            <canvas id="ventasChart" height="220"></canvas>
           </div>
         </article>
       </div>
 
-      <!-- LISTAS -->
-      <div class="grid grid-2 mt-16">
-        <article class="card">
-          <h3>👤 Usuarios Recientes</h3>
-          <ul class="list">
-            <?php foreach ($usuariosRecientes as $u): ?>
-              <li>
+      <div class="grid grid-2" style="margin-top:24px;">
+        <article class="chart-card">
+          <h3>📊 Ventas por Categoría</h3>
+          <div class="chart-wrapper">
+            <canvas id="categoriasChart" height="240"></canvas>
+          </div>
+        </article>
+        <article class="chart-card">
+          <h3>🔥 Productos Más Vendidos</h3>
+          <div class="chart-wrapper">
+            <canvas id="productosChart" height="240"></canvas>
+          </div>
+        </article>
+      </div>
+
+      <article class="chart-card" style="margin-top:24px;">
+        <h3>💰 Ingresos últimos días</h3>
+        <div class="chart-wrapper" style="height:220px;">
+          <canvas id="ingresosChart" height="220"></canvas>
+        </div>
+      </article>
+
+      <div class="grid grid-2" style="margin-top:24px;">
+        <article class="list-card">
+          <h3>👥 Usuarios recientes</h3>
+          <?php if (!empty($usuariosRecientes)): ?>
+            <?php foreach ($usuariosRecientes as $usuario): ?>
+              <div class="list-item">
                 <div style="display:flex; gap:12px; align-items:center;">
-                  <span class="ava"><?= strtoupper(substr($u['nombre'],0,2)) ?></span>
+                  <span class="list-avatar"><?= strtoupper(substr($usuario['nombre'], 0, 2)) ?></span>
                   <div>
-                    <div style="font-weight:600; color:var(--text); margin-bottom:2px;">
-                      <?= htmlspecialchars($u['nombre']) ?>
-                    </div>
+                    <div style="font-weight:600;"><?= htmlspecialchars($usuario['nombre']) ?></div>
                     <div style="font-size:0.85rem; color:var(--muted);">
-                      <?= htmlspecialchars($u['email']) ?>
+                      <?= htmlspecialchars($usuario['email']) ?> · <?= timeAgo($usuario['fecha_registro']) ?>
                     </div>
                   </div>
                 </div>
-                <div style="font-size:0.8rem; color:var(--muted); font-weight:500;">
-                  <?= timeAgo($u['fecha_registro']) ?>
-                </div>
-              </li>
-            <?php endforeach; ?>
-          </ul>
-        </article>
-
-        <article class="card">
-          <h3>📦 Resumen Inventario</h3>
-          <ul class="list">
-            <?php foreach ($inventarioResumen as $item): ?>
-              <li>
-                <span style="font-weight:600; color:var(--text);">
-                  <?= htmlspecialchars($item['categoria']) ?>
-                </span>
-                <span class="pill"><?= (int)$item['cantidad'] ?> ítems</span>
-              </li>
-            <?php endforeach; ?>
-          </ul>
-        </article>
-      </div>
-    </section>
-  </main>
-
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <script>
-  // Configuración global profesional
-  Chart.defaults.font.family = 'Inter, system-ui, sans-serif';
-  Chart.defaults.color = getComputedStyle(document.documentElement).getPropertyValue('--muted') || '#7a6f65';
-
-  // 📈 Gráfico de usuarios mensuales
-  new Chart(document.getElementById('usuariosChart'), {
-    type: 'line',
-    data: {
-      labels: <?= json_encode(array_column($usuariosMensuales, 'mes')) ?>,
-      datasets: [{
-        label: "Usuarios nuevos",
-        data: <?= json_encode(array_column($usuariosMensuales, 'total')) ?>,
-        borderColor: "#a1683a",
-        backgroundColor: function(context) {
-          const ctx = context.chart.ctx;
-          const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-          gradient.addColorStop(0, 'rgba(161, 104, 58, 0.3)');
-          gradient.addColorStop(1, 'rgba(161, 104, 58, 0.0)');
-          return gradient;
-        },
-        fill: true,
-        tension: 0.4,
-        borderWidth: 3,
-        pointRadius: 5,
-        pointBackgroundColor: '#a1683a',
-        pointBorderColor: '#fff',
-        pointBorderWidth: 2,
-        pointHoverRadius: 7,
-        pointHoverBorderWidth: 3
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: true,
-          position: 'top',
-          align: 'end',
-          labels: {
-            usePointStyle: true,
-            padding: 15,
-            font: { size: 12, weight: '600' }
-          }
-        },
-        tooltip: {
-          backgroundColor: 'rgba(0, 0, 0, 0.85)',
-          padding: 12,
-          borderRadius: 8,
-          titleFont: { size: 14, weight: 'bold' },
-          bodyFont: { size: 13 },
-          displayColors: false
-        }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          grid: {
-            color: 'rgba(0, 0, 0, 0.05)',
-            drawBorder: false
-          },
-          ticks: {
-            padding: 10,
-            font: { size: 11 }
-          }
-        },
-        x: {
-          grid: { display: false },
-          ticks: {
-            padding: 10,
-            font: { size: 11 }
-          }
-        }
-      }
-    }
-  });
-
-  // 📊 Gráfico de ventas mensuales
-  new Chart(document.getElementById('ventasChart'), {
-    type: 'bar',
-    data: {
-      labels: <?= json_encode(array_column($ventasMensuales, 'mes')) ?>,
-      datasets: [{
-        label: "Ingresos ($)",
-        data: <?= json_encode(array_column($ventasMensuales, 'total')) ?>,
-        backgroundColor: function(context) {
-          const ctx = context.chart.ctx;
-          const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-          gradient.addColorStop(0, '#a1683a');
-          gradient.addColorStop(1, '#8f5e4b');
-          return gradient;
-        },
-        borderRadius: 8,
-        borderSkipped: false
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: true,
-          position: 'top',
-          align: 'end',
-          labels: {
-            usePointStyle: true,
-            padding: 15,
-            font: { size: 12, weight: '600' }
-          }
-        },
-        tooltip: {
-          backgroundColor: 'rgba(0, 0, 0, 0.85)',
-          padding: 12,
-          borderRadius: 8,
-          titleFont: { size: 14, weight: 'bold' },
-          bodyFont: { size: 13 },
-          displayColors: false,
-          callbacks: {
-            label: function(context) {
-              return 'Ingresos: 
-if (!isset($_SESSION['ultima_conexion'])) {
-    $_SESSION['ultima_conexion'] = date('Y-m-d H:i:s');
-}
-$ultimaConexion = $_SESSION['ultima_conexion'];
-
-// 📊 Cálculos adicionales para métricas avanzadas
-$crecimientoUsuarios = count($usuariosMensuales) > 1 
-    ? (($usuariosMensuales[count($usuariosMensuales)-1]['total'] - $usuariosMensuales[count($usuariosMensuales)-2]['total']) / $usuariosMensuales[count($usuariosMensuales)-2]['total']) * 100 
-    : 0;
-?>
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Dashboard Admin - LumiSpace</title>
-  <link rel="stylesheet" href="../css/dashboard.css" />
-  <link rel="stylesheet" href="../css/dashboard-professional.css" />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <!-- Font Awesome para iconos -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-</head>
-<body>
-  <?php include("../includes/sidebar-admin.php"); ?>
-  
-  <main class="main">
-    <?php include("../includes/header-admin.php"); ?>
-
-    <section class="content">
-      <!-- PAGE HEADER -->
-      <div class="page-header">
-        <div>
-          <h1 class="page-title">📊 Panel de Control</h1>
-          <p class="page-subtitle">Vista general del sistema • Última actualización: <?= date('d/m/Y H:i') ?></p>
-        </div>
-      </div>
-
-      <!-- METRIC CARDS -->
-      <div class="grid grid-4 gap-16">
-        <article class="metric-card">
-          <div class="metric-header">
-            <div class="metric-icon">👥</div>
-            <div class="metric-trend up" data-tooltip="Crecimiento vs mes anterior">
-              ↑ <?= number_format(abs($crecimientoUsuarios), 1) ?>%
-            </div>
-          </div>
-          <div class="metric-body">
-            <div class="metric-label">Usuarios Totales</div>
-            <div class="metric-value"><?= number_format($totalUsuarios) ?></div>
-          </div>
-          <div class="metric-footer">
-            <span>📈</span>
-            <span>Usuarios activos en la plataforma</span>
-          </div>
-        </article>
-
-        <article class="metric-card">
-          <div class="metric-header">
-            <div class="metric-icon">⚡</div>
-            <div class="metric-trend up" data-tooltip="Estado del sistema">
-              ✓ Activos
-            </div>
-          </div>
-          <div class="metric-body">
-            <div class="metric-label">Gestores Activos</div>
-            <div class="metric-value"><?= number_format($totalGestores) ?></div>
-          </div>
-          <div class="metric-footer">
-            <span>🔧</span>
-            <span>Personal gestionando el sistema</span>
-          </div>
-        </article>
-
-        <article class="metric-card">
-          <div class="metric-header">
-            <div class="metric-icon">📦</div>
-            <div class="metric-trend up" data-tooltip="Productos en inventario">
-              ✓ Stock
-            </div>
-          </div>
-          <div class="metric-body">
-            <div class="metric-label">Productos</div>
-            <div class="metric-value"><?= number_format($totalProductos) ?></div>
-          </div>
-          <div class="metric-footer">
-            <span>🏷️</span>
-            <span>Artículos en catálogo</span>
-          </div>
-        </article>
-
-        <article class="metric-card">
-          <div class="metric-header">
-            <div class="metric-icon">💰</div>
-            <div class="metric-trend up" data-tooltip="Ingresos del mes actual">
-              ↑ +15.3%
-            </div>
-          </div>
-          <div class="metric-body">
-            <div class="metric-label">Ingresos del Mes</div>
-            <div class="metric-value"><?= formatCurrency($ingresosMes) ?></div>
-          </div>
-          <div class="metric-footer">
-            <span>💳</span>
-            <span>Revenue generado este mes</span>
-          </div>
-        </article>
-      </div>
-
-      <!-- CHARTS -->
-      <div class="grid grid-2 gap-16 mt-24">
-        <article class="chart-card">
-          <div class="chart-header">
-            <h3 class="chart-title">📈 Crecimiento de Usuarios</h3>
-            <div class="chart-controls">
-              <button class="chart-btn active" data-period="6m">6M</button>
-              <button class="chart-btn" data-period="1y">1A</button>
-              <button class="chart-btn" data-period="all">Todo</button>
-            </div>
-          </div>
-          <div class="chart-wrapper">
-            <canvas id="usuariosChart"></canvas>
-          </div>
-        </article>
-
-        <article class="chart-card">
-          <div class="chart-header">
-            <h3 class="chart-title">💵 Ventas Mensuales</h3>
-            <div class="chart-controls">
-              <button class="chart-btn active" data-period="6m">6M</button>
-              <button class="chart-btn" data-period="1y">1A</button>
-              <button class="chart-btn" data-period="all">Todo</button>
-            </div>
-          </div>
-          <div class="chart-wrapper">
-            <canvas id="ventasChart"></canvas>
-          </div>
-        </article>
-      </div>
-
-      <!-- GRÁFICAS ADICIONALES -->
-      <div class="grid grid-2 gap-16 mt-24">
-        <article class="chart-card">
-          <div class="chart-header">
-            <h3 class="chart-title">📊 Ventas por Categoría</h3>
-            <div class="chart-controls">
-              <button class="chart-btn active">Mensual</button>
-            </div>
-          </div>
-          <div class="chart-wrapper">
-            <canvas id="categoriasChart"></canvas>
-          </div>
-        </article>
-
-        <article class="chart-card">
-          <div class="chart-header">
-            <h3 class="chart-title">🔥 Productos Más Vendidos</h3>
-            <div class="chart-controls">
-              <button class="chart-btn active">Top 5</button>
-            </div>
-          </div>
-          <div class="chart-wrapper">
-            <canvas id="productosChart"></canvas>
-          </div>
-        </article>
-      </div>
-
-      <!-- GRÁFICA DE INGRESOS DIARIOS -->
-      <div class="grid mt-24">
-        <article class="chart-card">
-          <div class="chart-header">
-            <h3 class="chart-title">💰 Ingresos Últimos 7 Días</h3>
-            <div class="chart-controls">
-              <button class="chart-btn active">7D</button>
-              <button class="chart-btn">15D</button>
-              <button class="chart-btn">30D</button>
-            </div>
-          </div>
-          <div class="chart-wrapper" style="height: 200px;">
-            <canvas id="ingresosDiariosChart"></canvas>
-          </div>
-        </article>
-      </div>
-
-      <!-- LISTS & INVENTORY -->
-      <div class="grid grid-2 gap-16 mt-24">
-        <!-- USUARIOS RECIENTES -->
-        <article class="list-card">
-          <div class="list-header">
-            <h3 class="list-title">
-              👤 Usuarios Recientes
-              <span class="list-badge"><?= count($usuariosRecientes) ?></span>
-            </h3>
-            <a href="usuarios.php" style="color: var(--act1); font-size: 0.9rem; font-weight: 600; text-decoration: none;">Ver todos →</a>
-          </div>
-          <div>
-            <?php foreach ($usuariosRecientes as $u): ?>
-              <div class="list-item">
-                <div class="list-avatar"><?= strtoupper(substr($u['nombre'], 0, 2)) ?></div>
-                <div class="list-content">
-                  <div class="list-name"><?= htmlspecialchars($u['nombre']) ?></div>
-                  <div class="list-meta"><?= htmlspecialchars($u['email']) ?> • <?= timeAgo($u['fecha_registro']) ?></div>
-                </div>
-                <button class="list-action">Ver perfil</button>
+                <button class="quick-action" style="padding:8px 16px; font-size:0.8rem;" onclick="window.location.href='usuarios.php'">
+                  Ver perfil
+                </button>
               </div>
             <?php endforeach; ?>
-          </div>
+          <?php else: ?>
+            <p style="color:var(--muted);">No hay registros recientes.</p>
+          <?php endif; ?>
         </article>
 
-        <!-- INVENTARIO -->
         <article class="list-card">
-          <div class="list-header">
-            <h3 class="list-title">
-              📦 Resumen de Inventario
-              <span class="list-badge"><?= count($inventarioResumen) ?></span>
-            </h3>
-            <a href="inventario.php" style="color: var(--act1); font-size: 0.9rem; font-weight: 600; text-decoration: none;">Gestionar →</a>
-          </div>
-          <div>
-            <?php 
+          <h3>📦 Resumen de inventario</h3>
+          <?php if (!empty($inventarioResumen)): ?>
+            <?php
             $maxCantidad = max(array_column($inventarioResumen, 'cantidad'));
-            foreach ($inventarioResumen as $item): 
-              $porcentaje = ($item['cantidad'] / $maxCantidad) * 100;
+            foreach ($inventarioResumen as $item):
+                $porcentaje = $maxCantidad > 0 ? ($item['cantidad'] / $maxCantidad) * 100 : 0;
             ?>
               <div class="inventory-item">
-                <div class="inventory-header">
-                  <span class="inventory-label"><?= htmlspecialchars($item['categoria']) ?></span>
-                  <span class="inventory-value"><?= number_format((int)$item['cantidad']) ?> ítems</span>
+                <div style="display:flex; justify-content:space-between; font-weight:600;">
+                  <span><?= htmlspecialchars($item['categoria']) ?></span>
+                  <span><?= number_format((int) $item['cantidad']) ?> ítems</span>
                 </div>
                 <div class="inventory-bar">
-                  <div class="inventory-fill" style="width: <?= $porcentaje ?>%"></div>
+                  <div class="inventory-fill" style="width: <?= number_format($porcentaje, 2, '.', '') ?>%;"></div>
                 </div>
               </div>
             <?php endforeach; ?>
-          </div>
+          <?php else: ?>
+            <p style="color:var(--muted);">Sin datos de inventario.</p>
+          <?php endif; ?>
         </article>
       </div>
 
-      <!-- QUICK ACTIONS -->
       <div class="quick-actions">
-        <div class="quick-action" onclick="window.location.href='usuarios.php'">
-          <div class="quick-action-icon">👥</div>
-          <div class="quick-action-label">Gestionar Usuarios</div>
-        </div>
-        <div class="quick-action" onclick="window.location.href='productos.php'">
-          <div class="quick-action-icon">📦</div>
-          <div class="quick-action-label">Administrar Productos</div>
-        </div>
-        <div class="quick-action" onclick="window.location.href='reportes.php'">
-          <div class="quick-action-icon">📊</div>
-          <div class="quick-action-label">Ver Reportes</div>
-        </div>
-        <div class="quick-action" onclick="window.location.href='configuracion.php'">
-          <div class="quick-action-icon">⚙️</div>
-          <div class="quick-action-label">Configuración</div>
-        </div>
+        <div class="quick-action" onclick="window.location.href='usuarios.php'">Gestionar usuarios</div>
+        <div class="quick-action" onclick="window.location.href='productos.php'">Administrar productos</div>
+        <div class="quick-action" onclick="window.location.href='reportes.php'">Reportes</div>
+        <div class="quick-action" onclick="window.location.href='configuracion.php'">Configuración</div>
       </div>
     </section>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script>
-  // Configuración global de Chart.js
-  Chart.defaults.font.family = 'Inter, system-ui, sans-serif';
-  Chart.defaults.color = getComputedStyle(document.body).getPropertyValue('--muted');
-  Chart.defaults.plugins.legend.display = false;
+    const usuariosMensuales = <?= json_encode($usuariosMensuales, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+    const ventasMensuales   = <?= json_encode($ventasMensuales, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+    const ventasPorCategoria = <?= json_encode($ventasPorCategoria, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+    const productosPopulares = <?= json_encode($productosPopulares, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+    const ingresosPorDia     = <?= json_encode($ingresosPorDia, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
 
-  // 📈 Gráfico de Usuarios Mensuales
-  const ctxUsuarios = document.getElementById('usuariosChart').getContext('2d');
-  const usuariosChart = new Chart(ctxUsuarios, {
-    type: 'line',
-    data: {
-      labels: <?= json_encode(array_column($usuariosMensuales, 'mes')) ?>,
-      datasets: [{
-        label: 'Nuevos Usuarios',
-        data: <?= json_encode(array_column($usuariosMensuales, 'total')) ?>,
-        borderColor: '#a1683a',
-        backgroundColor: function(context) {
-          const ctx = context.chart.ctx;
-          const gradient = ctx.createLinearGradient(0, 0, 0, 280);
-          gradient.addColorStop(0, 'rgba(161, 104, 58, 0.3)');
-          gradient.addColorStop(1, 'rgba(161, 104, 58, 0.0)');
-          return gradient;
-        },
-        fill: true,
-        tension: 0.4,
-        borderWidth: 3,
-        pointRadius: 5,
-        pointBackgroundColor: '#a1683a',
-        pointBorderColor: '#fff',
-        pointBorderWidth: 2,
-        pointHoverRadius: 7
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: {
-        intersect: false,
-        mode: 'index'
-      },
-      plugins: {
-        tooltip: {
-          backgroundColor: 'rgba(0, 0, 0, 0.8)',
-          padding: 12,
-          borderRadius: 8,
-          titleFont: { size: 14, weight: 'bold' },
-          bodyFont: { size: 13 },
-          callbacks: {
-            label: function(context) {
-              return 'Usuarios: ' + context.parsed.y;
-            }
-          }
-        },
-        legend: {
-          display: true,
-          position: 'top',
-          align: 'end'
-        }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          grid: {
-            color: 'rgba(0, 0, 0, 0.05)',
-            drawBorder: false
-          },
-          ticks: {
-            padding: 10,
-            precision: 0
-          }
-        },
-        x: {
-          grid: {
-            display: false
-          },
-          ticks: {
-            padding: 10
-          }
-        }
-      }
+    Chart.defaults.font.family = 'Inter, system-ui, sans-serif';
+    Chart.defaults.color = getComputedStyle(document.body).getPropertyValue('--muted') || '#7a6f65';
+
+    const currencyFormatter = new Intl.NumberFormat('es-MX', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+
+    function renderEmptyState(canvasId, message) {
+      const canvas = document.getElementById(canvasId);
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.font = '14px Inter, sans-serif';
+      ctx.fillStyle = '#9a9289';
+      ctx.textAlign = 'center';
+      ctx.fillText(message, canvas.width / 2, canvas.height / 2);
     }
-  });
 
-  // 📊 Gráfico de Ventas Mensuales
-  const ctxVentas = document.getElementById('ventasChart').getContext('2d');
-  const ventasChart = new Chart(ctxVentas, {
-    type: 'bar',
-    data: {
-      labels: <?= json_encode(array_column($ventasMensuales, 'mes')) ?>,
-      datasets: [{
-        label: 'Ingresos ($)',
-        data: <?= json_encode(array_column($ventasMensuales, 'total')) ?>,
-        backgroundColor: function(context) {
-          const ctx = context.chart.ctx;
-          const gradient = ctx.createLinearGradient(0, 0, 0, 280);
-          gradient.addColorStop(0, '#a1683a');
-          gradient.addColorStop(1, '#8f5e4b');
-          return gradient;
-        },
-        borderRadius: 8,
-        borderSkipped: false
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: {
-        intersect: false,
-        mode: 'index'
-      },
-      plugins: {
-        tooltip: {
-          backgroundColor: 'rgba(0, 0, 0, 0.8)',
-          padding: 12,
-          borderRadius: 8,
-          titleFont: { size: 14, weight: 'bold' },
-          bodyFont: { size: 13 },
-          callbacks: {
-            label: function(context) {
-              return 'Ingresos: 
-
-  // 🎨 Animación de entrada para las cards
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach((entry, index) => {
-      if (entry.isIntersecting) {
-        setTimeout(() => {
-          entry.target.style.opacity = '1';
-          entry.target.style.transform = 'translateY(0)';
-        }, index * 100);
-      }
-    });
-  }, { threshold: 0.1 });
-
-  document.querySelectorAll('.metric-card, .chart-card, .list-card').forEach((card) => {
-    card.style.opacity = '0';
-    card.style.transform = 'translateY(20px)';
-    card.style.transition = 'all 0.6s ease';
-    observer.observe(card);
-  });
-
-  // 🎯 Ripple effect en botones
-  document.querySelectorAll('.quick-action, .list-action, .chart-btn').forEach(el => {
-    el.addEventListener('click', function(e) {
-      const ripple = document.createElement('span');
-      ripple.classList.add('ripple');
-      
-      const rect = this.getBoundingClientRect();
-      const size = Math.max(rect.width, rect.height);
-      const x = e.clientX - rect.left - size / 2;
-      const y = e.clientY - rect.top - size / 2;
-      
-      ripple.style.width = ripple.style.height = size + 'px';
-      ripple.style.left = x + 'px';
-      ripple.style.top = y + 'px';
-      
-      this.appendChild(ripple);
-      setTimeout(() => ripple.remove(), 600);
-    });
-  });
-
-  // 📊 Actualización en tiempo real (simulación)
-  setInterval(() => {
-    const metricValues = document.querySelectorAll('.metric-value');
-    metricValues.forEach(el => {
-      el.style.transform = 'scale(1.05)';
-      setTimeout(() => {
-        el.style.transform = 'scale(1)';
-      }, 200);
-    });
-  }, 30000); // Cada 30 segundos
-
-  // 🎨 Animación de barras de inventario
-  window.addEventListener('load', () => {
-    document.querySelectorAll('.inventory-fill').forEach(bar => {
-      const width = bar.style.width;
-      bar.style.width = '0%';
-      setTimeout(() => {
-        bar.style.width = width;
-      }, 300);
-    });
-  });
-
-  // 🌓 Toggle de tema (si existe)
-  const themeToggle = document.querySelector('[data-theme-toggle]');
-  if (themeToggle) {
-    themeToggle.addEventListener('click', () => {
-      document.body.classList.toggle('dark');
-      localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
-    });
-  }
-
-  // Restaurar tema guardado
-  if (localStorage.getItem('theme') === 'dark') {
-    document.body.classList.add('dark');
-  }
-
-  console.log('%c🚀 Dashboard LumiSpace v2.0', 'color: #a1683a; font-size: 16px; font-weight: bold;');
-  console.log('%cPanel de administración cargado correctamente', 'color: #1abc9c; font-size: 12px;');
-  </script>
-</body>
-</html> + context.parsed.y.toLocaleString('es-MX', {minimumFractionDigits: 2});
-            }
-          }
-        },
-        legend: {
-          display: true,
-          position: 'top',
-          align: 'end'
-        }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          grid: {
-            color: 'rgba(0, 0, 0, 0.05)',
-            drawBorder: false
-          },
-          ticks: {
-            padding: 10,
-            callback: function(value) {
-              return '
-
-  // 🎨 Animación de entrada para las cards
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach((entry, index) => {
-      if (entry.isIntersecting) {
-        setTimeout(() => {
-          entry.target.style.opacity = '1';
-          entry.target.style.transform = 'translateY(0)';
-        }, index * 100);
-      }
-    });
-  }, { threshold: 0.1 });
-
-  document.querySelectorAll('.metric-card, .chart-card, .list-card').forEach((card) => {
-    card.style.opacity = '0';
-    card.style.transform = 'translateY(20px)';
-    card.style.transition = 'all 0.6s ease';
-    observer.observe(card);
-  });
-
-  // 🎯 Ripple effect en botones
-  document.querySelectorAll('.quick-action, .list-action, .chart-btn').forEach(el => {
-    el.addEventListener('click', function(e) {
-      const ripple = document.createElement('span');
-      ripple.classList.add('ripple');
-      
-      const rect = this.getBoundingClientRect();
-      const size = Math.max(rect.width, rect.height);
-      const x = e.clientX - rect.left - size / 2;
-      const y = e.clientY - rect.top - size / 2;
-      
-      ripple.style.width = ripple.style.height = size + 'px';
-      ripple.style.left = x + 'px';
-      ripple.style.top = y + 'px';
-      
-      this.appendChild(ripple);
-      setTimeout(() => ripple.remove(), 600);
-    });
-  });
-
-  // 📊 Actualización en tiempo real (simulación)
-  setInterval(() => {
-    const metricValues = document.querySelectorAll('.metric-value');
-    metricValues.forEach(el => {
-      el.style.transform = 'scale(1.05)';
-      setTimeout(() => {
-        el.style.transform = 'scale(1)';
-      }, 200);
-    });
-  }, 30000); // Cada 30 segundos
-
-  // 🎨 Animación de barras de inventario
-  window.addEventListener('load', () => {
-    document.querySelectorAll('.inventory-fill').forEach(bar => {
-      const width = bar.style.width;
-      bar.style.width = '0%';
-      setTimeout(() => {
-        bar.style.width = width;
-      }, 300);
-    });
-  });
-
-  // 🌓 Toggle de tema (si existe)
-  const themeToggle = document.querySelector('[data-theme-toggle]');
-  if (themeToggle) {
-    themeToggle.addEventListener('click', () => {
-      document.body.classList.toggle('dark');
-      localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
-    });
-  }
-
-  // Restaurar tema guardado
-  if (localStorage.getItem('theme') === 'dark') {
-    document.body.classList.add('dark');
-  }
-
-  console.log('%c🚀 Dashboard LumiSpace v2.0', 'color: #a1683a; font-size: 16px; font-weight: bold;');
-  console.log('%cPanel de administración cargado correctamente', 'color: #1abc9c; font-size: 12px;');
-  </script>
-</body>
-</html> + value.toLocaleString();
-            }
-          }
-        },
-        x: {
-          grid: {
-            display: false
-          },
-          ticks: {
-            padding: 10
-          }
-        }
-      }
+    function buildGradient(ctx, color, height = 300) {
+      const gradient = ctx.createLinearGradient(0, 0, 0, height);
+      gradient.addColorStop(0, color.replace('1)', '0.3)'));
+      gradient.addColorStop(1, color.replace('1)', '0)'));
+      return gradient;
     }
-  });
 
-  // 📊 Gráfico de Ventas por Categoría (Pie Chart)
-  const ctxCategorias = document.getElementById('categoriasChart').getContext('2d');
-  <?php if (isset($ventasPorCategoria) && !empty($ventasPorCategoria)): ?>
-  new Chart(ctxCategorias, {
-    type: 'doughnut',
-    data: {
-      labels: <?= json_encode(array_column($ventasPorCategoria, 'categoria')) ?>,
-      datasets: [{
-        label: 'Ventas',
-        data: <?= json_encode(array_column($ventasPorCategoria, 'total')) ?>,
-        backgroundColor: [
-          '#a1683a',
-          '#8f5e4b',
-          '#7a6a4b',
-          '#c7925b',
-          '#d4a373'
-        ],
-        borderWidth: 2,
-        borderColor: '#fff'
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: true,
-          position: 'right'
+    // Usuarios chart
+    (function renderUsuarios() {
+      const labels = usuariosMensuales.map(item => item.mes);
+      const data = usuariosMensuales.map(item => Number(item.total));
+      if (!labels.length) {
+        renderEmptyState('usuariosChart', 'Sin datos suficientes');
+        return;
+      }
+
+      const ctx = document.getElementById('usuariosChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Nuevos usuarios',
+            data,
+            borderColor: '#a1683a',
+            backgroundColor: buildGradient(ctx, 'rgba(161,104,58,1)'),
+            borderWidth: 3,
+            fill: true,
+            tension: 0.4,
+            pointRadius: 4,
+            pointBackgroundColor: '#a1683a'
+          }]
         },
-        tooltip: {
-          backgroundColor: 'rgba(0, 0, 0, 0.8)',
-          padding: 12,
-          borderRadius: 8,
-          callbacks: {
-            label: function(context) {
-              const total = context.dataset.data.reduce((a, b) => a + b, 0);
-              const percentage = ((context.parsed / total) * 100).toFixed(1);
-              return context.label + ': 
+        options: {
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (context) => `Usuarios: ${context.parsed.y}`
+              }
+            }
+          },
+          scales: {
+            y: { beginAtZero: true, ticks: { precision: 0 } }
+          }
+        }
+      });
+    })();
 
-  // 🎨 Animación de entrada para las cards
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach((entry, index) => {
-      if (entry.isIntersecting) {
-        setTimeout(() => {
-          entry.target.style.opacity = '1';
+    // Ventas mensuales
+    (function renderVentas() {
+      const labels = ventasMensuales.map(item => item.mes);
+      const data = ventasMensuales.map(item => Number(item.total));
+      if (!labels.length) {
+        renderEmptyState('ventasChart', 'Sin ventas registradas');
+        return;
+      }
+
+      new Chart(document.getElementById('ventasChart'), {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Ingresos',
+            data,
+            backgroundColor: labels.map(() => '#c7925b'),
+            borderRadius: 8,
+            borderSkipped: false
+          }]
+        },
+        options: {
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (context) => `Ingresos: ${currencyFormatter.format(context.parsed.y)}`
+              }
+            }
+          },
+          scales: {
+            y: { beginAtZero: true }
+          }
+        }
+      });
+    })();
+
+    // Categorías
+    (function renderCategorias() {
+      if (!ventasPorCategoria.length) {
+        renderEmptyState('categoriasChart', 'Sin ventas por categoría');
+        return;
+      }
+
+      new Chart(document.getElementById('categoriasChart'), {
+        type: 'doughnut',
+        data: {
+          labels: ventasPorCategoria.map(item => item.categoria),
+          datasets: [{
+            data: ventasPorCategoria.map(item => item.monto),
+            backgroundColor: ['#a1683a', '#c7925b', '#7a6a4b', '#1abc9c', '#f2994a'],
+            borderWidth: 2
+          }]
+        },
+        options: {
+          maintainAspectRatio: false,
+          plugins: {
+            tooltip: {
+              callbacks: {
+                label: (context) => `${context.label}: ${currencyFormatter.format(context.parsed)}`
+              }
+            }
+          }
+        }
+      });
+    })();
+
+    // Productos
+    (function renderProductos() {
+      if (!productosPopulares.length) {
+        renderEmptyState('productosChart', 'No hay productos vendidos');
+        return;
+      }
+
+      new Chart(document.getElementById('productosChart'), {
+        type: 'bar',
+        data: {
+          labels: productosPopulares.map(item => item.nombre),
+          datasets: [{
+            label: 'Unidades',
+            data: productosPopulares.map(item => item.cantidad),
+            backgroundColor: '#a1683a',
+            borderRadius: 6
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (context) => `Vendidos: ${context.parsed.x}`
+              }
+            }
+          },
+          scales: {
+            x: { beginAtZero: true, ticks: { precision: 0 } }
+          }
+        }
+      });
+    })();
+
+    // Ingresos diarios
+    (function renderIngresos() {
+      if (!ingresosPorDia.length) {
+        renderEmptyState('ingresosChart', 'Sin datos diarios');
+        return;
+      }
+
+      const ctx = document.getElementById('ingresosChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: ingresosPorDia.map(item => item.fecha),
+          datasets: [{
+            label: 'Ingresos diarios',
+            data: ingresosPorDia.map(item => item.total),
+            borderColor: '#1abc9c',
+            backgroundColor: buildGradient(ctx, 'rgba(26,188,156,1)', 220),
+            borderWidth: 3,
+            fill: true,
+            tension: 0.4,
+            pointRadius: 4,
+            pointBackgroundColor: '#1abc9c'
+          }]
+        },
+        options: {
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (context) => `Ingresos: ${currencyFormatter.format(context.parsed.y)}`
+              }
+            }
+          },
+          scales: { y: { beginAtZero: true } }
+        }
+      });
+    })();
+
+    // Animaciones ligeras
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.style.opacity = 1;
           entry.target.style.transform = 'translateY(0)';
-        }, index * 100);
-      }
-    });
-  }, { threshold: 0.1 });
-
-  document.querySelectorAll('.metric-card, .chart-card, .list-card').forEach((card) => {
-    card.style.opacity = '0';
-    card.style.transform = 'translateY(20px)';
-    card.style.transition = 'all 0.6s ease';
-    observer.observe(card);
-  });
-
-  // 🎯 Ripple effect en botones
-  document.querySelectorAll('.quick-action, .list-action, .chart-btn').forEach(el => {
-    el.addEventListener('click', function(e) {
-      const ripple = document.createElement('span');
-      ripple.classList.add('ripple');
-      
-      const rect = this.getBoundingClientRect();
-      const size = Math.max(rect.width, rect.height);
-      const x = e.clientX - rect.left - size / 2;
-      const y = e.clientY - rect.top - size / 2;
-      
-      ripple.style.width = ripple.style.height = size + 'px';
-      ripple.style.left = x + 'px';
-      ripple.style.top = y + 'px';
-      
-      this.appendChild(ripple);
-      setTimeout(() => ripple.remove(), 600);
-    });
-  });
-
-  // 📊 Actualización en tiempo real (simulación)
-  setInterval(() => {
-    const metricValues = document.querySelectorAll('.metric-value');
-    metricValues.forEach(el => {
-      el.style.transform = 'scale(1.05)';
-      setTimeout(() => {
-        el.style.transform = 'scale(1)';
-      }, 200);
-    });
-  }, 30000); // Cada 30 segundos
-
-  // 🎨 Animación de barras de inventario
-  window.addEventListener('load', () => {
-    document.querySelectorAll('.inventory-fill').forEach(bar => {
-      const width = bar.style.width;
-      bar.style.width = '0%';
-      setTimeout(() => {
-        bar.style.width = width;
-      }, 300);
-    });
-  });
-
-  // 🌓 Toggle de tema (si existe)
-  const themeToggle = document.querySelector('[data-theme-toggle]');
-  if (themeToggle) {
-    themeToggle.addEventListener('click', () => {
-      document.body.classList.toggle('dark');
-      localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
-    });
-  }
-
-  // Restaurar tema guardado
-  if (localStorage.getItem('theme') === 'dark') {
-    document.body.classList.add('dark');
-  }
-
-  console.log('%c🚀 Dashboard LumiSpace v2.0', 'color: #a1683a; font-size: 16px; font-weight: bold;');
-  console.log('%cPanel de administración cargado correctamente', 'color: #1abc9c; font-size: 12px;');
-  </script>
-</body>
-</html> + context.parsed.toLocaleString() + ' (' + percentage + '%)';
-            }
-          }
         }
-      }
-    }
-  });
-  <?php else: ?>
-  // Si no hay datos, mostrar mensaje
-  ctxCategorias.fillStyle = '#999';
-  ctxCategorias.font = '14px Inter';
-  ctxCategorias.textAlign = 'center';
-  ctxCategorias.fillText('No hay datos disponibles', ctxCategorias.canvas.width / 2, ctxCategorias.canvas.height / 2);
-  <?php endif; ?>
+      });
+    }, { threshold: 0.15 });
 
-  // 🔥 Gráfico de Productos Populares (Bar Horizontal)
-  const ctxProductos = document.getElementById('productosChart').getContext('2d');
-  <?php if (isset($productosPopulares) && !empty($productosPopulares)): ?>
-  new Chart(ctxProductos, {
-    type: 'bar',
-    data: {
-      labels: <?= json_encode(array_column($productosPopulares, 'nombre')) ?>,
-      datasets: [{
-        label: 'Unidades Vendidas',
-        data: <?= json_encode(array_column($productosPopulares, 'cantidad')) ?>,
-        backgroundColor: function(context) {
-          const colors = ['#a1683a', '#8f5e4b', '#7a6a4b', '#c7925b', '#d4a373'];
-          return colors[context.dataIndex % colors.length];
-        },
-        borderRadius: 6
-      }]
-    },
-    options: {
-      indexAxis: 'y',
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: false
-        },
-        tooltip: {
-          backgroundColor: 'rgba(0, 0, 0, 0.8)',
-          padding: 12,
-          borderRadius: 8,
-          callbacks: {
-            label: function(context) {
-              return 'Vendidos: ' + context.parsed.x + ' unidades';
-            }
-          }
-        }
-      },
-      scales: {
-        x: {
-          beginAtZero: true,
-          grid: {
-            color: 'rgba(0, 0, 0, 0.05)'
-          },
-          ticks: {
-            precision: 0
-          }
-        },
-        y: {
-          grid: {
-            display: false
-          }
-        }
-      }
-    }
-  });
-  <?php else: ?>
-  ctxProductos.fillStyle = '#999';
-  ctxProductos.font = '14px Inter';
-  ctxProductos.textAlign = 'center';
-  ctxProductos.fillText('No hay datos disponibles', ctxProductos.canvas.width / 2, ctxProductos.canvas.height / 2);
-  <?php endif; ?>
-
-  // 💰 Gráfico de Ingresos Diarios (Area Chart)
-  const ctxIngresos = document.getElementById('ingresosDiariosChart').getContext('2d');
-  <?php if (isset($ingresosPorDia) && !empty($ingresosPorDia)): ?>
-  new Chart(ctxIngresos, {
-    type: 'line',
-    data: {
-      labels: <?= json_encode(array_column($ingresosPorDia, 'fecha')) ?>,
-      datasets: [{
-        label: 'Ingresos Diarios',
-        data: <?= json_encode(array_column($ingresosPorDia, 'total')) ?>,
-        borderColor: '#1abc9c',
-        backgroundColor: function(context) {
-          const ctx = context.chart.ctx;
-          const gradient = ctx.createLinearGradient(0, 0, 0, 200);
-          gradient.addColorStop(0, 'rgba(26, 188, 156, 0.3)');
-          gradient.addColorStop(1, 'rgba(26, 188, 156, 0.0)');
-          return gradient;
-        },
-        fill: true,
-        tension: 0.4,
-        borderWidth: 3,
-        pointRadius: 4,
-        pointBackgroundColor: '#1abc9c',
-        pointBorderColor: '#fff',
-        pointBorderWidth: 2,
-        pointHoverRadius: 6
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: {
-        intersect: false,
-        mode: 'index'
-      },
-      plugins: {
-        legend: {
-          display: true,
-          position: 'top',
-          align: 'end'
-        },
-        tooltip: {
-          backgroundColor: 'rgba(0, 0, 0, 0.8)',
-          padding: 12,
-          borderRadius: 8,
-          callbacks: {
-            label: function(context) {
-              return 'Ingresos: 
-
-  // 🎨 Animación de entrada para las cards
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach((entry, index) => {
-      if (entry.isIntersecting) {
-        setTimeout(() => {
-          entry.target.style.opacity = '1';
-          entry.target.style.transform = 'translateY(0)';
-        }, index * 100);
-      }
+    document.querySelectorAll('.metric-card, .chart-card, .list-card, .quick-action').forEach(el => {
+      el.style.opacity = 0;
+      el.style.transform = 'translateY(15px)';
+      el.style.transition = 'all 0.5s ease';
+      observer.observe(el);
     });
-  }, { threshold: 0.1 });
-
-  document.querySelectorAll('.metric-card, .chart-card, .list-card').forEach((card) => {
-    card.style.opacity = '0';
-    card.style.transform = 'translateY(20px)';
-    card.style.transition = 'all 0.6s ease';
-    observer.observe(card);
-  });
-
-  // 🎯 Ripple effect en botones
-  document.querySelectorAll('.quick-action, .list-action, .chart-btn').forEach(el => {
-    el.addEventListener('click', function(e) {
-      const ripple = document.createElement('span');
-      ripple.classList.add('ripple');
-      
-      const rect = this.getBoundingClientRect();
-      const size = Math.max(rect.width, rect.height);
-      const x = e.clientX - rect.left - size / 2;
-      const y = e.clientY - rect.top - size / 2;
-      
-      ripple.style.width = ripple.style.height = size + 'px';
-      ripple.style.left = x + 'px';
-      ripple.style.top = y + 'px';
-      
-      this.appendChild(ripple);
-      setTimeout(() => ripple.remove(), 600);
-    });
-  });
-
-  // 📊 Actualización en tiempo real (simulación)
-  setInterval(() => {
-    const metricValues = document.querySelectorAll('.metric-value');
-    metricValues.forEach(el => {
-      el.style.transform = 'scale(1.05)';
-      setTimeout(() => {
-        el.style.transform = 'scale(1)';
-      }, 200);
-    });
-  }, 30000); // Cada 30 segundos
-
-  // 🎨 Animación de barras de inventario
-  window.addEventListener('load', () => {
-    document.querySelectorAll('.inventory-fill').forEach(bar => {
-      const width = bar.style.width;
-      bar.style.width = '0%';
-      setTimeout(() => {
-        bar.style.width = width;
-      }, 300);
-    });
-  });
-
-  // 🌓 Toggle de tema (si existe)
-  const themeToggle = document.querySelector('[data-theme-toggle]');
-  if (themeToggle) {
-    themeToggle.addEventListener('click', () => {
-      document.body.classList.toggle('dark');
-      localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
-    });
-  }
-
-  // Restaurar tema guardado
-  if (localStorage.getItem('theme') === 'dark') {
-    document.body.classList.add('dark');
-  }
-
-  console.log('%c🚀 Dashboard LumiSpace v2.0', 'color: #a1683a; font-size: 16px; font-weight: bold;');
-  console.log('%cPanel de administración cargado correctamente', 'color: #1abc9c; font-size: 12px;');
-  </script>
-</body>
-</html> + context.parsed.y.toLocaleString('es-MX', {minimumFractionDigits: 2});
-            }
-          }
-        }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          grid: {
-            color: 'rgba(0, 0, 0, 0.05)',
-            drawBorder: false
-          },
-          ticks: {
-            padding: 10,
-            callback: function(value) {
-              return '
-
-  // 🎨 Animación de entrada para las cards
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach((entry, index) => {
-      if (entry.isIntersecting) {
-        setTimeout(() => {
-          entry.target.style.opacity = '1';
-          entry.target.style.transform = 'translateY(0)';
-        }, index * 100);
-      }
-    });
-  }, { threshold: 0.1 });
-
-  document.querySelectorAll('.metric-card, .chart-card, .list-card').forEach((card) => {
-    card.style.opacity = '0';
-    card.style.transform = 'translateY(20px)';
-    card.style.transition = 'all 0.6s ease';
-    observer.observe(card);
-  });
-
-  // 🎯 Ripple effect en botones
-  document.querySelectorAll('.quick-action, .list-action, .chart-btn').forEach(el => {
-    el.addEventListener('click', function(e) {
-      const ripple = document.createElement('span');
-      ripple.classList.add('ripple');
-      
-      const rect = this.getBoundingClientRect();
-      const size = Math.max(rect.width, rect.height);
-      const x = e.clientX - rect.left - size / 2;
-      const y = e.clientY - rect.top - size / 2;
-      
-      ripple.style.width = ripple.style.height = size + 'px';
-      ripple.style.left = x + 'px';
-      ripple.style.top = y + 'px';
-      
-      this.appendChild(ripple);
-      setTimeout(() => ripple.remove(), 600);
-    });
-  });
-
-  // 📊 Actualización en tiempo real (simulación)
-  setInterval(() => {
-    const metricValues = document.querySelectorAll('.metric-value');
-    metricValues.forEach(el => {
-      el.style.transform = 'scale(1.05)';
-      setTimeout(() => {
-        el.style.transform = 'scale(1)';
-      }, 200);
-    });
-  }, 30000); // Cada 30 segundos
-
-  // 🎨 Animación de barras de inventario
-  window.addEventListener('load', () => {
-    document.querySelectorAll('.inventory-fill').forEach(bar => {
-      const width = bar.style.width;
-      bar.style.width = '0%';
-      setTimeout(() => {
-        bar.style.width = width;
-      }, 300);
-    });
-  });
-
-  // 🌓 Toggle de tema (si existe)
-  const themeToggle = document.querySelector('[data-theme-toggle]');
-  if (themeToggle) {
-    themeToggle.addEventListener('click', () => {
-      document.body.classList.toggle('dark');
-      localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
-    });
-  }
-
-  // Restaurar tema guardado
-  if (localStorage.getItem('theme') === 'dark') {
-    document.body.classList.add('dark');
-  }
-
-  console.log('%c🚀 Dashboard LumiSpace v2.0', 'color: #a1683a; font-size: 16px; font-weight: bold;');
-  console.log('%cPanel de administración cargado correctamente', 'color: #1abc9c; font-size: 12px;');
-  </script>
-</body>
-</html> + value.toLocaleString();
-            }
-          }
-        },
-        x: {
-          grid: {
-            display: false
-          },
-          ticks: {
-            padding: 10
-          }
-        }
-      }
-    }
-  });
-  <?php else: ?>
-  ctxIngresos.fillStyle = '#999';
-  ctxIngresos.font = '14px Inter';
-  ctxIngresos.textAlign = 'center';
-  ctxIngresos.fillText('No hay datos disponibles', ctxIngresos.canvas.width / 2, ctxIngresos.canvas.height / 2);
-  <?php endif; ?>
-
-  // 🎨 Animación de entrada para las cards
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach((entry, index) => {
-      if (entry.isIntersecting) {
-        setTimeout(() => {
-          entry.target.style.opacity = '1';
-          entry.target.style.transform = 'translateY(0)';
-        }, index * 100);
-      }
-    });
-  }, { threshold: 0.1 });
-
-  document.querySelectorAll('.metric-card, .chart-card, .list-card').forEach((card) => {
-    card.style.opacity = '0';
-    card.style.transform = 'translateY(20px)';
-    card.style.transition = 'all 0.6s ease';
-    observer.observe(card);
-  });
-
-  // 🎯 Ripple effect en botones
-  document.querySelectorAll('.quick-action, .list-action, .chart-btn').forEach(el => {
-    el.addEventListener('click', function(e) {
-      const ripple = document.createElement('span');
-      ripple.classList.add('ripple');
-      
-      const rect = this.getBoundingClientRect();
-      const size = Math.max(rect.width, rect.height);
-      const x = e.clientX - rect.left - size / 2;
-      const y = e.clientY - rect.top - size / 2;
-      
-      ripple.style.width = ripple.style.height = size + 'px';
-      ripple.style.left = x + 'px';
-      ripple.style.top = y + 'px';
-      
-      this.appendChild(ripple);
-      setTimeout(() => ripple.remove(), 600);
-    });
-  });
-
-  // 📊 Actualización en tiempo real (simulación)
-  setInterval(() => {
-    const metricValues = document.querySelectorAll('.metric-value');
-    metricValues.forEach(el => {
-      el.style.transform = 'scale(1.05)';
-      setTimeout(() => {
-        el.style.transform = 'scale(1)';
-      }, 200);
-    });
-  }, 30000); // Cada 30 segundos
-
-  // 🎨 Animación de barras de inventario
-  window.addEventListener('load', () => {
-    document.querySelectorAll('.inventory-fill').forEach(bar => {
-      const width = bar.style.width;
-      bar.style.width = '0%';
-      setTimeout(() => {
-        bar.style.width = width;
-      }, 300);
-    });
-  });
-
-  // 🌓 Toggle de tema (si existe)
-  const themeToggle = document.querySelector('[data-theme-toggle]');
-  if (themeToggle) {
-    themeToggle.addEventListener('click', () => {
-      document.body.classList.toggle('dark');
-      localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
-    });
-  }
-
-  // Restaurar tema guardado
-  if (localStorage.getItem('theme') === 'dark') {
-    document.body.classList.add('dark');
-  }
-
-  console.log('%c🚀 Dashboard LumiSpace v2.0', 'color: #a1683a; font-size: 16px; font-weight: bold;');
-  console.log('%cPanel de administración cargado correctamente', 'color: #1abc9c; font-size: 12px;');
-  </script>
-</body>
-</html> + context.parsed.y.toLocaleString('es-MX', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-              });
-            }
-          }
-        }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          grid: {
-            color: 'rgba(0, 0, 0, 0.05)',
-            drawBorder: false
-          },
-          ticks: {
-            padding: 10,
-            font: { size: 11 },
-            callback: function(value) {
-              return '
-if (!isset($_SESSION['ultima_conexion'])) {
-    $_SESSION['ultima_conexion'] = date('Y-m-d H:i:s');
-}
-$ultimaConexion = $_SESSION['ultima_conexion'];
-
-// 📊 Cálculos adicionales para métricas avanzadas
-$crecimientoUsuarios = count($usuariosMensuales) > 1 
-    ? (($usuariosMensuales[count($usuariosMensuales)-1]['total'] - $usuariosMensuales[count($usuariosMensuales)-2]['total']) / $usuariosMensuales[count($usuariosMensuales)-2]['total']) * 100 
-    : 0;
-?>
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Dashboard Admin - LumiSpace</title>
-  <link rel="stylesheet" href="../css/dashboard.css" />
-  <link rel="stylesheet" href="../css/dashboard-professional.css" />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <!-- Font Awesome para iconos -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-</head>
-<body>
-  <?php include("../includes/sidebar-admin.php"); ?>
-  
-  <main class="main">
-    <?php include("../includes/header-admin.php"); ?>
-
-    <section class="content">
-      <!-- PAGE HEADER -->
-      <div class="page-header">
-        <div>
-          <h1 class="page-title">📊 Panel de Control</h1>
-          <p class="page-subtitle">Vista general del sistema • Última actualización: <?= date('d/m/Y H:i') ?></p>
-        </div>
-      </div>
-
-      <!-- METRIC CARDS -->
-      <div class="grid grid-4 gap-16">
-        <article class="metric-card">
-          <div class="metric-header">
-            <div class="metric-icon">👥</div>
-            <div class="metric-trend up" data-tooltip="Crecimiento vs mes anterior">
-              ↑ <?= number_format(abs($crecimientoUsuarios), 1) ?>%
-            </div>
-          </div>
-          <div class="metric-body">
-            <div class="metric-label">Usuarios Totales</div>
-            <div class="metric-value"><?= number_format($totalUsuarios) ?></div>
-          </div>
-          <div class="metric-footer">
-            <span>📈</span>
-            <span>Usuarios activos en la plataforma</span>
-          </div>
-        </article>
-
-        <article class="metric-card">
-          <div class="metric-header">
-            <div class="metric-icon">⚡</div>
-            <div class="metric-trend up" data-tooltip="Estado del sistema">
-              ✓ Activos
-            </div>
-          </div>
-          <div class="metric-body">
-            <div class="metric-label">Gestores Activos</div>
-            <div class="metric-value"><?= number_format($totalGestores) ?></div>
-          </div>
-          <div class="metric-footer">
-            <span>🔧</span>
-            <span>Personal gestionando el sistema</span>
-          </div>
-        </article>
-
-        <article class="metric-card">
-          <div class="metric-header">
-            <div class="metric-icon">📦</div>
-            <div class="metric-trend up" data-tooltip="Productos en inventario">
-              ✓ Stock
-            </div>
-          </div>
-          <div class="metric-body">
-            <div class="metric-label">Productos</div>
-            <div class="metric-value"><?= number_format($totalProductos) ?></div>
-          </div>
-          <div class="metric-footer">
-            <span>🏷️</span>
-            <span>Artículos en catálogo</span>
-          </div>
-        </article>
-
-        <article class="metric-card">
-          <div class="metric-header">
-            <div class="metric-icon">💰</div>
-            <div class="metric-trend up" data-tooltip="Ingresos del mes actual">
-              ↑ +15.3%
-            </div>
-          </div>
-          <div class="metric-body">
-            <div class="metric-label">Ingresos del Mes</div>
-            <div class="metric-value"><?= formatCurrency($ingresosMes) ?></div>
-          </div>
-          <div class="metric-footer">
-            <span>💳</span>
-            <span>Revenue generado este mes</span>
-          </div>
-        </article>
-      </div>
-
-      <!-- CHARTS -->
-      <div class="grid grid-2 gap-16 mt-24">
-        <article class="chart-card">
-          <div class="chart-header">
-            <h3 class="chart-title">📈 Crecimiento de Usuarios</h3>
-            <div class="chart-controls">
-              <button class="chart-btn active" data-period="6m">6M</button>
-              <button class="chart-btn" data-period="1y">1A</button>
-              <button class="chart-btn" data-period="all">Todo</button>
-            </div>
-          </div>
-          <div class="chart-wrapper">
-            <canvas id="usuariosChart"></canvas>
-          </div>
-        </article>
-
-        <article class="chart-card">
-          <div class="chart-header">
-            <h3 class="chart-title">💵 Ventas Mensuales</h3>
-            <div class="chart-controls">
-              <button class="chart-btn active" data-period="6m">6M</button>
-              <button class="chart-btn" data-period="1y">1A</button>
-              <button class="chart-btn" data-period="all">Todo</button>
-            </div>
-          </div>
-          <div class="chart-wrapper">
-            <canvas id="ventasChart"></canvas>
-          </div>
-        </article>
-      </div>
-
-      <!-- GRÁFICAS ADICIONALES -->
-      <div class="grid grid-2 gap-16 mt-24">
-        <article class="chart-card">
-          <div class="chart-header">
-            <h3 class="chart-title">📊 Ventas por Categoría</h3>
-            <div class="chart-controls">
-              <button class="chart-btn active">Mensual</button>
-            </div>
-          </div>
-          <div class="chart-wrapper">
-            <canvas id="categoriasChart"></canvas>
-          </div>
-        </article>
-
-        <article class="chart-card">
-          <div class="chart-header">
-            <h3 class="chart-title">🔥 Productos Más Vendidos</h3>
-            <div class="chart-controls">
-              <button class="chart-btn active">Top 5</button>
-            </div>
-          </div>
-          <div class="chart-wrapper">
-            <canvas id="productosChart"></canvas>
-          </div>
-        </article>
-      </div>
-
-      <!-- GRÁFICA DE INGRESOS DIARIOS -->
-      <div class="grid mt-24">
-        <article class="chart-card">
-          <div class="chart-header">
-            <h3 class="chart-title">💰 Ingresos Últimos 7 Días</h3>
-            <div class="chart-controls">
-              <button class="chart-btn active">7D</button>
-              <button class="chart-btn">15D</button>
-              <button class="chart-btn">30D</button>
-            </div>
-          </div>
-          <div class="chart-wrapper" style="height: 200px;">
-            <canvas id="ingresosDiariosChart"></canvas>
-          </div>
-        </article>
-      </div>
-
-      <!-- LISTS & INVENTORY -->
-      <div class="grid grid-2 gap-16 mt-24">
-        <!-- USUARIOS RECIENTES -->
-        <article class="list-card">
-          <div class="list-header">
-            <h3 class="list-title">
-              👤 Usuarios Recientes
-              <span class="list-badge"><?= count($usuariosRecientes) ?></span>
-            </h3>
-            <a href="usuarios.php" style="color: var(--act1); font-size: 0.9rem; font-weight: 600; text-decoration: none;">Ver todos →</a>
-          </div>
-          <div>
-            <?php foreach ($usuariosRecientes as $u): ?>
-              <div class="list-item">
-                <div class="list-avatar"><?= strtoupper(substr($u['nombre'], 0, 2)) ?></div>
-                <div class="list-content">
-                  <div class="list-name"><?= htmlspecialchars($u['nombre']) ?></div>
-                  <div class="list-meta"><?= htmlspecialchars($u['email']) ?> • <?= timeAgo($u['fecha_registro']) ?></div>
-                </div>
-                <button class="list-action">Ver perfil</button>
-              </div>
-            <?php endforeach; ?>
-          </div>
-        </article>
-
-        <!-- INVENTARIO -->
-        <article class="list-card">
-          <div class="list-header">
-            <h3 class="list-title">
-              📦 Resumen de Inventario
-              <span class="list-badge"><?= count($inventarioResumen) ?></span>
-            </h3>
-            <a href="inventario.php" style="color: var(--act1); font-size: 0.9rem; font-weight: 600; text-decoration: none;">Gestionar →</a>
-          </div>
-          <div>
-            <?php 
-            $maxCantidad = max(array_column($inventarioResumen, 'cantidad'));
-            foreach ($inventarioResumen as $item): 
-              $porcentaje = ($item['cantidad'] / $maxCantidad) * 100;
-            ?>
-              <div class="inventory-item">
-                <div class="inventory-header">
-                  <span class="inventory-label"><?= htmlspecialchars($item['categoria']) ?></span>
-                  <span class="inventory-value"><?= number_format((int)$item['cantidad']) ?> ítems</span>
-                </div>
-                <div class="inventory-bar">
-                  <div class="inventory-fill" style="width: <?= $porcentaje ?>%"></div>
-                </div>
-              </div>
-            <?php endforeach; ?>
-          </div>
-        </article>
-      </div>
-
-      <!-- QUICK ACTIONS -->
-      <div class="quick-actions">
-        <div class="quick-action" onclick="window.location.href='usuarios.php'">
-          <div class="quick-action-icon">👥</div>
-          <div class="quick-action-label">Gestionar Usuarios</div>
-        </div>
-        <div class="quick-action" onclick="window.location.href='productos.php'">
-          <div class="quick-action-icon">📦</div>
-          <div class="quick-action-label">Administrar Productos</div>
-        </div>
-        <div class="quick-action" onclick="window.location.href='reportes.php'">
-          <div class="quick-action-icon">📊</div>
-          <div class="quick-action-label">Ver Reportes</div>
-        </div>
-        <div class="quick-action" onclick="window.location.href='configuracion.php'">
-          <div class="quick-action-icon">⚙️</div>
-          <div class="quick-action-label">Configuración</div>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <script>
-  // Configuración global de Chart.js
-  Chart.defaults.font.family = 'Inter, system-ui, sans-serif';
-  Chart.defaults.color = getComputedStyle(document.body).getPropertyValue('--muted');
-  Chart.defaults.plugins.legend.display = false;
-
-  // 📈 Gráfico de Usuarios Mensuales
-  const ctxUsuarios = document.getElementById('usuariosChart').getContext('2d');
-  const usuariosChart = new Chart(ctxUsuarios, {
-    type: 'line',
-    data: {
-      labels: <?= json_encode(array_column($usuariosMensuales, 'mes')) ?>,
-      datasets: [{
-        label: 'Nuevos Usuarios',
-        data: <?= json_encode(array_column($usuariosMensuales, 'total')) ?>,
-        borderColor: '#a1683a',
-        backgroundColor: function(context) {
-          const ctx = context.chart.ctx;
-          const gradient = ctx.createLinearGradient(0, 0, 0, 280);
-          gradient.addColorStop(0, 'rgba(161, 104, 58, 0.3)');
-          gradient.addColorStop(1, 'rgba(161, 104, 58, 0.0)');
-          return gradient;
-        },
-        fill: true,
-        tension: 0.4,
-        borderWidth: 3,
-        pointRadius: 5,
-        pointBackgroundColor: '#a1683a',
-        pointBorderColor: '#fff',
-        pointBorderWidth: 2,
-        pointHoverRadius: 7
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: {
-        intersect: false,
-        mode: 'index'
-      },
-      plugins: {
-        tooltip: {
-          backgroundColor: 'rgba(0, 0, 0, 0.8)',
-          padding: 12,
-          borderRadius: 8,
-          titleFont: { size: 14, weight: 'bold' },
-          bodyFont: { size: 13 },
-          callbacks: {
-            label: function(context) {
-              return 'Usuarios: ' + context.parsed.y;
-            }
-          }
-        },
-        legend: {
-          display: true,
-          position: 'top',
-          align: 'end'
-        }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          grid: {
-            color: 'rgba(0, 0, 0, 0.05)',
-            drawBorder: false
-          },
-          ticks: {
-            padding: 10,
-            precision: 0
-          }
-        },
-        x: {
-          grid: {
-            display: false
-          },
-          ticks: {
-            padding: 10
-          }
-        }
-      }
-    }
-  });
-
-  // 📊 Gráfico de Ventas Mensuales
-  const ctxVentas = document.getElementById('ventasChart').getContext('2d');
-  const ventasChart = new Chart(ctxVentas, {
-    type: 'bar',
-    data: {
-      labels: <?= json_encode(array_column($ventasMensuales, 'mes')) ?>,
-      datasets: [{
-        label: 'Ingresos ($)',
-        data: <?= json_encode(array_column($ventasMensuales, 'total')) ?>,
-        backgroundColor: function(context) {
-          const ctx = context.chart.ctx;
-          const gradient = ctx.createLinearGradient(0, 0, 0, 280);
-          gradient.addColorStop(0, '#a1683a');
-          gradient.addColorStop(1, '#8f5e4b');
-          return gradient;
-        },
-        borderRadius: 8,
-        borderSkipped: false
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: {
-        intersect: false,
-        mode: 'index'
-      },
-      plugins: {
-        tooltip: {
-          backgroundColor: 'rgba(0, 0, 0, 0.8)',
-          padding: 12,
-          borderRadius: 8,
-          titleFont: { size: 14, weight: 'bold' },
-          bodyFont: { size: 13 },
-          callbacks: {
-            label: function(context) {
-              return 'Ingresos: 
-
-  // 🎨 Animación de entrada para las cards
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach((entry, index) => {
-      if (entry.isIntersecting) {
-        setTimeout(() => {
-          entry.target.style.opacity = '1';
-          entry.target.style.transform = 'translateY(0)';
-        }, index * 100);
-      }
-    });
-  }, { threshold: 0.1 });
-
-  document.querySelectorAll('.metric-card, .chart-card, .list-card').forEach((card) => {
-    card.style.opacity = '0';
-    card.style.transform = 'translateY(20px)';
-    card.style.transition = 'all 0.6s ease';
-    observer.observe(card);
-  });
-
-  // 🎯 Ripple effect en botones
-  document.querySelectorAll('.quick-action, .list-action, .chart-btn').forEach(el => {
-    el.addEventListener('click', function(e) {
-      const ripple = document.createElement('span');
-      ripple.classList.add('ripple');
-      
-      const rect = this.getBoundingClientRect();
-      const size = Math.max(rect.width, rect.height);
-      const x = e.clientX - rect.left - size / 2;
-      const y = e.clientY - rect.top - size / 2;
-      
-      ripple.style.width = ripple.style.height = size + 'px';
-      ripple.style.left = x + 'px';
-      ripple.style.top = y + 'px';
-      
-      this.appendChild(ripple);
-      setTimeout(() => ripple.remove(), 600);
-    });
-  });
-
-  // 📊 Actualización en tiempo real (simulación)
-  setInterval(() => {
-    const metricValues = document.querySelectorAll('.metric-value');
-    metricValues.forEach(el => {
-      el.style.transform = 'scale(1.05)';
-      setTimeout(() => {
-        el.style.transform = 'scale(1)';
-      }, 200);
-    });
-  }, 30000); // Cada 30 segundos
-
-  // 🎨 Animación de barras de inventario
-  window.addEventListener('load', () => {
-    document.querySelectorAll('.inventory-fill').forEach(bar => {
-      const width = bar.style.width;
-      bar.style.width = '0%';
-      setTimeout(() => {
-        bar.style.width = width;
-      }, 300);
-    });
-  });
-
-  // 🌓 Toggle de tema (si existe)
-  const themeToggle = document.querySelector('[data-theme-toggle]');
-  if (themeToggle) {
-    themeToggle.addEventListener('click', () => {
-      document.body.classList.toggle('dark');
-      localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
-    });
-  }
-
-  // Restaurar tema guardado
-  if (localStorage.getItem('theme') === 'dark') {
-    document.body.classList.add('dark');
-  }
-
-  console.log('%c🚀 Dashboard LumiSpace v2.0', 'color: #a1683a; font-size: 16px; font-weight: bold;');
-  console.log('%cPanel de administración cargado correctamente', 'color: #1abc9c; font-size: 12px;');
-  </script>
-</body>
-</html> + context.parsed.y.toLocaleString('es-MX', {minimumFractionDigits: 2});
-            }
-          }
-        },
-        legend: {
-          display: true,
-          position: 'top',
-          align: 'end'
-        }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          grid: {
-            color: 'rgba(0, 0, 0, 0.05)',
-            drawBorder: false
-          },
-          ticks: {
-            padding: 10,
-            callback: function(value) {
-              return '
-
-  // 🎨 Animación de entrada para las cards
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach((entry, index) => {
-      if (entry.isIntersecting) {
-        setTimeout(() => {
-          entry.target.style.opacity = '1';
-          entry.target.style.transform = 'translateY(0)';
-        }, index * 100);
-      }
-    });
-  }, { threshold: 0.1 });
-
-  document.querySelectorAll('.metric-card, .chart-card, .list-card').forEach((card) => {
-    card.style.opacity = '0';
-    card.style.transform = 'translateY(20px)';
-    card.style.transition = 'all 0.6s ease';
-    observer.observe(card);
-  });
-
-  // 🎯 Ripple effect en botones
-  document.querySelectorAll('.quick-action, .list-action, .chart-btn').forEach(el => {
-    el.addEventListener('click', function(e) {
-      const ripple = document.createElement('span');
-      ripple.classList.add('ripple');
-      
-      const rect = this.getBoundingClientRect();
-      const size = Math.max(rect.width, rect.height);
-      const x = e.clientX - rect.left - size / 2;
-      const y = e.clientY - rect.top - size / 2;
-      
-      ripple.style.width = ripple.style.height = size + 'px';
-      ripple.style.left = x + 'px';
-      ripple.style.top = y + 'px';
-      
-      this.appendChild(ripple);
-      setTimeout(() => ripple.remove(), 600);
-    });
-  });
-
-  // 📊 Actualización en tiempo real (simulación)
-  setInterval(() => {
-    const metricValues = document.querySelectorAll('.metric-value');
-    metricValues.forEach(el => {
-      el.style.transform = 'scale(1.05)';
-      setTimeout(() => {
-        el.style.transform = 'scale(1)';
-      }, 200);
-    });
-  }, 30000); // Cada 30 segundos
-
-  // 🎨 Animación de barras de inventario
-  window.addEventListener('load', () => {
-    document.querySelectorAll('.inventory-fill').forEach(bar => {
-      const width = bar.style.width;
-      bar.style.width = '0%';
-      setTimeout(() => {
-        bar.style.width = width;
-      }, 300);
-    });
-  });
-
-  // 🌓 Toggle de tema (si existe)
-  const themeToggle = document.querySelector('[data-theme-toggle]');
-  if (themeToggle) {
-    themeToggle.addEventListener('click', () => {
-      document.body.classList.toggle('dark');
-      localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
-    });
-  }
-
-  // Restaurar tema guardado
-  if (localStorage.getItem('theme') === 'dark') {
-    document.body.classList.add('dark');
-  }
-
-  console.log('%c🚀 Dashboard LumiSpace v2.0', 'color: #a1683a; font-size: 16px; font-weight: bold;');
-  console.log('%cPanel de administración cargado correctamente', 'color: #1abc9c; font-size: 12px;');
-  </script>
-</body>
-</html> + value.toLocaleString();
-            }
-          }
-        },
-        x: {
-          grid: {
-            display: false
-          },
-          ticks: {
-            padding: 10
-          }
-        }
-      }
-    }
-  });
-
-  // 📊 Gráfico de Ventas por Categoría (Pie Chart)
-  const ctxCategorias = document.getElementById('categoriasChart').getContext('2d');
-  <?php if (isset($ventasPorCategoria) && !empty($ventasPorCategoria)): ?>
-  new Chart(ctxCategorias, {
-    type: 'doughnut',
-    data: {
-      labels: <?= json_encode(array_column($ventasPorCategoria, 'categoria')) ?>,
-      datasets: [{
-        label: 'Ventas',
-        data: <?= json_encode(array_column($ventasPorCategoria, 'total')) ?>,
-        backgroundColor: [
-          '#a1683a',
-          '#8f5e4b',
-          '#7a6a4b',
-          '#c7925b',
-          '#d4a373'
-        ],
-        borderWidth: 2,
-        borderColor: '#fff'
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: true,
-          position: 'right'
-        },
-        tooltip: {
-          backgroundColor: 'rgba(0, 0, 0, 0.8)',
-          padding: 12,
-          borderRadius: 8,
-          callbacks: {
-            label: function(context) {
-              const total = context.dataset.data.reduce((a, b) => a + b, 0);
-              const percentage = ((context.parsed / total) * 100).toFixed(1);
-              return context.label + ': 
-
-  // 🎨 Animación de entrada para las cards
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach((entry, index) => {
-      if (entry.isIntersecting) {
-        setTimeout(() => {
-          entry.target.style.opacity = '1';
-          entry.target.style.transform = 'translateY(0)';
-        }, index * 100);
-      }
-    });
-  }, { threshold: 0.1 });
-
-  document.querySelectorAll('.metric-card, .chart-card, .list-card').forEach((card) => {
-    card.style.opacity = '0';
-    card.style.transform = 'translateY(20px)';
-    card.style.transition = 'all 0.6s ease';
-    observer.observe(card);
-  });
-
-  // 🎯 Ripple effect en botones
-  document.querySelectorAll('.quick-action, .list-action, .chart-btn').forEach(el => {
-    el.addEventListener('click', function(e) {
-      const ripple = document.createElement('span');
-      ripple.classList.add('ripple');
-      
-      const rect = this.getBoundingClientRect();
-      const size = Math.max(rect.width, rect.height);
-      const x = e.clientX - rect.left - size / 2;
-      const y = e.clientY - rect.top - size / 2;
-      
-      ripple.style.width = ripple.style.height = size + 'px';
-      ripple.style.left = x + 'px';
-      ripple.style.top = y + 'px';
-      
-      this.appendChild(ripple);
-      setTimeout(() => ripple.remove(), 600);
-    });
-  });
-
-  // 📊 Actualización en tiempo real (simulación)
-  setInterval(() => {
-    const metricValues = document.querySelectorAll('.metric-value');
-    metricValues.forEach(el => {
-      el.style.transform = 'scale(1.05)';
-      setTimeout(() => {
-        el.style.transform = 'scale(1)';
-      }, 200);
-    });
-  }, 30000); // Cada 30 segundos
-
-  // 🎨 Animación de barras de inventario
-  window.addEventListener('load', () => {
-    document.querySelectorAll('.inventory-fill').forEach(bar => {
-      const width = bar.style.width;
-      bar.style.width = '0%';
-      setTimeout(() => {
-        bar.style.width = width;
-      }, 300);
-    });
-  });
-
-  // 🌓 Toggle de tema (si existe)
-  const themeToggle = document.querySelector('[data-theme-toggle]');
-  if (themeToggle) {
-    themeToggle.addEventListener('click', () => {
-      document.body.classList.toggle('dark');
-      localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
-    });
-  }
-
-  // Restaurar tema guardado
-  if (localStorage.getItem('theme') === 'dark') {
-    document.body.classList.add('dark');
-  }
-
-  console.log('%c🚀 Dashboard LumiSpace v2.0', 'color: #a1683a; font-size: 16px; font-weight: bold;');
-  console.log('%cPanel de administración cargado correctamente', 'color: #1abc9c; font-size: 12px;');
-  </script>
-</body>
-</html> + context.parsed.toLocaleString() + ' (' + percentage + '%)';
-            }
-          }
-        }
-      }
-    }
-  });
-  <?php else: ?>
-  // Si no hay datos, mostrar mensaje
-  ctxCategorias.fillStyle = '#999';
-  ctxCategorias.font = '14px Inter';
-  ctxCategorias.textAlign = 'center';
-  ctxCategorias.fillText('No hay datos disponibles', ctxCategorias.canvas.width / 2, ctxCategorias.canvas.height / 2);
-  <?php endif; ?>
-
-  // 🔥 Gráfico de Productos Populares (Bar Horizontal)
-  const ctxProductos = document.getElementById('productosChart').getContext('2d');
-  <?php if (isset($productosPopulares) && !empty($productosPopulares)): ?>
-  new Chart(ctxProductos, {
-    type: 'bar',
-    data: {
-      labels: <?= json_encode(array_column($productosPopulares, 'nombre')) ?>,
-      datasets: [{
-        label: 'Unidades Vendidas',
-        data: <?= json_encode(array_column($productosPopulares, 'cantidad')) ?>,
-        backgroundColor: function(context) {
-          const colors = ['#a1683a', '#8f5e4b', '#7a6a4b', '#c7925b', '#d4a373'];
-          return colors[context.dataIndex % colors.length];
-        },
-        borderRadius: 6
-      }]
-    },
-    options: {
-      indexAxis: 'y',
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: false
-        },
-        tooltip: {
-          backgroundColor: 'rgba(0, 0, 0, 0.8)',
-          padding: 12,
-          borderRadius: 8,
-          callbacks: {
-            label: function(context) {
-              return 'Vendidos: ' + context.parsed.x + ' unidades';
-            }
-          }
-        }
-      },
-      scales: {
-        x: {
-          beginAtZero: true,
-          grid: {
-            color: 'rgba(0, 0, 0, 0.05)'
-          },
-          ticks: {
-            precision: 0
-          }
-        },
-        y: {
-          grid: {
-            display: false
-          }
-        }
-      }
-    }
-  });
-  <?php else: ?>
-  ctxProductos.fillStyle = '#999';
-  ctxProductos.font = '14px Inter';
-  ctxProductos.textAlign = 'center';
-  ctxProductos.fillText('No hay datos disponibles', ctxProductos.canvas.width / 2, ctxProductos.canvas.height / 2);
-  <?php endif; ?>
-
-  // 💰 Gráfico de Ingresos Diarios (Area Chart)
-  const ctxIngresos = document.getElementById('ingresosDiariosChart').getContext('2d');
-  <?php if (isset($ingresosPorDia) && !empty($ingresosPorDia)): ?>
-  new Chart(ctxIngresos, {
-    type: 'line',
-    data: {
-      labels: <?= json_encode(array_column($ingresosPorDia, 'fecha')) ?>,
-      datasets: [{
-        label: 'Ingresos Diarios',
-        data: <?= json_encode(array_column($ingresosPorDia, 'total')) ?>,
-        borderColor: '#1abc9c',
-        backgroundColor: function(context) {
-          const ctx = context.chart.ctx;
-          const gradient = ctx.createLinearGradient(0, 0, 0, 200);
-          gradient.addColorStop(0, 'rgba(26, 188, 156, 0.3)');
-          gradient.addColorStop(1, 'rgba(26, 188, 156, 0.0)');
-          return gradient;
-        },
-        fill: true,
-        tension: 0.4,
-        borderWidth: 3,
-        pointRadius: 4,
-        pointBackgroundColor: '#1abc9c',
-        pointBorderColor: '#fff',
-        pointBorderWidth: 2,
-        pointHoverRadius: 6
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: {
-        intersect: false,
-        mode: 'index'
-      },
-      plugins: {
-        legend: {
-          display: true,
-          position: 'top',
-          align: 'end'
-        },
-        tooltip: {
-          backgroundColor: 'rgba(0, 0, 0, 0.8)',
-          padding: 12,
-          borderRadius: 8,
-          callbacks: {
-            label: function(context) {
-              return 'Ingresos: 
-
-  // 🎨 Animación de entrada para las cards
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach((entry, index) => {
-      if (entry.isIntersecting) {
-        setTimeout(() => {
-          entry.target.style.opacity = '1';
-          entry.target.style.transform = 'translateY(0)';
-        }, index * 100);
-      }
-    });
-  }, { threshold: 0.1 });
-
-  document.querySelectorAll('.metric-card, .chart-card, .list-card').forEach((card) => {
-    card.style.opacity = '0';
-    card.style.transform = 'translateY(20px)';
-    card.style.transition = 'all 0.6s ease';
-    observer.observe(card);
-  });
-
-  // 🎯 Ripple effect en botones
-  document.querySelectorAll('.quick-action, .list-action, .chart-btn').forEach(el => {
-    el.addEventListener('click', function(e) {
-      const ripple = document.createElement('span');
-      ripple.classList.add('ripple');
-      
-      const rect = this.getBoundingClientRect();
-      const size = Math.max(rect.width, rect.height);
-      const x = e.clientX - rect.left - size / 2;
-      const y = e.clientY - rect.top - size / 2;
-      
-      ripple.style.width = ripple.style.height = size + 'px';
-      ripple.style.left = x + 'px';
-      ripple.style.top = y + 'px';
-      
-      this.appendChild(ripple);
-      setTimeout(() => ripple.remove(), 600);
-    });
-  });
-
-  // 📊 Actualización en tiempo real (simulación)
-  setInterval(() => {
-    const metricValues = document.querySelectorAll('.metric-value');
-    metricValues.forEach(el => {
-      el.style.transform = 'scale(1.05)';
-      setTimeout(() => {
-        el.style.transform = 'scale(1)';
-      }, 200);
-    });
-  }, 30000); // Cada 30 segundos
-
-  // 🎨 Animación de barras de inventario
-  window.addEventListener('load', () => {
-    document.querySelectorAll('.inventory-fill').forEach(bar => {
-      const width = bar.style.width;
-      bar.style.width = '0%';
-      setTimeout(() => {
-        bar.style.width = width;
-      }, 300);
-    });
-  });
-
-  // 🌓 Toggle de tema (si existe)
-  const themeToggle = document.querySelector('[data-theme-toggle]');
-  if (themeToggle) {
-    themeToggle.addEventListener('click', () => {
-      document.body.classList.toggle('dark');
-      localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
-    });
-  }
-
-  // Restaurar tema guardado
-  if (localStorage.getItem('theme') === 'dark') {
-    document.body.classList.add('dark');
-  }
-
-  console.log('%c🚀 Dashboard LumiSpace v2.0', 'color: #a1683a; font-size: 16px; font-weight: bold;');
-  console.log('%cPanel de administración cargado correctamente', 'color: #1abc9c; font-size: 12px;');
-  </script>
-</body>
-</html> + context.parsed.y.toLocaleString('es-MX', {minimumFractionDigits: 2});
-            }
-          }
-        }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          grid: {
-            color: 'rgba(0, 0, 0, 0.05)',
-            drawBorder: false
-          },
-          ticks: {
-            padding: 10,
-            callback: function(value) {
-              return '
-
-  // 🎨 Animación de entrada para las cards
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach((entry, index) => {
-      if (entry.isIntersecting) {
-        setTimeout(() => {
-          entry.target.style.opacity = '1';
-          entry.target.style.transform = 'translateY(0)';
-        }, index * 100);
-      }
-    });
-  }, { threshold: 0.1 });
-
-  document.querySelectorAll('.metric-card, .chart-card, .list-card').forEach((card) => {
-    card.style.opacity = '0';
-    card.style.transform = 'translateY(20px)';
-    card.style.transition = 'all 0.6s ease';
-    observer.observe(card);
-  });
-
-  // 🎯 Ripple effect en botones
-  document.querySelectorAll('.quick-action, .list-action, .chart-btn').forEach(el => {
-    el.addEventListener('click', function(e) {
-      const ripple = document.createElement('span');
-      ripple.classList.add('ripple');
-      
-      const rect = this.getBoundingClientRect();
-      const size = Math.max(rect.width, rect.height);
-      const x = e.clientX - rect.left - size / 2;
-      const y = e.clientY - rect.top - size / 2;
-      
-      ripple.style.width = ripple.style.height = size + 'px';
-      ripple.style.left = x + 'px';
-      ripple.style.top = y + 'px';
-      
-      this.appendChild(ripple);
-      setTimeout(() => ripple.remove(), 600);
-    });
-  });
-
-  // 📊 Actualización en tiempo real (simulación)
-  setInterval(() => {
-    const metricValues = document.querySelectorAll('.metric-value');
-    metricValues.forEach(el => {
-      el.style.transform = 'scale(1.05)';
-      setTimeout(() => {
-        el.style.transform = 'scale(1)';
-      }, 200);
-    });
-  }, 30000); // Cada 30 segundos
-
-  // 🎨 Animación de barras de inventario
-  window.addEventListener('load', () => {
-    document.querySelectorAll('.inventory-fill').forEach(bar => {
-      const width = bar.style.width;
-      bar.style.width = '0%';
-      setTimeout(() => {
-        bar.style.width = width;
-      }, 300);
-    });
-  });
-
-  // 🌓 Toggle de tema (si existe)
-  const themeToggle = document.querySelector('[data-theme-toggle]');
-  if (themeToggle) {
-    themeToggle.addEventListener('click', () => {
-      document.body.classList.toggle('dark');
-      localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
-    });
-  }
-
-  // Restaurar tema guardado
-  if (localStorage.getItem('theme') === 'dark') {
-    document.body.classList.add('dark');
-  }
-
-  console.log('%c🚀 Dashboard LumiSpace v2.0', 'color: #a1683a; font-size: 16px; font-weight: bold;');
-  console.log('%cPanel de administración cargado correctamente', 'color: #1abc9c; font-size: 12px;');
-  </script>
-</body>
-</html> + value.toLocaleString();
-            }
-          }
-        },
-        x: {
-          grid: {
-            display: false
-          },
-          ticks: {
-            padding: 10
-          }
-        }
-      }
-    }
-  });
-  <?php else: ?>
-  ctxIngresos.fillStyle = '#999';
-  ctxIngresos.font = '14px Inter';
-  ctxIngresos.textAlign = 'center';
-  ctxIngresos.fillText('No hay datos disponibles', ctxIngresos.canvas.width / 2, ctxIngresos.canvas.height / 2);
-  <?php endif; ?>
-
-  // 🎨 Animación de entrada para las cards
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach((entry, index) => {
-      if (entry.isIntersecting) {
-        setTimeout(() => {
-          entry.target.style.opacity = '1';
-          entry.target.style.transform = 'translateY(0)';
-        }, index * 100);
-      }
-    });
-  }, { threshold: 0.1 });
-
-  document.querySelectorAll('.metric-card, .chart-card, .list-card').forEach((card) => {
-    card.style.opacity = '0';
-    card.style.transform = 'translateY(20px)';
-    card.style.transition = 'all 0.6s ease';
-    observer.observe(card);
-  });
-
-  // 🎯 Ripple effect en botones
-  document.querySelectorAll('.quick-action, .list-action, .chart-btn').forEach(el => {
-    el.addEventListener('click', function(e) {
-      const ripple = document.createElement('span');
-      ripple.classList.add('ripple');
-      
-      const rect = this.getBoundingClientRect();
-      const size = Math.max(rect.width, rect.height);
-      const x = e.clientX - rect.left - size / 2;
-      const y = e.clientY - rect.top - size / 2;
-      
-      ripple.style.width = ripple.style.height = size + 'px';
-      ripple.style.left = x + 'px';
-      ripple.style.top = y + 'px';
-      
-      this.appendChild(ripple);
-      setTimeout(() => ripple.remove(), 600);
-    });
-  });
-
-  // 📊 Actualización en tiempo real (simulación)
-  setInterval(() => {
-    const metricValues = document.querySelectorAll('.metric-value');
-    metricValues.forEach(el => {
-      el.style.transform = 'scale(1.05)';
-      setTimeout(() => {
-        el.style.transform = 'scale(1)';
-      }, 200);
-    });
-  }, 30000); // Cada 30 segundos
-
-  // 🎨 Animación de barras de inventario
-  window.addEventListener('load', () => {
-    document.querySelectorAll('.inventory-fill').forEach(bar => {
-      const width = bar.style.width;
-      bar.style.width = '0%';
-      setTimeout(() => {
-        bar.style.width = width;
-      }, 300);
-    });
-  });
-
-  // 🌓 Toggle de tema (si existe)
-  const themeToggle = document.querySelector('[data-theme-toggle]');
-  if (themeToggle) {
-    themeToggle.addEventListener('click', () => {
-      document.body.classList.toggle('dark');
-      localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
-    });
-  }
-
-  // Restaurar tema guardado
-  if (localStorage.getItem('theme') === 'dark') {
-    document.body.classList.add('dark');
-  }
-
-  console.log('%c🚀 Dashboard LumiSpace v2.0', 'color: #a1683a; font-size: 16px; font-weight: bold;');
-  console.log('%cPanel de administración cargado correctamente', 'color: #1abc9c; font-size: 12px;');
-  </script>
-</body>
-</html> + value.toLocaleString();
-            }
-          }
-        },
-        x: {
-          grid: { display: false },
-          ticks: {
-            padding: 10,
-            font: { size: 11 }
-          }
-        }
-      }
-    }
-  });
-
-  // ✨ Animaciones de entrada
-  document.addEventListener('DOMContentLoaded', function() {
-    const cards = document.querySelectorAll('.card');
-    cards.forEach((card, index) => {
-      card.style.opacity = '0';
-      card.style.transform = 'translateY(20px)';
-      setTimeout(() => {
-        card.style.transition = 'all 0.5s ease';
-        card.style.opacity = '1';
-        card.style.transform = 'translateY(0)';
-      }, index * 100);
-    });
-  });
   </script>
 </body>
 </html>
-if (!isset($_SESSION['ultima_conexion'])) {
-    $_SESSION['ultima_conexion'] = date('Y-m-d H:i:s');
-}
-$ultimaConexion = $_SESSION['ultima_conexion'];
 
-// 📊 Cálculos adicionales para métricas avanzadas
-$crecimientoUsuarios = count($usuariosMensuales) > 1 
-    ? (($usuariosMensuales[count($usuariosMensuales)-1]['total'] - $usuariosMensuales[count($usuariosMensuales)-2]['total']) / $usuariosMensuales[count($usuariosMensuales)-2]['total']) * 100 
-    : 0;
-?>
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Dashboard Admin - LumiSpace</title>
-  <link rel="stylesheet" href="../css/dashboard.css" />
-  <link rel="stylesheet" href="../css/dashboard-professional.css" />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <!-- Font Awesome para iconos -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-</head>
-<body>
-  <?php include("../includes/sidebar-admin.php"); ?>
-  
-  <main class="main">
-    <?php include("../includes/header-admin.php"); ?>
-
-    <section class="content">
-      <!-- PAGE HEADER -->
-      <div class="page-header">
-        <div>
-          <h1 class="page-title">📊 Panel de Control</h1>
-          <p class="page-subtitle">Vista general del sistema • Última actualización: <?= date('d/m/Y H:i') ?></p>
-        </div>
-      </div>
-
-      <!-- METRIC CARDS -->
-      <div class="grid grid-4 gap-16">
-        <article class="metric-card">
-          <div class="metric-header">
-            <div class="metric-icon">👥</div>
-            <div class="metric-trend up" data-tooltip="Crecimiento vs mes anterior">
-              ↑ <?= number_format(abs($crecimientoUsuarios), 1) ?>%
-            </div>
-          </div>
-          <div class="metric-body">
-            <div class="metric-label">Usuarios Totales</div>
-            <div class="metric-value"><?= number_format($totalUsuarios) ?></div>
-          </div>
-          <div class="metric-footer">
-            <span>📈</span>
-            <span>Usuarios activos en la plataforma</span>
-          </div>
-        </article>
-
-        <article class="metric-card">
-          <div class="metric-header">
-            <div class="metric-icon">⚡</div>
-            <div class="metric-trend up" data-tooltip="Estado del sistema">
-              ✓ Activos
-            </div>
-          </div>
-          <div class="metric-body">
-            <div class="metric-label">Gestores Activos</div>
-            <div class="metric-value"><?= number_format($totalGestores) ?></div>
-          </div>
-          <div class="metric-footer">
-            <span>🔧</span>
-            <span>Personal gestionando el sistema</span>
-          </div>
-        </article>
-
-        <article class="metric-card">
-          <div class="metric-header">
-            <div class="metric-icon">📦</div>
-            <div class="metric-trend up" data-tooltip="Productos en inventario">
-              ✓ Stock
-            </div>
-          </div>
-          <div class="metric-body">
-            <div class="metric-label">Productos</div>
-            <div class="metric-value"><?= number_format($totalProductos) ?></div>
-          </div>
-          <div class="metric-footer">
-            <span>🏷️</span>
-            <span>Artículos en catálogo</span>
-          </div>
-        </article>
-
-        <article class="metric-card">
-          <div class="metric-header">
-            <div class="metric-icon">💰</div>
-            <div class="metric-trend up" data-tooltip="Ingresos del mes actual">
-              ↑ +15.3%
-            </div>
-          </div>
-          <div class="metric-body">
-            <div class="metric-label">Ingresos del Mes</div>
-            <div class="metric-value"><?= formatCurrency($ingresosMes) ?></div>
-          </div>
-          <div class="metric-footer">
-            <span>💳</span>
-            <span>Revenue generado este mes</span>
-          </div>
-        </article>
-      </div>
-
-      <!-- CHARTS -->
-      <div class="grid grid-2 gap-16 mt-24">
-        <article class="chart-card">
-          <div class="chart-header">
-            <h3 class="chart-title">📈 Crecimiento de Usuarios</h3>
-            <div class="chart-controls">
-              <button class="chart-btn active" data-period="6m">6M</button>
-              <button class="chart-btn" data-period="1y">1A</button>
-              <button class="chart-btn" data-period="all">Todo</button>
-            </div>
-          </div>
-          <div class="chart-wrapper">
-            <canvas id="usuariosChart"></canvas>
-          </div>
-        </article>
-
-        <article class="chart-card">
-          <div class="chart-header">
-            <h3 class="chart-title">💵 Ventas Mensuales</h3>
-            <div class="chart-controls">
-              <button class="chart-btn active" data-period="6m">6M</button>
-              <button class="chart-btn" data-period="1y">1A</button>
-              <button class="chart-btn" data-period="all">Todo</button>
-            </div>
-          </div>
-          <div class="chart-wrapper">
-            <canvas id="ventasChart"></canvas>
-          </div>
-        </article>
-      </div>
-
-      <!-- GRÁFICAS ADICIONALES -->
-      <div class="grid grid-2 gap-16 mt-24">
-        <article class="chart-card">
-          <div class="chart-header">
-            <h3 class="chart-title">📊 Ventas por Categoría</h3>
-            <div class="chart-controls">
-              <button class="chart-btn active">Mensual</button>
-            </div>
-          </div>
-          <div class="chart-wrapper">
-            <canvas id="categoriasChart"></canvas>
-          </div>
-        </article>
-
-        <article class="chart-card">
-          <div class="chart-header">
-            <h3 class="chart-title">🔥 Productos Más Vendidos</h3>
-            <div class="chart-controls">
-              <button class="chart-btn active">Top 5</button>
-            </div>
-          </div>
-          <div class="chart-wrapper">
-            <canvas id="productosChart"></canvas>
-          </div>
-        </article>
-      </div>
-
-      <!-- GRÁFICA DE INGRESOS DIARIOS -->
-      <div class="grid mt-24">
-        <article class="chart-card">
-          <div class="chart-header">
-            <h3 class="chart-title">💰 Ingresos Últimos 7 Días</h3>
-            <div class="chart-controls">
-              <button class="chart-btn active">7D</button>
-              <button class="chart-btn">15D</button>
-              <button class="chart-btn">30D</button>
-            </div>
-          </div>
-          <div class="chart-wrapper" style="height: 200px;">
-            <canvas id="ingresosDiariosChart"></canvas>
-          </div>
-        </article>
-      </div>
-
-      <!-- LISTS & INVENTORY -->
-      <div class="grid grid-2 gap-16 mt-24">
-        <!-- USUARIOS RECIENTES -->
-        <article class="list-card">
-          <div class="list-header">
-            <h3 class="list-title">
-              👤 Usuarios Recientes
-              <span class="list-badge"><?= count($usuariosRecientes) ?></span>
-            </h3>
-            <a href="usuarios.php" style="color: var(--act1); font-size: 0.9rem; font-weight: 600; text-decoration: none;">Ver todos →</a>
-          </div>
-          <div>
-            <?php foreach ($usuariosRecientes as $u): ?>
-              <div class="list-item">
-                <div class="list-avatar"><?= strtoupper(substr($u['nombre'], 0, 2)) ?></div>
-                <div class="list-content">
-                  <div class="list-name"><?= htmlspecialchars($u['nombre']) ?></div>
-                  <div class="list-meta"><?= htmlspecialchars($u['email']) ?> • <?= timeAgo($u['fecha_registro']) ?></div>
-                </div>
-                <button class="list-action">Ver perfil</button>
-              </div>
-            <?php endforeach; ?>
-          </div>
-        </article>
-
-        <!-- INVENTARIO -->
-        <article class="list-card">
-          <div class="list-header">
-            <h3 class="list-title">
-              📦 Resumen de Inventario
-              <span class="list-badge"><?= count($inventarioResumen) ?></span>
-            </h3>
-            <a href="inventario.php" style="color: var(--act1); font-size: 0.9rem; font-weight: 600; text-decoration: none;">Gestionar →</a>
-          </div>
-          <div>
-            <?php 
-            $maxCantidad = max(array_column($inventarioResumen, 'cantidad'));
-            foreach ($inventarioResumen as $item): 
-              $porcentaje = ($item['cantidad'] / $maxCantidad) * 100;
-            ?>
-              <div class="inventory-item">
-                <div class="inventory-header">
-                  <span class="inventory-label"><?= htmlspecialchars($item['categoria']) ?></span>
-                  <span class="inventory-value"><?= number_format((int)$item['cantidad']) ?> ítems</span>
-                </div>
-                <div class="inventory-bar">
-                  <div class="inventory-fill" style="width: <?= $porcentaje ?>%"></div>
-                </div>
-              </div>
-            <?php endforeach; ?>
-          </div>
-        </article>
-      </div>
-
-      <!-- QUICK ACTIONS -->
-      <div class="quick-actions">
-        <div class="quick-action" onclick="window.location.href='usuarios.php'">
-          <div class="quick-action-icon">👥</div>
-          <div class="quick-action-label">Gestionar Usuarios</div>
-        </div>
-        <div class="quick-action" onclick="window.location.href='productos.php'">
-          <div class="quick-action-icon">📦</div>
-          <div class="quick-action-label">Administrar Productos</div>
-        </div>
-        <div class="quick-action" onclick="window.location.href='reportes.php'">
-          <div class="quick-action-icon">📊</div>
-          <div class="quick-action-label">Ver Reportes</div>
-        </div>
-        <div class="quick-action" onclick="window.location.href='configuracion.php'">
-          <div class="quick-action-icon">⚙️</div>
-          <div class="quick-action-label">Configuración</div>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <script>
-  // Configuración global de Chart.js
-  Chart.defaults.font.family = 'Inter, system-ui, sans-serif';
-  Chart.defaults.color = getComputedStyle(document.body).getPropertyValue('--muted');
-  Chart.defaults.plugins.legend.display = false;
-
-  // 📈 Gráfico de Usuarios Mensuales
-  const ctxUsuarios = document.getElementById('usuariosChart').getContext('2d');
-  const usuariosChart = new Chart(ctxUsuarios, {
-    type: 'line',
-    data: {
-      labels: <?= json_encode(array_column($usuariosMensuales, 'mes')) ?>,
-      datasets: [{
-        label: 'Nuevos Usuarios',
-        data: <?= json_encode(array_column($usuariosMensuales, 'total')) ?>,
-        borderColor: '#a1683a',
-        backgroundColor: function(context) {
-          const ctx = context.chart.ctx;
-          const gradient = ctx.createLinearGradient(0, 0, 0, 280);
-          gradient.addColorStop(0, 'rgba(161, 104, 58, 0.3)');
-          gradient.addColorStop(1, 'rgba(161, 104, 58, 0.0)');
-          return gradient;
-        },
-        fill: true,
-        tension: 0.4,
-        borderWidth: 3,
-        pointRadius: 5,
-        pointBackgroundColor: '#a1683a',
-        pointBorderColor: '#fff',
-        pointBorderWidth: 2,
-        pointHoverRadius: 7
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: {
-        intersect: false,
-        mode: 'index'
-      },
-      plugins: {
-        tooltip: {
-          backgroundColor: 'rgba(0, 0, 0, 0.8)',
-          padding: 12,
-          borderRadius: 8,
-          titleFont: { size: 14, weight: 'bold' },
-          bodyFont: { size: 13 },
-          callbacks: {
-            label: function(context) {
-              return 'Usuarios: ' + context.parsed.y;
-            }
-          }
-        },
-        legend: {
-          display: true,
-          position: 'top',
-          align: 'end'
-        }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          grid: {
-            color: 'rgba(0, 0, 0, 0.05)',
-            drawBorder: false
-          },
-          ticks: {
-            padding: 10,
-            precision: 0
-          }
-        },
-        x: {
-          grid: {
-            display: false
-          },
-          ticks: {
-            padding: 10
-          }
-        }
-      }
-    }
-  });
-
-  // 📊 Gráfico de Ventas Mensuales
-  const ctxVentas = document.getElementById('ventasChart').getContext('2d');
-  const ventasChart = new Chart(ctxVentas, {
-    type: 'bar',
-    data: {
-      labels: <?= json_encode(array_column($ventasMensuales, 'mes')) ?>,
-      datasets: [{
-        label: 'Ingresos ($)',
-        data: <?= json_encode(array_column($ventasMensuales, 'total')) ?>,
-        backgroundColor: function(context) {
-          const ctx = context.chart.ctx;
-          const gradient = ctx.createLinearGradient(0, 0, 0, 280);
-          gradient.addColorStop(0, '#a1683a');
-          gradient.addColorStop(1, '#8f5e4b');
-          return gradient;
-        },
-        borderRadius: 8,
-        borderSkipped: false
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: {
-        intersect: false,
-        mode: 'index'
-      },
-      plugins: {
-        tooltip: {
-          backgroundColor: 'rgba(0, 0, 0, 0.8)',
-          padding: 12,
-          borderRadius: 8,
-          titleFont: { size: 14, weight: 'bold' },
-          bodyFont: { size: 13 },
-          callbacks: {
-            label: function(context) {
-              return 'Ingresos: 
-
-  // 🎨 Animación de entrada para las cards
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach((entry, index) => {
-      if (entry.isIntersecting) {
-        setTimeout(() => {
-          entry.target.style.opacity = '1';
-          entry.target.style.transform = 'translateY(0)';
-        }, index * 100);
-      }
-    });
-  }, { threshold: 0.1 });
-
-  document.querySelectorAll('.metric-card, .chart-card, .list-card').forEach((card) => {
-    card.style.opacity = '0';
-    card.style.transform = 'translateY(20px)';
-    card.style.transition = 'all 0.6s ease';
-    observer.observe(card);
-  });
-
-  // 🎯 Ripple effect en botones
-  document.querySelectorAll('.quick-action, .list-action, .chart-btn').forEach(el => {
-    el.addEventListener('click', function(e) {
-      const ripple = document.createElement('span');
-      ripple.classList.add('ripple');
-      
-      const rect = this.getBoundingClientRect();
-      const size = Math.max(rect.width, rect.height);
-      const x = e.clientX - rect.left - size / 2;
-      const y = e.clientY - rect.top - size / 2;
-      
-      ripple.style.width = ripple.style.height = size + 'px';
-      ripple.style.left = x + 'px';
-      ripple.style.top = y + 'px';
-      
-      this.appendChild(ripple);
-      setTimeout(() => ripple.remove(), 600);
-    });
-  });
-
-  // 📊 Actualización en tiempo real (simulación)
-  setInterval(() => {
-    const metricValues = document.querySelectorAll('.metric-value');
-    metricValues.forEach(el => {
-      el.style.transform = 'scale(1.05)';
-      setTimeout(() => {
-        el.style.transform = 'scale(1)';
-      }, 200);
-    });
-  }, 30000); // Cada 30 segundos
-
-  // 🎨 Animación de barras de inventario
-  window.addEventListener('load', () => {
-    document.querySelectorAll('.inventory-fill').forEach(bar => {
-      const width = bar.style.width;
-      bar.style.width = '0%';
-      setTimeout(() => {
-        bar.style.width = width;
-      }, 300);
-    });
-  });
-
-  // 🌓 Toggle de tema (si existe)
-  const themeToggle = document.querySelector('[data-theme-toggle]');
-  if (themeToggle) {
-    themeToggle.addEventListener('click', () => {
-      document.body.classList.toggle('dark');
-      localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
-    });
-  }
-
-  // Restaurar tema guardado
-  if (localStorage.getItem('theme') === 'dark') {
-    document.body.classList.add('dark');
-  }
-
-  console.log('%c🚀 Dashboard LumiSpace v2.0', 'color: #a1683a; font-size: 16px; font-weight: bold;');
-  console.log('%cPanel de administración cargado correctamente', 'color: #1abc9c; font-size: 12px;');
-  </script>
-</body>
-</html> + context.parsed.y.toLocaleString('es-MX', {minimumFractionDigits: 2});
-            }
-          }
-        },
-        legend: {
-          display: true,
-          position: 'top',
-          align: 'end'
-        }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          grid: {
-            color: 'rgba(0, 0, 0, 0.05)',
-            drawBorder: false
-          },
-          ticks: {
-            padding: 10,
-            callback: function(value) {
-              return '
-
-  // 🎨 Animación de entrada para las cards
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach((entry, index) => {
-      if (entry.isIntersecting) {
-        setTimeout(() => {
-          entry.target.style.opacity = '1';
-          entry.target.style.transform = 'translateY(0)';
-        }, index * 100);
-      }
-    });
-  }, { threshold: 0.1 });
-
-  document.querySelectorAll('.metric-card, .chart-card, .list-card').forEach((card) => {
-    card.style.opacity = '0';
-    card.style.transform = 'translateY(20px)';
-    card.style.transition = 'all 0.6s ease';
-    observer.observe(card);
-  });
-
-  // 🎯 Ripple effect en botones
-  document.querySelectorAll('.quick-action, .list-action, .chart-btn').forEach(el => {
-    el.addEventListener('click', function(e) {
-      const ripple = document.createElement('span');
-      ripple.classList.add('ripple');
-      
-      const rect = this.getBoundingClientRect();
-      const size = Math.max(rect.width, rect.height);
-      const x = e.clientX - rect.left - size / 2;
-      const y = e.clientY - rect.top - size / 2;
-      
-      ripple.style.width = ripple.style.height = size + 'px';
-      ripple.style.left = x + 'px';
-      ripple.style.top = y + 'px';
-      
-      this.appendChild(ripple);
-      setTimeout(() => ripple.remove(), 600);
-    });
-  });
-
-  // 📊 Actualización en tiempo real (simulación)
-  setInterval(() => {
-    const metricValues = document.querySelectorAll('.metric-value');
-    metricValues.forEach(el => {
-      el.style.transform = 'scale(1.05)';
-      setTimeout(() => {
-        el.style.transform = 'scale(1)';
-      }, 200);
-    });
-  }, 30000); // Cada 30 segundos
-
-  // 🎨 Animación de barras de inventario
-  window.addEventListener('load', () => {
-    document.querySelectorAll('.inventory-fill').forEach(bar => {
-      const width = bar.style.width;
-      bar.style.width = '0%';
-      setTimeout(() => {
-        bar.style.width = width;
-      }, 300);
-    });
-  });
-
-  // 🌓 Toggle de tema (si existe)
-  const themeToggle = document.querySelector('[data-theme-toggle]');
-  if (themeToggle) {
-    themeToggle.addEventListener('click', () => {
-      document.body.classList.toggle('dark');
-      localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
-    });
-  }
-
-  // Restaurar tema guardado
-  if (localStorage.getItem('theme') === 'dark') {
-    document.body.classList.add('dark');
-  }
-
-  console.log('%c🚀 Dashboard LumiSpace v2.0', 'color: #a1683a; font-size: 16px; font-weight: bold;');
-  console.log('%cPanel de administración cargado correctamente', 'color: #1abc9c; font-size: 12px;');
-  </script>
-</body>
-</html> + value.toLocaleString();
-            }
-          }
-        },
-        x: {
-          grid: {
-            display: false
-          },
-          ticks: {
-            padding: 10
-          }
-        }
-      }
-    }
-  });
-
-  // 📊 Gráfico de Ventas por Categoría (Pie Chart)
-  const ctxCategorias = document.getElementById('categoriasChart').getContext('2d');
-  <?php if (isset($ventasPorCategoria) && !empty($ventasPorCategoria)): ?>
-  new Chart(ctxCategorias, {
-    type: 'doughnut',
-    data: {
-      labels: <?= json_encode(array_column($ventasPorCategoria, 'categoria')) ?>,
-      datasets: [{
-        label: 'Ventas',
-        data: <?= json_encode(array_column($ventasPorCategoria, 'total')) ?>,
-        backgroundColor: [
-          '#a1683a',
-          '#8f5e4b',
-          '#7a6a4b',
-          '#c7925b',
-          '#d4a373'
-        ],
-        borderWidth: 2,
-        borderColor: '#fff'
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: true,
-          position: 'right'
-        },
-        tooltip: {
-          backgroundColor: 'rgba(0, 0, 0, 0.8)',
-          padding: 12,
-          borderRadius: 8,
-          callbacks: {
-            label: function(context) {
-              const total = context.dataset.data.reduce((a, b) => a + b, 0);
-              const percentage = ((context.parsed / total) * 100).toFixed(1);
-              return context.label + ': 
-
-  // 🎨 Animación de entrada para las cards
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach((entry, index) => {
-      if (entry.isIntersecting) {
-        setTimeout(() => {
-          entry.target.style.opacity = '1';
-          entry.target.style.transform = 'translateY(0)';
-        }, index * 100);
-      }
-    });
-  }, { threshold: 0.1 });
-
-  document.querySelectorAll('.metric-card, .chart-card, .list-card').forEach((card) => {
-    card.style.opacity = '0';
-    card.style.transform = 'translateY(20px)';
-    card.style.transition = 'all 0.6s ease';
-    observer.observe(card);
-  });
-
-  // 🎯 Ripple effect en botones
-  document.querySelectorAll('.quick-action, .list-action, .chart-btn').forEach(el => {
-    el.addEventListener('click', function(e) {
-      const ripple = document.createElement('span');
-      ripple.classList.add('ripple');
-      
-      const rect = this.getBoundingClientRect();
-      const size = Math.max(rect.width, rect.height);
-      const x = e.clientX - rect.left - size / 2;
-      const y = e.clientY - rect.top - size / 2;
-      
-      ripple.style.width = ripple.style.height = size + 'px';
-      ripple.style.left = x + 'px';
-      ripple.style.top = y + 'px';
-      
-      this.appendChild(ripple);
-      setTimeout(() => ripple.remove(), 600);
-    });
-  });
-
-  // 📊 Actualización en tiempo real (simulación)
-  setInterval(() => {
-    const metricValues = document.querySelectorAll('.metric-value');
-    metricValues.forEach(el => {
-      el.style.transform = 'scale(1.05)';
-      setTimeout(() => {
-        el.style.transform = 'scale(1)';
-      }, 200);
-    });
-  }, 30000); // Cada 30 segundos
-
-  // 🎨 Animación de barras de inventario
-  window.addEventListener('load', () => {
-    document.querySelectorAll('.inventory-fill').forEach(bar => {
-      const width = bar.style.width;
-      bar.style.width = '0%';
-      setTimeout(() => {
-        bar.style.width = width;
-      }, 300);
-    });
-  });
-
-  // 🌓 Toggle de tema (si existe)
-  const themeToggle = document.querySelector('[data-theme-toggle]');
-  if (themeToggle) {
-    themeToggle.addEventListener('click', () => {
-      document.body.classList.toggle('dark');
-      localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
-    });
-  }
-
-  // Restaurar tema guardado
-  if (localStorage.getItem('theme') === 'dark') {
-    document.body.classList.add('dark');
-  }
-
-  console.log('%c🚀 Dashboard LumiSpace v2.0', 'color: #a1683a; font-size: 16px; font-weight: bold;');
-  console.log('%cPanel de administración cargado correctamente', 'color: #1abc9c; font-size: 12px;');
-  </script>
-</body>
-</html> + context.parsed.toLocaleString() + ' (' + percentage + '%)';
-            }
-          }
-        }
-      }
-    }
-  });
-  <?php else: ?>
-  // Si no hay datos, mostrar mensaje
-  ctxCategorias.fillStyle = '#999';
-  ctxCategorias.font = '14px Inter';
-  ctxCategorias.textAlign = 'center';
-  ctxCategorias.fillText('No hay datos disponibles', ctxCategorias.canvas.width / 2, ctxCategorias.canvas.height / 2);
-  <?php endif; ?>
-
-  // 🔥 Gráfico de Productos Populares (Bar Horizontal)
-  const ctxProductos = document.getElementById('productosChart').getContext('2d');
-  <?php if (isset($productosPopulares) && !empty($productosPopulares)): ?>
-  new Chart(ctxProductos, {
-    type: 'bar',
-    data: {
-      labels: <?= json_encode(array_column($productosPopulares, 'nombre')) ?>,
-      datasets: [{
-        label: 'Unidades Vendidas',
-        data: <?= json_encode(array_column($productosPopulares, 'cantidad')) ?>,
-        backgroundColor: function(context) {
-          const colors = ['#a1683a', '#8f5e4b', '#7a6a4b', '#c7925b', '#d4a373'];
-          return colors[context.dataIndex % colors.length];
-        },
-        borderRadius: 6
-      }]
-    },
-    options: {
-      indexAxis: 'y',
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: false
-        },
-        tooltip: {
-          backgroundColor: 'rgba(0, 0, 0, 0.8)',
-          padding: 12,
-          borderRadius: 8,
-          callbacks: {
-            label: function(context) {
-              return 'Vendidos: ' + context.parsed.x + ' unidades';
-            }
-          }
-        }
-      },
-      scales: {
-        x: {
-          beginAtZero: true,
-          grid: {
-            color: 'rgba(0, 0, 0, 0.05)'
-          },
-          ticks: {
-            precision: 0
-          }
-        },
-        y: {
-          grid: {
-            display: false
-          }
-        }
-      }
-    }
-  });
-  <?php else: ?>
-  ctxProductos.fillStyle = '#999';
-  ctxProductos.font = '14px Inter';
-  ctxProductos.textAlign = 'center';
-  ctxProductos.fillText('No hay datos disponibles', ctxProductos.canvas.width / 2, ctxProductos.canvas.height / 2);
-  <?php endif; ?>
-
-  // 💰 Gráfico de Ingresos Diarios (Area Chart)
-  const ctxIngresos = document.getElementById('ingresosDiariosChart').getContext('2d');
-  <?php if (isset($ingresosPorDia) && !empty($ingresosPorDia)): ?>
-  new Chart(ctxIngresos, {
-    type: 'line',
-    data: {
-      labels: <?= json_encode(array_column($ingresosPorDia, 'fecha')) ?>,
-      datasets: [{
-        label: 'Ingresos Diarios',
-        data: <?= json_encode(array_column($ingresosPorDia, 'total')) ?>,
-        borderColor: '#1abc9c',
-        backgroundColor: function(context) {
-          const ctx = context.chart.ctx;
-          const gradient = ctx.createLinearGradient(0, 0, 0, 200);
-          gradient.addColorStop(0, 'rgba(26, 188, 156, 0.3)');
-          gradient.addColorStop(1, 'rgba(26, 188, 156, 0.0)');
-          return gradient;
-        },
-        fill: true,
-        tension: 0.4,
-        borderWidth: 3,
-        pointRadius: 4,
-        pointBackgroundColor: '#1abc9c',
-        pointBorderColor: '#fff',
-        pointBorderWidth: 2,
-        pointHoverRadius: 6
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: {
-        intersect: false,
-        mode: 'index'
-      },
-      plugins: {
-        legend: {
-          display: true,
-          position: 'top',
-          align: 'end'
-        },
-        tooltip: {
-          backgroundColor: 'rgba(0, 0, 0, 0.8)',
-          padding: 12,
-          borderRadius: 8,
-          callbacks: {
-            label: function(context) {
-              return 'Ingresos: 
-
-  // 🎨 Animación de entrada para las cards
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach((entry, index) => {
-      if (entry.isIntersecting) {
-        setTimeout(() => {
-          entry.target.style.opacity = '1';
-          entry.target.style.transform = 'translateY(0)';
-        }, index * 100);
-      }
-    });
-  }, { threshold: 0.1 });
-
-  document.querySelectorAll('.metric-card, .chart-card, .list-card').forEach((card) => {
-    card.style.opacity = '0';
-    card.style.transform = 'translateY(20px)';
-    card.style.transition = 'all 0.6s ease';
-    observer.observe(card);
-  });
-
-  // 🎯 Ripple effect en botones
-  document.querySelectorAll('.quick-action, .list-action, .chart-btn').forEach(el => {
-    el.addEventListener('click', function(e) {
-      const ripple = document.createElement('span');
-      ripple.classList.add('ripple');
-      
-      const rect = this.getBoundingClientRect();
-      const size = Math.max(rect.width, rect.height);
-      const x = e.clientX - rect.left - size / 2;
-      const y = e.clientY - rect.top - size / 2;
-      
-      ripple.style.width = ripple.style.height = size + 'px';
-      ripple.style.left = x + 'px';
-      ripple.style.top = y + 'px';
-      
-      this.appendChild(ripple);
-      setTimeout(() => ripple.remove(), 600);
-    });
-  });
-
-  // 📊 Actualización en tiempo real (simulación)
-  setInterval(() => {
-    const metricValues = document.querySelectorAll('.metric-value');
-    metricValues.forEach(el => {
-      el.style.transform = 'scale(1.05)';
-      setTimeout(() => {
-        el.style.transform = 'scale(1)';
-      }, 200);
-    });
-  }, 30000); // Cada 30 segundos
-
-  // 🎨 Animación de barras de inventario
-  window.addEventListener('load', () => {
-    document.querySelectorAll('.inventory-fill').forEach(bar => {
-      const width = bar.style.width;
-      bar.style.width = '0%';
-      setTimeout(() => {
-        bar.style.width = width;
-      }, 300);
-    });
-  });
-
-  // 🌓 Toggle de tema (si existe)
-  const themeToggle = document.querySelector('[data-theme-toggle]');
-  if (themeToggle) {
-    themeToggle.addEventListener('click', () => {
-      document.body.classList.toggle('dark');
-      localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
-    });
-  }
-
-  // Restaurar tema guardado
-  if (localStorage.getItem('theme') === 'dark') {
-    document.body.classList.add('dark');
-  }
-
-  console.log('%c🚀 Dashboard LumiSpace v2.0', 'color: #a1683a; font-size: 16px; font-weight: bold;');
-  console.log('%cPanel de administración cargado correctamente', 'color: #1abc9c; font-size: 12px;');
-  </script>
-</body>
-</html> + context.parsed.y.toLocaleString('es-MX', {minimumFractionDigits: 2});
-            }
-          }
-        }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          grid: {
-            color: 'rgba(0, 0, 0, 0.05)',
-            drawBorder: false
-          },
-          ticks: {
-            padding: 10,
-            callback: function(value) {
-              return '
-
-  // 🎨 Animación de entrada para las cards
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach((entry, index) => {
-      if (entry.isIntersecting) {
-        setTimeout(() => {
-          entry.target.style.opacity = '1';
-          entry.target.style.transform = 'translateY(0)';
-        }, index * 100);
-      }
-    });
-  }, { threshold: 0.1 });
-
-  document.querySelectorAll('.metric-card, .chart-card, .list-card').forEach((card) => {
-    card.style.opacity = '0';
-    card.style.transform = 'translateY(20px)';
-    card.style.transition = 'all 0.6s ease';
-    observer.observe(card);
-  });
-
-  // 🎯 Ripple effect en botones
-  document.querySelectorAll('.quick-action, .list-action, .chart-btn').forEach(el => {
-    el.addEventListener('click', function(e) {
-      const ripple = document.createElement('span');
-      ripple.classList.add('ripple');
-      
-      const rect = this.getBoundingClientRect();
-      const size = Math.max(rect.width, rect.height);
-      const x = e.clientX - rect.left - size / 2;
-      const y = e.clientY - rect.top - size / 2;
-      
-      ripple.style.width = ripple.style.height = size + 'px';
-      ripple.style.left = x + 'px';
-      ripple.style.top = y + 'px';
-      
-      this.appendChild(ripple);
-      setTimeout(() => ripple.remove(), 600);
-    });
-  });
-
-  // 📊 Actualización en tiempo real (simulación)
-  setInterval(() => {
-    const metricValues = document.querySelectorAll('.metric-value');
-    metricValues.forEach(el => {
-      el.style.transform = 'scale(1.05)';
-      setTimeout(() => {
-        el.style.transform = 'scale(1)';
-      }, 200);
-    });
-  }, 30000); // Cada 30 segundos
-
-  // 🎨 Animación de barras de inventario
-  window.addEventListener('load', () => {
-    document.querySelectorAll('.inventory-fill').forEach(bar => {
-      const width = bar.style.width;
-      bar.style.width = '0%';
-      setTimeout(() => {
-        bar.style.width = width;
-      }, 300);
-    });
-  });
-
-  // 🌓 Toggle de tema (si existe)
-  const themeToggle = document.querySelector('[data-theme-toggle]');
-  if (themeToggle) {
-    themeToggle.addEventListener('click', () => {
-      document.body.classList.toggle('dark');
-      localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
-    });
-  }
-
-  // Restaurar tema guardado
-  if (localStorage.getItem('theme') === 'dark') {
-    document.body.classList.add('dark');
-  }
-
-  console.log('%c🚀 Dashboard LumiSpace v2.0', 'color: #a1683a; font-size: 16px; font-weight: bold;');
-  console.log('%cPanel de administración cargado correctamente', 'color: #1abc9c; font-size: 12px;');
-  </script>
-</body>
-</html> + value.toLocaleString();
-            }
-          }
-        },
-        x: {
-          grid: {
-            display: false
-          },
-          ticks: {
-            padding: 10
-          }
-        }
-      }
-    }
-  });
-  <?php else: ?>
-  ctxIngresos.fillStyle = '#999';
-  ctxIngresos.font = '14px Inter';
-  ctxIngresos.textAlign = 'center';
-  ctxIngresos.fillText('No hay datos disponibles', ctxIngresos.canvas.width / 2, ctxIngresos.canvas.height / 2);
-  <?php endif; ?>
-
-  // 🎨 Animación de entrada para las cards
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach((entry, index) => {
-      if (entry.isIntersecting) {
-        setTimeout(() => {
-          entry.target.style.opacity = '1';
-          entry.target.style.transform = 'translateY(0)';
-        }, index * 100);
-      }
-    });
-  }, { threshold: 0.1 });
-
-  document.querySelectorAll('.metric-card, .chart-card, .list-card').forEach((card) => {
-    card.style.opacity = '0';
-    card.style.transform = 'translateY(20px)';
-    card.style.transition = 'all 0.6s ease';
-    observer.observe(card);
-  });
-
-  // 🎯 Ripple effect en botones
-  document.querySelectorAll('.quick-action, .list-action, .chart-btn').forEach(el => {
-    el.addEventListener('click', function(e) {
-      const ripple = document.createElement('span');
-      ripple.classList.add('ripple');
-      
-      const rect = this.getBoundingClientRect();
-      const size = Math.max(rect.width, rect.height);
-      const x = e.clientX - rect.left - size / 2;
-      const y = e.clientY - rect.top - size / 2;
-      
-      ripple.style.width = ripple.style.height = size + 'px';
-      ripple.style.left = x + 'px';
-      ripple.style.top = y + 'px';
-      
-      this.appendChild(ripple);
-      setTimeout(() => ripple.remove(), 600);
-    });
-  });
-
-  // 📊 Actualización en tiempo real (simulación)
-  setInterval(() => {
-    const metricValues = document.querySelectorAll('.metric-value');
-    metricValues.forEach(el => {
-      el.style.transform = 'scale(1.05)';
-      setTimeout(() => {
-        el.style.transform = 'scale(1)';
-      }, 200);
-    });
-  }, 30000); // Cada 30 segundos
-
-  // 🎨 Animación de barras de inventario
-  window.addEventListener('load', () => {
-    document.querySelectorAll('.inventory-fill').forEach(bar => {
-      const width = bar.style.width;
-      bar.style.width = '0%';
-      setTimeout(() => {
-        bar.style.width = width;
-      }, 300);
-    });
-  });
-
-  // 🌓 Toggle de tema (si existe)
-  const themeToggle = document.querySelector('[data-theme-toggle]');
-  if (themeToggle) {
-    themeToggle.addEventListener('click', () => {
-      document.body.classList.toggle('dark');
-      localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
-    });
-  }
-
-  // Restaurar tema guardado
-  if (localStorage.getItem('theme') === 'dark') {
-    document.body.classList.add('dark');
-  }
-
-  console.log('%c🚀 Dashboard LumiSpace v2.0', 'color: #a1683a; font-size: 16px; font-weight: bold;');
-  console.log('%cPanel de administración cargado correctamente', 'color: #1abc9c; font-size: 12px;');
-  </script>
-</body>
-</html>

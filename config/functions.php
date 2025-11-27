@@ -1,9 +1,25 @@
 <?php
 
-// Ruta base del proyecto (ajusta "LumiSpace" si tu carpeta tiene otro nombre)
+// Detección dinámica de BASE_URL para compatibilidad Hostinger/Docker
 if (!defined("BASE_URL")) {
     $envBase = getenv('BASE_URL');
-    define("BASE_URL", $envBase !== false ? $envBase : "/LumiSpace/");
+    if ($envBase !== false) {
+        define("BASE_URL", $envBase);
+    } else {
+        // Normalizar rutas para evitar problemas de slashes en Windows/Linux
+        $projectDir = str_replace('\\', '/', dirname(__DIR__));
+        $docRoot = str_replace('\\', '/', $_SERVER['DOCUMENT_ROOT'] ?? $projectDir);
+
+        // Si el proyecto está dentro del document root
+        if (strpos($projectDir, $docRoot) === 0) {
+            $folder = substr($projectDir, strlen($docRoot));
+            // Asegurar formato /carpeta/ o /
+            define("BASE_URL", rtrim($folder, '/') . '/');
+        } else {
+            // Fallback por si la estructura de carpetas es inusual
+            define("BASE_URL", "/");
+        }
+    }
 }
 
 include_once(__DIR__ . "/db.php");
@@ -38,11 +54,14 @@ function carritoAgregar(int $producto_id, int $cantidad = 1): void
     // Si ya existe, sumar cantidad
     if (isset($_SESSION['carrito'][$producto_id])) {
         $_SESSION['carrito'][$producto_id]['cantidad'] += $cantidad;
+        // Actualizar subtotal
+        $_SESSION['carrito'][$producto_id]['subtotal'] = (float) $_SESSION['carrito'][$producto_id]['precio'] * $_SESSION['carrito'][$producto_id]['cantidad'];
     } else {
         $producto = getProductoById($producto_id);
         if ($producto) {
             $_SESSION['carrito'][$producto_id] = [
                 'producto_id' => $producto['id'],
+                'id' => $producto['id'],
                 'nombre' => $producto['nombre'],
                 'precio' => (float) $producto['precio'],
                 'imagen' => $producto['imagen'] ?? 'images/default.png',
@@ -402,19 +421,30 @@ function getCorteCajaHoy(): array
 }
 
 // Ventas agrupadas por categoría (hoy)
+// ------------------------------------------------------------
+// 📌 VENTAS POR CATEGORÍA — VERSIÓN CORREGIDA PARA HOSTINGER
+// ------------------------------------------------------------
 function getVentasPorCategoria(): array
 {
     $conn = getDBConnection();
-    $sql = "SELECT cat.nombre as categoria, SUM(dv.subtotal) as total
-             FROM detalle_ventas dv
-             INNER JOIN productos p ON dv.producto_id = p.id
-             INNER JOIN categorias cat ON p.categoria_id = cat.id
-             INNER JOIN ventas v ON dv.venta_id = v.id
-             WHERE DATE(v.fecha) = CURDATE()
-             GROUP BY cat.id";
-    $res = $conn->query($sql);
-    return $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
+
+    $sql = "
+        SELECT 
+            c.nombre AS categoria,
+            SUM(dv.cantidad * dv.precio) AS monto_total
+        FROM ventas v
+        INNER JOIN detalle_ventas dv ON dv.venta_id = v.id
+        INNER JOIN productos p ON p.id = dv.producto_id
+        LEFT JOIN categorias c ON c.id = p.categoria_id
+        GROUP BY c.nombre
+        ORDER BY monto_total DESC
+    ";
+
+    $result = $conn->query($sql);
+    return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
 }
+
+
 
 // Detalle completo de una venta
 function getVentaById(int $venta_id): ?array
@@ -482,30 +512,45 @@ function getCategoriasMasVendidasMes(int $limit = 10): array
    REPORTES MENSUALES
    ============================================================ */
 
-// Ventas por mes (para gráficas del dashboard)
+
+
 function getVentasMensuales(): array
 {
     $conn = getDBConnection();
-    $sql = "SELECT MONTHNAME(fecha) as mes, SUM(total) as total 
-             FROM ventas 
-             WHERE YEAR(fecha)=YEAR(NOW())
-             GROUP BY MONTH(fecha)
-             ORDER BY MONTH(fecha)";
-    $res = $conn->query($sql);
-    return $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
+
+    $sql = "
+        SELECT 
+            DATE_FORMAT(v.fecha, '%Y-%m') AS mes,
+            SUM(dv.cantidad * dv.precio) AS total
+        FROM ventas v
+        INNER JOIN detalle_ventas dv ON dv.venta_id = v.id
+        GROUP BY mes
+        ORDER BY mes
+    ";
+
+    $result = $conn->query($sql);
+    return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
 }
 
 // Ventas por día en el mes actual
 function getVentasPorDiaMesActual(): array
 {
     $conn = getDBConnection();
-    $sql = "SELECT DAY(fecha) as dia, SUM(total) as total
-            FROM ventas
-            WHERE MONTH(fecha)=MONTH(NOW()) AND YEAR(fecha)=YEAR(NOW())
-            GROUP BY DAY(fecha)
-            ORDER BY dia ASC";
-    $res = $conn->query($sql);
-    return $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
+
+    $sql = "
+        SELECT 
+            DAY(v.fecha) AS dia,
+            SUM(dv.cantidad * dv.precio) AS total
+        FROM ventas v
+        INNER JOIN detalle_ventas dv ON dv.venta_id = v.id
+        WHERE MONTH(v.fecha) = MONTH(CURRENT_DATE())
+        AND YEAR(v.fecha) = YEAR(CURRENT_DATE())
+        GROUP BY dia
+        ORDER BY dia
+    ";
+
+    $result = $conn->query($sql);
+    return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
 }
 
 
@@ -514,25 +559,25 @@ function getVentasPorDiaMesActual(): array
    ============================================================ */
 
 // Top N productos más vendidos (general)
-function getProductosMasVendidos(int $limit = 10): array
+function getProductosMasVendidos(int $limit = 5): array
 {
     $conn = getDBConnection();
-    $stmt = $conn->prepare("
-        SELECT p.id, p.nombre, p.precio, p.imagen,
-               SUM(dv.cantidad) as total_vendido,
-               SUM(dv.subtotal) as ingresos
+
+    $sql = "
+        SELECT 
+            p.nombre,
+            SUM(dv.cantidad) AS total_vendido
         FROM detalle_ventas dv
-        JOIN productos p ON dv.producto_id = p.id
-        JOIN ventas v ON dv.venta_id = v.id
-        GROUP BY p.id
+        INNER JOIN productos p ON p.id = dv.producto_id
+        GROUP BY p.id, p.nombre
         ORDER BY total_vendido DESC
-        LIMIT ?
-    ");
-    $stmt->bind_param("i", $limit);
-    $stmt->execute();
-    $res = $stmt->get_result();
-    return $res->fetch_all(MYSQLI_ASSOC);
+        LIMIT $limit
+    ";
+
+    $result = $conn->query($sql);
+    return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
 }
+
 
 // Top N productos más vendidos del mes actual
 function getProductosMasVendidosMes(int $limit = 10): array
@@ -753,16 +798,19 @@ function getUsuariosRecientes(int $limit = 5): array
 function getInventarioResumen(): array
 {
     $conn = getDBConnection();
+
     $sql = "
-        SELECT c.nombre AS categoria, 
-               COALESCE(SUM(p.stock), 0) AS cantidad
-        FROM categorias c
-        LEFT JOIN productos p ON p.categoria_id = c.id
-        GROUP BY c.id, c.nombre
-        ORDER BY c.nombre ASC
+        SELECT c.nombre AS categoria,
+               COUNT(p.id) AS cantidad
+        FROM productos p
+        LEFT JOIN categorias c ON p.categoria_id = c.id
+        GROUP BY c.nombre
+        ORDER BY cantidad DESC
     ";
-    $res = $conn->query($sql);
-    return $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
+
+    $result = $conn->query($sql);
+
+    return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
 }
 
 
@@ -1330,13 +1378,38 @@ function getProductosPublicos(int $limit = 12): array
 {
     $conn = getDBConnection();
 
-    $sql = "SELECT p.id, p.nombre, p.descripcion, p.precio, p.stock, p.imagen, 
-                   c.nombre AS categoria
-            FROM productos p
-            LEFT JOIN categorias c ON p.categoria_id = c.id
-            WHERE p.estado = 'activo'
-            ORDER BY p.id DESC
-            LIMIT ?";
+    // Verificar qué columnas existen en la tabla productos
+    $check_estado = $conn->query("SHOW COLUMNS FROM productos LIKE 'estado'");
+    $has_estado = $check_estado && $check_estado->num_rows > 0;
+    $check_activo = $conn->query("SHOW COLUMNS FROM productos LIKE 'activo'");
+    $has_activo = $check_activo && $check_activo->num_rows > 0;
+
+    // Construir SELECT sin la columna stock que no existe
+    $sql = "SELECT p.id, p.nombre, p.descripcion, p.precio, p.imagen, 
+                   c.nombre AS categoria";
+    
+    // Agregar categoria_id si existe
+    $check_categoria_id = $conn->query("SHOW COLUMNS FROM productos LIKE 'categoria_id'");
+    if ($check_categoria_id && $check_categoria_id->num_rows > 0) {
+        $sql .= ", p.categoria_id";
+    }
+    
+    $sql .= " FROM productos p
+            LEFT JOIN categorias c ON p.categoria_id = c.id";
+    
+    // Construir WHERE según las columnas disponibles
+    $where_conditions = [];
+    if ($has_estado) {
+        $where_conditions[] = "p.estado = 'activo'";
+    } elseif ($has_activo) {
+        $where_conditions[] = "p.activo = 1";
+    }
+    
+    if (!empty($where_conditions)) {
+        $sql .= " WHERE " . implode(" AND ", $where_conditions);
+    }
+    
+    $sql .= " ORDER BY p.id DESC LIMIT ?";
 
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
@@ -1427,17 +1500,40 @@ function eliminarProducto(int $id): bool
 {
     $conn = getDBConnection();
 
-    // eliminar inventario asociado
-    $conn->query("DELETE FROM inventario WHERE producto_id=$id");
+    // 🔹 Iniciar transacción
+    $conn->begin_transaction();
 
-    $stmt = $conn->prepare("DELETE FROM productos WHERE id=?");
-    if (!$stmt) {
-        error_log("❌ Error en eliminarProducto prepare(): " . $conn->error);
+    try {
+        // 1️⃣ Eliminar ventas relacionadas
+        $stmt1 = $conn->prepare("DELETE FROM detalle_ventas WHERE producto_id = ?");
+        $stmt1->bind_param("i", $id);
+        $stmt1->execute();
+        $stmt1->close();
+
+        // 2️⃣ Eliminar inventario relacionado
+        $stmt2 = $conn->prepare("DELETE FROM inventario WHERE producto_id = ?");
+        $stmt2->bind_param("i", $id);
+        $stmt2->execute();
+        $stmt2->close();
+
+        // 3️⃣ Eliminar producto
+        $stmt3 = $conn->prepare("DELETE FROM productos WHERE id = ?");
+        $stmt3->bind_param("i", $id);
+        $stmt3->execute();
+        $stmt3->close();
+
+        // ✅ Confirmar cambios
+        $conn->commit();
+        return true;
+
+    } catch (Exception $e) {
+        // ❌ Revertir cambios si algo falla
+        $conn->rollback();
+        error_log("❌ Error al eliminar producto: " . $e->getMessage());
         return false;
     }
-    $stmt->bind_param("i", $id);
-    return $stmt->execute();
 }
+
 
 
 
@@ -1822,14 +1918,14 @@ function getCategorias(): array
     $check_featured = $conn->query("SHOW COLUMNS FROM categorias LIKE 'featured_image'");
     $has_imagen = $check_imagen && $check_imagen->num_rows > 0;
     $has_featured = $check_featured && $check_featured->num_rows > 0;
-    
+
     $image_col = '';
     if ($has_featured) {
         $image_col = ', featured_image';
     } elseif ($has_imagen) {
         $image_col = ', imagen';
     }
-    
+
     $sql = "SELECT id, nombre, descripcion{$image_col} FROM categorias ORDER BY nombre ASC";
     $res = $conn->query($sql);
     return $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
@@ -1880,7 +1976,8 @@ function eliminarCategoria(int $id): bool
     return $stmt->execute();
 }
 
-function getBrandsOverview(): array {
+function getBrandsOverview(): array
+{
     $conn = getDBConnection();
     $hasBrandsTable = tableExists($conn, 'marcas');
     $brands = [];
@@ -1927,16 +2024,16 @@ function getBrandsOverview(): array {
         if ($res) {
             while ($row = $res->fetch_assoc()) {
                 $brands[] = [
-                    'id'          => (int)$row['id'],
-                    'name'        => $row['nombre'] ?? 'Marca',
+                    'id' => (int) $row['id'],
+                    'name' => $row['nombre'] ?? 'Marca',
                     'description' => $row['descripcion'] ?? '',
-                    'logo'        => publicImageUrl($row['logo_path'] ?? ''),
-                    'tagline'     => $row['tagline'] ?? '',
-                    'campaign'    => $row['campania'] ?? '',
-                    'accent'      => $row['color_acento'] ?? '',
-                    'featured'    => !empty($row['destacada']),
-                    'products'    => (int)($row['total_productos'] ?? 0),
-                    'popularity'  => (int)($row['popularidad'] ?? 0),
+                    'logo' => publicImageUrl($row['logo_path'] ?? ''),
+                    'tagline' => $row['tagline'] ?? '',
+                    'campaign' => $row['campania'] ?? '',
+                    'accent' => $row['color_acento'] ?? '',
+                    'featured' => !empty($row['destacada']),
+                    'products' => (int) ($row['total_productos'] ?? 0),
+                    'popularity' => (int) ($row['popularidad'] ?? 0),
                 ];
             }
         }
@@ -1949,16 +2046,16 @@ function getBrandsOverview(): array {
             if ($res) {
                 while ($row = $res->fetch_assoc()) {
                     $brands[] = [
-                        'id'          => null,
-                        'name'        => $row['nombre'],
+                        'id' => null,
+                        'name' => $row['nombre'],
                         'description' => '',
-                        'logo'        => publicImageUrl('images/default.png'),
-                        'tagline'     => '',
-                        'campaign'    => '',
-                        'accent'      => '',
-                        'featured'    => false,
-                        'products'    => (int)$row['total_productos'],
-                        'popularity'  => (int)$row['total_productos'],
+                        'logo' => publicImageUrl('images/default.png'),
+                        'tagline' => '',
+                        'campaign' => '',
+                        'accent' => '',
+                        'featured' => false,
+                        'products' => (int) $row['total_productos'],
+                        'popularity' => (int) $row['total_productos'],
                     ];
                 }
             }
@@ -2031,7 +2128,8 @@ function toggleFavorito(int $usuario_id, int $producto_id): bool
  *
  * @return array{select:string[],join:string}
  */
-function lsFavoritesProductSelect(mysqli $conn, bool $withAddedAt = false): array {
+function lsFavoritesProductSelect(mysqli $conn, bool $withAddedAt = false): array
+{
     static $cache = [];
     $key = $withAddedAt ? 'with_added_at' : 'without_added_at';
     if (isset($cache[$key])) {
@@ -2081,7 +2179,7 @@ function lsFavoritesProductSelect(mysqli $conn, bool $withAddedAt = false): arra
 
     return $cache[$key] = [
         'select' => $select,
-        'join'   => $join,
+        'join' => $join,
     ];
 }
 
@@ -2106,7 +2204,7 @@ function getFavoritos(?int $usuario_id): array
         $sql = "
             SELECT " . implode(", ", $parts['select']) . "
             FROM favoritos f
-            JOIN productos p ON f.producto_id = p.id
+            INNER JOIN productos p ON f.producto_id = p.id
             {$parts['join']}
             WHERE f.usuario_id = ?
             ORDER BY f.creado_en DESC
@@ -2120,9 +2218,22 @@ function getFavoritos(?int $usuario_id): array
         $stmt->execute();
         $res = $stmt->get_result();
         $rows = $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
-        return array_map(static fn($row) => array_merge($row, [
-            'imagen' => publicImageUrl($row['imagen'] ?? ''),
-        ]), $rows);
+        $stmt->close();
+        
+        // Asegurar que todos los campos necesarios estén presentes
+        return array_map(static function($row) {
+            return array_merge([
+                'id' => (int)($row['id'] ?? 0),
+                'producto_id' => (int)($row['id'] ?? 0),
+                'nombre' => $row['nombre'] ?? 'Producto sin nombre',
+                'precio' => (float)($row['precio'] ?? 0),
+                'precio_original' => isset($row['precio_original']) && $row['precio_original'] !== null ? (float)$row['precio_original'] : null,
+                'descuento' => (int)($row['descuento'] ?? 0),
+                'stock' => (int)($row['stock'] ?? 0),
+                'categoria' => $row['categoria'] ?? 'Sin categoría',
+                'imagen' => publicImageUrl($row['imagen'] ?? ''),
+            ], $row);
+        }, $rows);
     }
     // fallback sesión
     if (!isset($_SESSION))
@@ -2164,7 +2275,8 @@ function getFavoritos(?int $usuario_id): array
  * BLOG / CONTENIDO
  * ============================================================
  */
-function getBlogPostsData(): array {
+function getBlogPostsData(): array
+{
     $conn = getDBConnection();
     $hasBlogTable = tableExists($conn, 'blog_posts');
     $posts = [];
@@ -2206,18 +2318,18 @@ function getBlogPostsData(): array {
                     $related = array_values(array_filter(array_map('trim', explode(',', $row['relacionados']))));
                 }
                 $posts[] = [
-                    'id'          => (int)$row['id'],
-                    'title'       => $row['titulo'] ?? 'Artículo',
-                    'slug'        => $row['slug'] ?? '',
-                    'category'    => $row['categoria'] ?? ($row['categoria_id'] ?? 'General'),
-                    'tags'        => $postTags,
-                    'summary'     => $row['resumen'] ?? '',
-                    'content'     => $row['contenido'] ?? '',
-                    'author'      => $row['autor'] ?? 'Equipo LumiSpace',
-                    'image'       => publicImageUrl($row['imagen_destacada'] ?? ''),
-                    'published_at'=> $row['publicado_en'] ?? date('Y-m-d'),
-                    'related'     => $related,
-                    'featured'    => !empty($row['destacado']),
+                    'id' => (int) $row['id'],
+                    'title' => $row['titulo'] ?? 'Artículo',
+                    'slug' => $row['slug'] ?? '',
+                    'category' => $row['categoria'] ?? ($row['categoria_id'] ?? 'General'),
+                    'tags' => $postTags,
+                    'summary' => $row['resumen'] ?? '',
+                    'content' => $row['contenido'] ?? '',
+                    'author' => $row['autor'] ?? 'Equipo LumiSpace',
+                    'image' => publicImageUrl($row['imagen_destacada'] ?? ''),
+                    'published_at' => $row['publicado_en'] ?? date('Y-m-d'),
+                    'related' => $related,
+                    'featured' => !empty($row['destacado']),
                 ];
             }
         }
@@ -2280,9 +2392,9 @@ function getBlogPostsData(): array {
     usort($posts, static fn($a, $b) => strtotime($b['published_at']) <=> strtotime($a['published_at']));
 
     return [
-        'posts'      => $posts,
+        'posts' => $posts,
         'categories' => $categories,
-        'tags'       => $tags,
+        'tags' => $tags,
     ];
 }
 
@@ -2291,7 +2403,8 @@ function getBlogPostsData(): array {
  * 🔍 Buscador avanzado
  * ============================================================
  */
-function lsGetProductColumnsMeta(): array {
+function lsGetProductColumnsMeta(): array
+{
     static $meta = null;
     if ($meta !== null) {
         return $meta;
@@ -2307,65 +2420,67 @@ function lsGetProductColumnsMeta(): array {
     }
 
     $meta = [
-        'has_precio'          => isset($cols['precio']),
+        'has_precio' => isset($cols['precio']),
         'has_precio_original' => isset($cols['precio_original']),
-        'has_descuento'       => isset($cols['descuento']),
-        'has_stock'           => isset($cols['stock']) || isset($cols['existencia']),
-        'stock_column'        => isset($cols['stock']) ? 'stock' : (isset($cols['existencia']) ? 'existencia' : null),
-        'has_categoria_id'    => isset($cols['categoria_id']),
-        'has_categoria_text'  => isset($cols['categoria']),
-        'has_marca_id'        => isset($cols['marca_id']),
-        'has_proveedor_id'    => isset($cols['proveedor_id']),
-        'has_color'           => isset($cols['color']),
-        'has_talla'           => isset($cols['talla']) || isset($cols['tamano']),
-        'talla_column'        => isset($cols['talla']) ? 'talla' : (isset($cols['tamano']) ? 'tamano' : null),
-        'has_disponible'      => isset($cols['disponible']),
-        'has_popular'         => isset($cols['ventas']) ? 'ventas' : (isset($cols['visitas']) ? 'visitas' : null),
-        'has_rating'          => isset($cols['calificacion']),
-        'has_created'         => isset($cols['creado_en']) ? 'creado_en' : (isset($cols['created_at']) ? 'created_at' : null),
+        'has_descuento' => isset($cols['descuento']),
+        'has_stock' => isset($cols['stock']) || isset($cols['existencia']),
+        'stock_column' => isset($cols['stock']) ? 'stock' : (isset($cols['existencia']) ? 'existencia' : null),
+        'has_categoria_id' => isset($cols['categoria_id']),
+        'has_categoria_text' => isset($cols['categoria']),
+        'has_marca_id' => isset($cols['marca_id']),
+        'has_proveedor_id' => isset($cols['proveedor_id']),
+        'has_color' => isset($cols['color']),
+        'has_talla' => isset($cols['talla']) || isset($cols['tamano']),
+        'talla_column' => isset($cols['talla']) ? 'talla' : (isset($cols['tamano']) ? 'tamano' : null),
+        'has_disponible' => isset($cols['disponible']),
+        'has_popular' => isset($cols['ventas']) ? 'ventas' : (isset($cols['visitas']) ? 'visitas' : null),
+        'has_rating' => isset($cols['calificacion']),
+        'has_created' => isset($cols['creado_en']) ? 'creado_en' : (isset($cols['created_at']) ? 'created_at' : null),
     ];
 
     return $meta;
 }
 
-function normalizeSearchProductRow(array $row): array {
+function normalizeSearchProductRow(array $row): array
+{
     return [
-        'id'             => (int)($row['id'] ?? 0),
-        'name'           => $row['nombre'] ?? 'Producto',
-        'description'    => $row['descripcion'] ?? '',
-        'category'       => $row['categoria'] ?? 'Otros',
-        'brand'          => $row['marca'] ?? ($row['proveedor'] ?? ''),
-        'price'          => isset($row['precio']) ? (float)$row['precio'] : 0.0,
-        'originalPrice'  => isset($row['precio_original']) && $row['precio_original'] !== null ? (float)$row['precio_original'] : null,
-        'discount'       => isset($row['descuento']) ? (float)$row['descuento'] : 0.0,
-        'stock'          => isset($row['stock']) ? (int)$row['stock'] : 0,
-        'availability'   => isset($row['disponible']) ? (bool)$row['disponible'] : (isset($row['stock']) ? ((int)$row['stock'] > 0) : true),
-        'color'          => $row['color'] ?? null,
-        'size'           => $row['talla'] ?? null,
-        'rating'         => isset($row['calificacion']) ? (float)$row['calificacion'] : null,
-        'image'          => publicImageUrl($row['imagen'] ?? ''),
-        'created_at'     => $row['creado_en'] ?? ($row['created_at'] ?? null),
-        'popularity'     => isset($row['popularity']) ? (int)$row['popularity'] : (isset($row['ventas']) ? (int)$row['ventas'] : (isset($row['visitas']) ? (int)$row['visitas'] : 0)),
+        'id' => (int) ($row['id'] ?? 0),
+        'name' => $row['nombre'] ?? 'Producto',
+        'description' => $row['descripcion'] ?? '',
+        'category' => $row['categoria'] ?? 'Otros',
+        'brand' => $row['marca'] ?? ($row['proveedor'] ?? ''),
+        'price' => isset($row['precio']) ? (float) $row['precio'] : 0.0,
+        'originalPrice' => isset($row['precio_original']) && $row['precio_original'] !== null ? (float) $row['precio_original'] : null,
+        'discount' => isset($row['descuento']) ? (float) $row['descuento'] : 0.0,
+        'stock' => isset($row['stock']) ? (int) $row['stock'] : 0,
+        'availability' => isset($row['disponible']) ? (bool) $row['disponible'] : (isset($row['stock']) ? ((int) $row['stock'] > 0) : true),
+        'color' => $row['color'] ?? null,
+        'size' => $row['talla'] ?? null,
+        'rating' => isset($row['calificacion']) ? (float) $row['calificacion'] : null,
+        'image' => publicImageUrl($row['imagen'] ?? ''),
+        'created_at' => $row['creado_en'] ?? ($row['created_at'] ?? null),
+        'popularity' => isset($row['popularity']) ? (int) $row['popularity'] : (isset($row['ventas']) ? (int) $row['ventas'] : (isset($row['visitas']) ? (int) $row['visitas'] : 0)),
     ];
 }
 
-function searchProductos(array $options = []): array {
+function searchProductos(array $options = []): array
+{
     $conn = getDBConnection();
     $meta = lsGetProductColumnsMeta();
 
-    $query      = trim((string)($options['q'] ?? ''));
-    $category   = trim((string)($options['category'] ?? ''));
-    $brand      = trim((string)($options['brand'] ?? ''));
-    $color      = trim((string)($options['color'] ?? ''));
-    $size       = trim((string)($options['size'] ?? ''));
-    $available  = isset($options['availability']) ? (string)$options['availability'] : '';
-    $minPrice   = isset($options['min_price']) ? (float)$options['min_price'] : null;
-    $maxPrice   = isset($options['max_price']) ? (float)$options['max_price'] : null;
+    $query = trim((string) ($options['q'] ?? ''));
+    $category = trim((string) ($options['category'] ?? ''));
+    $brand = trim((string) ($options['brand'] ?? ''));
+    $color = trim((string) ($options['color'] ?? ''));
+    $size = trim((string) ($options['size'] ?? ''));
+    $available = isset($options['availability']) ? (string) $options['availability'] : '';
+    $minPrice = isset($options['min_price']) ? (float) $options['min_price'] : null;
+    $maxPrice = isset($options['max_price']) ? (float) $options['max_price'] : null;
     $discountOnly = !empty($options['discount_only']);
-    $sort       = (string)($options['sort'] ?? 'relevance');
-    $page       = max(1, (int)($options['page'] ?? 1));
-    $perPage    = (int)($options['per_page'] ?? 12);
-    $perPage    = min(max($perPage, 6), 48);
+    $sort = (string) ($options['sort'] ?? 'relevance');
+    $page = max(1, (int) ($options['page'] ?? 1));
+    $perPage = (int) ($options['per_page'] ?? 12);
+    $perPage = min(max($perPage, 6), 48);
 
     $select = [
         "p.id",
@@ -2416,18 +2531,23 @@ function searchProductos(array $options = []): array {
             "p.nombre LIKE ?",
             "p.descripcion LIKE ?"
         ];
-        $params[] = $like; $types .= "s";
-        $params[] = $like; $types .= "s";
+        $params[] = $like;
+        $types .= "s";
+        $params[] = $like;
+        $types .= "s";
 
         if ($meta['has_categoria_id']) {
             $whereParts[] = "c.nombre LIKE ?";
-            $params[] = $like; $types .= "s";
+            $params[] = $like;
+            $types .= "s";
         } elseif ($meta['has_categoria_text']) {
             $whereParts[] = "p.categoria LIKE ?";
-            $params[] = $like; $types .= "s";
+            $params[] = $like;
+            $types .= "s";
         }
         $whereParts[] = "SOUNDEX(p.nombre) = SOUNDEX(?)";
-        $params[] = $query; $types .= "s";
+        $params[] = $query;
+        $types .= "s";
 
         $where[] = '(' . implode(' OR ', $whereParts) . ')';
     }
@@ -2436,30 +2556,36 @@ function searchProductos(array $options = []): array {
         if ($meta['has_categoria_id']) {
             if (ctype_digit($category)) {
                 $where[] = "c.id = ?";
-                $params[] = (int)$category; $types .= "i";
+                $params[] = (int) $category;
+                $types .= "i";
             } else {
                 $where[] = "LOWER(c.nombre) = ?";
-                $params[] = strtolower($category); $types .= "s";
+                $params[] = strtolower($category);
+                $types .= "s";
             }
         } elseif ($meta['has_categoria_text']) {
             $where[] = "LOWER(p.categoria) = ?";
-            $params[] = strtolower($category); $types .= "s";
+            $params[] = strtolower($category);
+            $types .= "s";
         }
     }
 
     if ($brand !== '' && $brandWhereAlias) {
         $where[] = "LOWER($brandWhereAlias) = ?";
-        $params[] = strtolower($brand); $types .= "s";
+        $params[] = strtolower($brand);
+        $types .= "s";
     }
 
     if ($color !== '' && $meta['has_color']) {
         $where[] = "LOWER(p.color) = ?";
-        $params[] = strtolower($color); $types .= "s";
+        $params[] = strtolower($color);
+        $types .= "s";
     }
 
     if ($size !== '' && $meta['has_talla']) {
         $where[] = "LOWER(p.{$meta['talla_column']}) = ?";
-        $params[] = strtolower($size); $types .= "s";
+        $params[] = strtolower($size);
+        $types .= "s";
     }
 
     if ($available !== '') {
@@ -2480,12 +2606,14 @@ function searchProductos(array $options = []): array {
 
     if ($minPrice !== null && $meta['has_precio']) {
         $where[] = "p.precio >= ?";
-        $params[] = $minPrice; $types .= "d";
+        $params[] = $minPrice;
+        $types .= "d";
     }
 
     if ($maxPrice !== null && $meta['has_precio']) {
         $where[] = "p.precio <= ?";
-        $params[] = $maxPrice; $types .= "d";
+        $params[] = $maxPrice;
+        $types .= "d";
     }
 
     if ($discountOnly && $meta['has_descuento']) {
@@ -2546,7 +2674,7 @@ function searchProductos(array $options = []): array {
     });
 
     $total = count($normalized);
-    $totalPages = (int)ceil($total / $perPage);
+    $totalPages = (int) ceil($total / $perPage);
     $offset = ($page - 1) * $perPage;
     $pageItems = array_slice($normalized, $offset, $perPage);
 
@@ -2576,12 +2704,12 @@ function searchProductos(array $options = []): array {
 
     // Facets
     $facets = [
-        'categories'    => [],
-        'brands'        => [],
-        'colors'        => [],
-        'sizes'         => [],
-        'availability'  => ['in_stock' => 0, 'out_of_stock' => 0],
-        'price'         => ['min' => null, 'max' => null],
+        'categories' => [],
+        'brands' => [],
+        'colors' => [],
+        'sizes' => [],
+        'availability' => ['in_stock' => 0, 'out_of_stock' => 0],
+        'price' => ['min' => null, 'max' => null],
     ];
 
     foreach ($normalized as $item) {
@@ -2614,15 +2742,16 @@ function searchProductos(array $options = []): array {
 
     return [
         'results' => $pageItems,
-        'total'   => $total,
-        'page'    => $page,
-        'per_page'=> $perPage,
+        'total' => $total,
+        'page' => $page,
+        'per_page' => $perPage,
         'total_pages' => $totalPages,
-        'facets'  => $facets,
+        'facets' => $facets,
     ];
 }
 
-function getSearchSuggestions(string $term, int $limit = 8): array {
+function getSearchSuggestions(string $term, int $limit = 8): array
+{
     $term = trim($term);
     if ($term === '') {
         return [];
@@ -2646,7 +2775,8 @@ function getSearchSuggestions(string $term, int $limit = 8): array {
     return array_slice($names, 0, $limit);
 }
 
-function logSearchQuery(?int $usuario_id, string $query, array $filters = [], int $resultsCount = 0): void {
+function logSearchQuery(?int $usuario_id, string $query, array $filters = [], int $resultsCount = 0): void
+{
     $query = trim($query);
     if ($query === '') {
         return;

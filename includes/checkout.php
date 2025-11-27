@@ -5,7 +5,6 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 // 🔗 DEPENDENCIAS
 // ====================================
 require_once __DIR__ . '/../config/functions.php';
-require_once __DIR__ . '/../config/carrito-funciones.php';
 require_once __DIR__ . '/../config/stripe.php';
 
 if (!function_exists('computeTotals')) {

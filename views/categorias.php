@@ -108,6 +108,31 @@ function getCategoryImage($imagen, $BASE) {
       flex: 1;
     }
 
+    /* Asegurar que el header y menú sean visibles */
+    .header {
+      position: sticky !important;
+      top: 0 !important;
+      z-index: 1000 !important;
+    }
+
+    .menu-toggle,
+    #menu-btn {
+      display: flex !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      pointer-events: auto !important;
+      cursor: pointer !important;
+      z-index: 1001 !important;
+    }
+
+    .sidebar {
+      z-index: 2000 !important;
+    }
+
+    .overlay {
+      z-index: 1500 !important;
+    }
+
     .container {
       max-width: 1280px;
       margin: 0 auto;
@@ -119,6 +144,7 @@ function getCategoryImage($imagen, $BASE) {
       padding: 90px 0 70px;
       position: relative;
       overflow: hidden;
+      transition: background 0.3s ease;
     }
 
     .hero-bg {
@@ -549,9 +575,102 @@ function getCategoryImage($imagen, $BASE) {
         text-align: center;
       }
     }
+
+    /* Modo Oscuro */
+    body.dark {
+      background: #1a1816 !important;
+      color: #f6f1e8;
+    }
+
+    body.dark .catalog-hero {
+      background: linear-gradient(180deg, #1a1816 0%, #2b241d 35%, #1f1c18 100%);
+    }
+
+    body.dark .hero-bg {
+      background: radial-gradient(circle at top right, rgba(160, 137, 107, 0.15), transparent 55%);
+    }
+
+    body.dark .hero-title,
+    body.dark .hero-subtitle {
+      color: #f6f1e8;
+    }
+
+    body.dark .category-card {
+      background: #2b241d !important;
+      border-color: rgba(160, 137, 107, 0.2) !important;
+    }
+
+    body.dark .category-card:hover {
+      background: #3a3228 !important;
+      border-color: rgba(160, 137, 107, 0.4) !important;
+    }
+
+    body.dark .card-body {
+      background: rgba(43, 36, 29, 0.9) !important;
+    }
+
+    body.dark .card-title {
+      color: #f6f1e8 !important;
+    }
+
+    body.dark .card-count {
+      color: #c9b8a2 !important;
+    }
+
+    body.dark .card-pill {
+      color: #c9b8a2 !important;
+    }
+
+    body.dark .card-description {
+      color: #c9b8a2 !important;
+    }
+
+    body.dark .card-badge {
+      background: rgba(43, 36, 29, 0.95) !important;
+      color: #f6f1e8 !important;
+    }
+
+    body.dark .ghost-btn {
+      background: rgba(160, 137, 107, 0.2) !important;
+      color: #f6f1e8 !important;
+      border-color: rgba(160, 137, 107, 0.3) !important;
+    }
+
+    body.dark .ghost-btn:hover {
+      background: rgba(160, 137, 107, 0.3) !important;
+      border-color: rgba(160, 137, 107, 0.5) !important;
+    }
+
+    body.dark .stats-section,
+    body.dark .statistics {
+      background: linear-gradient(135deg, rgba(43, 36, 29, 0.92), rgba(26, 24, 22, 0.95)) !important;
+    }
+
+    body.dark .stat-item {
+      background: rgba(43, 36, 29, 0.6) !important;
+    }
+
+    body.dark .stat-number {
+      color: #f6f1e8 !important;
+    }
+
+    body.dark .stat-label {
+      color: #c9b8a2 !important;
+    }
+
+    body.dark .filter-chip {
+      background: rgba(43, 36, 29, 0.6) !important;
+      color: #c9b8a2 !important;
+      border-color: rgba(160, 137, 107, 0.3) !important;
+    }
+
+    body.dark .filter-chip.active {
+      background: var(--brand-primary) !important;
+      color: white !important;
+    }
   </style>
 </head>
-<body>
+<body data-base="<?= htmlspecialchars($BASE) ?>">
 
   <div class="page-wrapper">
     <div class="main-content">
@@ -728,7 +847,7 @@ function getCategoryImage($imagen, $BASE) {
             <h2>¿Listo para Iluminar Tu Espacio?</h2>
             <p>Descubre nuestras ofertas exclusivas y transforma tu hogar hoy mismo</p>
             <div class="cta-buttons">
-              <a href="<?= $BASE ?>index.php" class="cta-btn primary">
+              <a href="<?= $BASE ?>views/catalogo.php" class="cta-btn primary">
                 <i class="fas fa-shopping-bag"></i> Ver Todos los Productos
               </a>
               <a href="<?= $BASE ?>views/contacto.php" class="cta-btn secondary">
@@ -744,7 +863,8 @@ function getCategoryImage($imagen, $BASE) {
     <?php include __DIR__ . "/../includes/footer.php"; ?>
   </div>
 
-  <script src="<?= $BASE ?>js/header.js"></script>
+  <script src="<?= $BASE ?>js/header.js" defer></script>
+  <script src="<?= $BASE ?>js/search-overlay.js" defer></script>
   <script>
   (()=>{
     const BASE_URL = document.querySelector('.products-grid')?.dataset.base || '/';

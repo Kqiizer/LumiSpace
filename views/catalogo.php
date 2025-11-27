@@ -38,7 +38,7 @@ $todos_productos = $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
 // Contar productos por categoría
 $productos_por_categoria = [];
 foreach ($todos_productos as $p) {
-    $cat_id = (int)($p['categoria_id'] ?? 0);
+    $cat_id = (int) ($p['categoria_id'] ?? 0);
     $productos_por_categoria[$cat_id] = ($productos_por_categoria[$cat_id] ?? 0) + 1;
 }
 
@@ -52,7 +52,7 @@ if ($usuario_id && $conn->query("SHOW TABLES LIKE 'favoritos'")->num_rows > 0) {
     $stmt->execute();
     $res = $stmt->get_result();
     while ($row = $res->fetch_assoc()) {
-        $favoritosSet[(int)$row['producto_id']] = true;
+        $favoritosSet[(int) $row['producto_id']] = true;
     }
     $stmt->close();
 }
@@ -63,20 +63,21 @@ if ($usuario_id && $conn->query("SHOW TABLES LIKE 'favoritos'")->num_rows > 0) {
 $stats = [
     'productos' => count($todos_productos),
     'categorias' => count($categorias_db),
-    'clientes' => (int)($conn->query("SELECT COUNT(*) as total FROM usuarios WHERE rol!='admin'")->fetch_assoc()['total'] ?? 0),
+    'clientes' => (int) ($conn->query("SELECT COUNT(*) as total FROM usuarios WHERE rol!='admin'")->fetch_assoc()['total'] ?? 0),
 ];
 
 // ==========================================
 // FUNCIÓN HELPER PARA IMÁGENES
 // ==========================================
-function img_url($path, $BASE, $folder = 'productos') {
-    $path = trim((string)$path);
+function img_url($path, $BASE, $folder = 'productos')
+{
+    $path = trim((string) $path);
 
-    if ($path === '') 
+    if ($path === '')
         return $BASE . "images/default.png";
 
     // Si es URL absoluta
-    if (preg_match('#^https?://#i', $path)) 
+    if (preg_match('#^https?://#i', $path))
         return $path;
 
     // 🔥 Ruta fija y correcta aunque estés dentro de /views/
@@ -86,16 +87,18 @@ function img_url($path, $BASE, $folder = 'productos') {
 ?>
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Catálogo completo de productos LumiSpace - <?= $stats['productos'] ?> productos disponibles">
+    <meta name="description"
+        content="Catálogo completo de productos LumiSpace - <?= $stats['productos'] ?> productos disponibles">
     <title>Catálogo de Productos - LumiSpace</title>
-    
+
     <!-- Fonts & Icons -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
+
     <!-- Stylesheets -->
     <link rel="stylesheet" href="<?= $BASE ?>css/styles/reset.css">
     <link rel="stylesheet" href="<?= $BASE ?>css/styles/header.css">
@@ -147,10 +150,10 @@ function img_url($path, $BASE, $folder = 'productos') {
             --bg-white: #262018;
             --bg-secondary: #2d261e;
             --bg-image: #332a20;
-            --border-color: rgba(255,255,255,0.15);
-            --shadow-sm: 0 2px 8px rgba(0,0,0,.45);
-            --shadow-md: 0 4px 12px rgba(0,0,0,.5);
-            --shadow-lg: 0 8px 18px rgba(0,0,0,.6);
+            --border-color: rgba(255, 255, 255, 0.15);
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, .45);
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, .5);
+            --shadow-lg: 0 8px 18px rgba(0, 0, 0, .6);
         }
 
         /* Transición suave al cambiar tema */
@@ -256,7 +259,7 @@ function img_url($path, $BASE, $folder = 'productos') {
             content: '';
             position: absolute;
             inset: 0;
-            background: radial-gradient(circle at 20% 20%, rgba(255,255,255,0.18), transparent 55%);
+            background: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.18), transparent 55%);
             opacity: 0.6;
         }
 
@@ -278,7 +281,7 @@ function img_url($path, $BASE, $folder = 'productos') {
             font-size: 1.1rem;
             opacity: 0.92;
             margin-bottom: 32px;
-            color: rgba(255,255,255,0.9);
+            color: rgba(255, 255, 255, 0.9);
         }
 
         .hero-stats {
@@ -316,7 +319,7 @@ function img_url($path, $BASE, $folder = 'productos') {
             position: sticky;
             top: 0;
             z-index: 100;
-            box-shadow: 0 2px 8px rgba(0,0,0,.05);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, .05);
             transition: background-color 0.3s ease, border-color 0.3s ease;
         }
 
@@ -758,6 +761,7 @@ function img_url($path, $BASE, $folder = 'productos') {
                 opacity: 0;
                 transform: translateY(20px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
@@ -775,6 +779,7 @@ function img_url($path, $BASE, $folder = 'productos') {
             0% {
                 background-color: hsl(200, 20%, 80%);
             }
+
             100% {
                 background-color: hsl(200, 20%, 95%);
             }
@@ -788,6 +793,7 @@ function img_url($path, $BASE, $folder = 'productos') {
             0% {
                 background-color: hsl(0, 0%, 25%);
             }
+
             100% {
                 background-color: hsl(0, 0%, 35%);
             }
@@ -901,7 +907,7 @@ function img_url($path, $BASE, $folder = 'productos') {
         </button>
 
         <!-- Header -->
-       <?php include __DIR__ . "/../includes/header.php"; ?>
+        <?php include __DIR__ . "/../includes/header.php"; ?>
 
 
         <!-- Hero Section -->
@@ -911,8 +917,9 @@ function img_url($path, $BASE, $folder = 'productos') {
                     <i class="fas fa-store"></i>
                     Catálogo Completo
                 </h1>
-                <p>Explora nuestra selección de <?= $stats['productos'] ?> productos en <?= $stats['categorias'] ?> categorías diferentes.</p>
-                
+                <p>Explora nuestra selección de <?= $stats['productos'] ?> productos en <?= $stats['categorias'] ?>
+                    categorías diferentes.</p>
+
                 <div class="hero-stats">
                     <div class="hero-stat">
                         <span class="hero-stat-number"><?= $stats['productos'] ?></span>
@@ -932,187 +939,196 @@ function img_url($path, $BASE, $folder = 'productos') {
 
         <!-- Barra de Filtros y Búsqueda -->
         <div class="filters-bar">
-    <div class="filters-container">
-        
-        <!-- Búsqueda -->
-        <div class="search-bar">
-            <div class="search-input-wrapper">
-                <input type="text" 
-                       class="search-input" 
-                       id="searchInput" 
-                       placeholder="Buscar productos por nombre...">
-                <i class="fas fa-search search-icon"></i>
-            </div>
-            <div class="search-actions">
-                <button class="btn-icon" id="btnClearFilters" title="Limpiar filtros">
-                    <i class="fas fa-times"></i>
-                    <span>Limpiar</span>
-                </button>
-            </div>
-        </div>
+            <div class="filters-container">
 
-        <!-- Filtros de Categorías -->
-        <div class="category-filters">
-            <div class="filters-scroll">
-
-                <!-- Botón TODOS -->
-                <button class="filter-chip active" data-category="">
-                    Todos
-                    <span class="chip-count">(<?= count($todos_productos) ?>)</span>
-                </button>
-
-                <!-- Botones de categorías -->
-                <?php foreach ($categorias_db as $cat): 
-                    $count = $productos_por_categoria[$cat['id']] ?? 0;
-
-                    if ($count > 0): ?>
-                        <button class="filter-chip" data-category="<?= $cat['id'] ?>">
-                            <?= htmlspecialchars($cat['nombre']) ?>
-                            <span class="chip-count">(<?= $count ?>)</span>
+                <!-- Búsqueda -->
+                <div class="search-bar">
+                    <div class="search-input-wrapper">
+                        <input type="text" class="search-input" id="searchInput"
+                            placeholder="Buscar productos por nombre...">
+                        <i class="fas fa-search search-icon"></i>
+                    </div>
+                    <div class="search-actions">
+                        <button class="btn-icon" id="btnClearFilters" title="Limpiar filtros">
+                            <i class="fas fa-times"></i>
+                            <span>Limpiar</span>
                         </button>
-                <?php endif; endforeach; ?>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Productos -->
-<section class="products-section">
-
-    <div class="products-header">
-        <div class="products-count">
-            Mostrando <strong id="visibleCount"><?= count($todos_productos) ?></strong> de 
-            <strong><?= count($todos_productos) ?></strong> productos
-        </div>
-    </div>
-
-    <div class="products-grid" id="productsGrid" data-base="<?= htmlspecialchars($BASE) ?>">
-        <?php foreach ($todos_productos as $p): 
-            $img = img_url($p['imagen'], $BASE);
-            $precio = (float)$p['precio'];
-            $precioOriginal = (float)($p['precio_original'] ?? 0);
-            $desc = $precioOriginal > $precio ? round(100 - ($precio * 100 / $precioOriginal)) : 0;
-            $fav = !empty($favoritosSet[$p['id']]);
-        ?>
-        <div class="product-card"
-             data-id="<?= $p['id'] ?>"
-             data-category="<?= $p['categoria_id'] ?>"
-             data-nombre="<?= htmlspecialchars($p['nombre'], ENT_QUOTES) ?>">
-
-            <div class="product-image-wrapper">
-                <div class="product-image" style="background-image:url('<?= $img ?>')"></div>
-
-                <?php if ($desc): ?>
-                    <div class="product-badge">-<?= $desc ?>%</div>
-                <?php endif; ?>
-
-                <div class="product-actions">
-                    <button class="action-btn js-wish <?= $fav ? 'active' : '' ?>"
-                            title="<?= $fav ? 'Quitar de favoritos' : 'Agregar a favoritos' ?>">
-                        <i class="fas fa-heart"></i>
-                    </button>
-
-                    <a class="action-btn"
-                       href="<?= $BASE ?>views/productos-detal.php?id=<?= $p['id'] ?>"
-                       title="Ver detalles del producto">
-                        <i class="fas fa-eye"></i>
-                    </a>
-
-                    <button class="action-btn js-cart" title="Agregar al carrito">
-                        <i class="fas fa-shopping-cart"></i>
-                    </button>
-                </div>
-            </div>
-
-            <div class="product-info">
-                <div class="product-category-tag">
-                    <?= htmlspecialchars($p['categoria']) ?>
+                    </div>
                 </div>
 
-                <div class="product-name">
-                    <?= htmlspecialchars($p['nombre']) ?>
-                </div>
+                <!-- Filtros de Categorías -->
+                <div class="category-filters">
+                    <div class="filters-scroll">
 
-                <div class="product-price-wrapper">
-                    <span class="product-price">$<?= number_format($precio, 2) ?></span>
+                        <!-- Botón TODOS -->
+                        <button class="filter-chip active" data-category="">
+                            Todos
+                            <span class="chip-count">(<?= count($todos_productos) ?>)</span>
+                        </button>
 
-                    <?php if ($desc): ?>
-                        <span class="original-price">$<?= number_format($precioOriginal, 2) ?></span>
-                    <?php endif; ?>
+                        <!-- Botones de categorías -->
+                        <?php foreach ($categorias_db as $cat):
+                            $count = $productos_por_categoria[$cat['id']] ?? 0;
+
+                            if ($count > 0): ?>
+                                <button class="filter-chip" data-category="<?= $cat['id'] ?>">
+                                    <?= htmlspecialchars($cat['nombre']) ?>
+                                    <span class="chip-count">(<?= $count ?>)</span>
+                                </button>
+                            <?php endif; endforeach; ?>
+                    </div>
                 </div>
             </div>
         </div>
-        <?php endforeach; ?>
-    </div>
 
-    <div class="empty-state" id="emptyState" style="display:none;">
-        <i class="fas fa-search"></i>
-        <h3>No se encontraron productos</h3>
-        <p>Intenta con otros filtros o términos de búsqueda</p>
-    </div>
+        <!-- Productos -->
+        <section class="products-section">
 
-</section>
+            <div class="products-header">
+                <div class="products-count">
+                    Mostrando <strong id="visibleCount"><?= count($todos_productos) ?></strong> de
+                    <strong><?= count($todos_productos) ?></strong> productos
+                </div>
+            </div>
+
+            <div class="products-grid" id="productsGrid" data-base="<?= htmlspecialchars($BASE) ?>">
+                <?php foreach ($todos_productos as $p):
+                    $img = img_url($p['imagen'], $BASE);
+                    $precio = (float) $p['precio'];
+                    $precioOriginal = (float) ($p['precio_original'] ?? 0);
+                    $desc = $precioOriginal > $precio ? round(100 - ($precio * 100 / $precioOriginal)) : 0;
+                    $fav = !empty($favoritosSet[$p['id']]);
+                    ?>
+                    <div class="product-card" data-id="<?= $p['id'] ?>" data-category="<?= $p['categoria_id'] ?>"
+                        data-nombre="<?= htmlspecialchars($p['nombre'], ENT_QUOTES) ?>">
+
+                        <div class="product-image-wrapper">
+                            <div class="product-image" style="background-image:url('<?= $img ?>')"></div>
+
+                            <?php if ($desc): ?>
+                                <div class="product-badge">-<?= $desc ?>%</div>
+                            <?php endif; ?>
+
+                            <div class="product-actions">
+                                <button class="action-btn js-wish <?= $fav ? 'active' : '' ?>"
+                                    title="<?= $fav ? 'Quitar de favoritos' : 'Agregar a favoritos' ?>">
+                                    <i class="fas fa-heart"></i>
+                                </button>
+
+                                <a class="action-btn" href="<?= $BASE ?>views/productos-detal.php?id=<?= $p['id'] ?>"
+                                    title="Ver detalles del producto">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+
+                                <button class="action-btn js-cart" title="Agregar al carrito">
+                                    <i class="fas fa-shopping-cart"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="product-info">
+                            <div class="product-category-tag">
+                                <?= htmlspecialchars($p['categoria']) ?>
+                            </div>
+
+                            <div class="product-name">
+                                <?= htmlspecialchars($p['nombre']) ?>
+                            </div>
+
+                            <div class="product-price-wrapper">
+                                <span class="product-price">$<?= number_format($precio, 2) ?></span>
+
+                                <?php if ($desc): ?>
+                                    <span class="original-price">$<?= number_format($precioOriginal, 2) ?></span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+
+            <div class="empty-state" id="emptyState" style="display:none;">
+                <i class="fas fa-search"></i>
+                <h3>No se encontraron productos</h3>
+                <p>Intenta con otros filtros o términos de búsqueda</p>
+            </div>
+
+        </section>
 
 
-<!-- =================================================================== -->
-<!--  🔥 JAVASCRIPT INTEGRADO - FILTROS 100% FUNCIONALES -->
-<!-- =================================================================== -->
+        <!-- =================================================================== -->
+        <!--  🔥 JAVASCRIPT INTEGRADO - FILTROS 100% FUNCIONALES -->
+        <!-- =================================================================== -->
 
-<script>
-document.addEventListener("DOMContentLoaded", () => {
+        <script>
+            document.addEventListener("DOMContentLoaded", () => {
 
-    const products = document.querySelectorAll(".product-card");
-    const chips = document.querySelectorAll(".filter-chip");
-    const searchInput = document.getElementById("searchInput");
-    const emptyState = document.getElementById("emptyState");
-    const visibleCount = document.getElementById("visibleCount");
-    const btnClear = document.getElementById("btnClearFilters");
+                const products = document.querySelectorAll(".product-card");
+                const chips = document.querySelectorAll(".filter-chip");
+                const searchInput = document.getElementById("searchInput");
+                const emptyState = document.getElementById("emptyState");
+                const visibleCount = document.getElementById("visibleCount");
+                const btnClear = document.getElementById("btnClearFilters");
 
-    function aplicarFiltros() {
-        const texto = searchInput.value.toLowerCase();
-        const chipActivo = document.querySelector(".filter-chip.active");
-        const categoria = chipActivo ? chipActivo.dataset.category : "";
+                function aplicarFiltros() {
+                    const texto = searchInput.value.toLowerCase();
+                    const chipActivo = document.querySelector(".filter-chip.active");
+                    const categoria = chipActivo ? chipActivo.dataset.category : "";
 
-        let visibles = 0;
+                    let visibles = 0;
 
-        products.forEach(p => {
-            const nombre = p.dataset.nombre.toLowerCase();
-            const cat = p.dataset.category;
+                    products.forEach(p => {
+                        const nombre = p.dataset.nombre.toLowerCase();
+                        const cat = p.dataset.category;
 
-            const coincideTexto = nombre.includes(texto);
-            const coincideCategoria = categoria === "" || categoria === cat;
+                        const coincideTexto = nombre.includes(texto);
+                        const coincideCategoria = categoria === "" || categoria === cat;
 
-            if (coincideTexto && coincideCategoria) {
-                p.style.display = "block";
-                visibles++;
-            } else {
-                p.style.display = "none";
-            }
-        });
+                        if (coincideTexto && coincideCategoria) {
+                            p.style.display = "block";
+                            visibles++;
+                        } else {
+                            p.style.display = "none";
+                        }
+                    });
 
-        visibleCount.textContent = visibles;
-        emptyState.style.display = visibles === 0 ? "block" : "none";
-    }
+                    visibleCount.textContent = visibles;
+                    emptyState.style.display = visibles === 0 ? "block" : "none";
+                }
 
-    chips.forEach(chip => {
-        chip.addEventListener("click", () => {
-            chips.forEach(c => c.classList.remove("active"));
-            chip.classList.add("active");
-            aplicarFiltros();
-        });
-    });
+                chips.forEach(chip => {
+                    chip.addEventListener("click", () => {
+                        chips.forEach(c => c.classList.remove("active"));
+                        chip.classList.add("active");
+                        aplicarFiltros();
+                    });
+                });
 
-    searchInput.addEventListener("keyup", aplicarFiltros);
+                searchInput.addEventListener("keyup", aplicarFiltros);
 
-    btnClear.addEventListener("click", () => {
-        searchInput.value = "";
-        chips.forEach(c => c.classList.remove("active"));
-        chips[0].classList.add("active");
-        aplicarFiltros();
-    });
+                btnClear.addEventListener("click", () => {
+                    searchInput.value = "";
+                    chips.forEach(c => c.classList.remove("active"));
+                    chips[0].classList.add("active");
+                    aplicarFiltros();
+                });
 
-});
-</script>
+                // Aplicar filtro de categoría desde la URL si existe
+                const urlParams = new URLSearchParams(window.location.search);
+                const categoriaId = urlParams.get('categoria');
+                if (categoriaId) {
+                    const chipCategoria = document.querySelector(`.filter-chip[data-category="${categoriaId}"]`);
+                    if (chipCategoria) {
+                        chips.forEach(c => c.classList.remove("active"));
+                        chipCategoria.classList.add("active");
+                        aplicarFiltros();
+                        // Scroll suave al área de filtros
+                        chipCategoria.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                    }
+                }
+
+            });
+        </script>
 
 
         <!-- Footer -->
@@ -1123,6 +1139,8 @@ document.addEventListener("DOMContentLoaded", () => {
     <script>
         window.BASE_URL = "<?= $BASE ?>";
     </script>
+    <script src="<?= $BASE ?>js/product-actions.js"></script>
     <script src="<?= $BASE ?>js/catalogo.js"></script>
 </body>
+
 </html>
