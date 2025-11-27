@@ -269,8 +269,14 @@ if (isset($google_client) && $google_client instanceof Google_Client) {
           <input type="checkbox" id="acepto" name="acepto" required>
           <label for="acepto">
             Acepto los 
-            <button type="button" class="legal-link" data-legal-doc="terms">Términos y Condiciones</button> y la 
-            <button type="button" class="legal-link" data-legal-doc="privacy">Política de Privacidad</button>.
+          <a href="../docs/terminos-condiciones.html" class="legal-link" target="_blank">
+    Términos y Condiciones
+</a>
+y la
+<a href="../docs/politica-privacidad.html" class="legal-link" target="_blank">
+    Política de Privacidad
+</a>
+
           </label>
         </div>
 

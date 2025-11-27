@@ -125,14 +125,6 @@ $actividades = [
 
         <section class="content">
 
-            <nav style="margin-bottom: 24px; color: #6b7280; font-size: 0.875rem;">
-                <a href="dashboard.php" style="color: #6b7280; text-decoration: none;">Dashboard</a>
-                <span style="margin: 0 8px;">/</span>
-                <a href="configuracion.php" style="color: #6b7280; text-decoration: none;">Configuración</a>
-                <span style="margin: 0 8px;">/</span>
-                <span style="color: #1a202c; font-weight: 600;">Actividad</span>
-            </nav>
-
             <h1 class="page-title" style="margin-bottom: 20px;">
                 <i class="fas fa-history"></i> Actividad Reciente
             </h1>
