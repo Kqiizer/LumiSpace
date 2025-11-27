@@ -13,168 +13,79 @@ if (!isset($_SESSION['usuario_id'])) {
 
 $usuario_id = (int) $_SESSION['usuario_id'];
 
-// ✅ Obtener preferencias actuales
+// ✅ Obtener usuario
 $admin = getUsuarioPorId($usuario_id);
-
 if (!$admin) {
     $_SESSION['error'] = "No se pudo cargar la información del usuario.";
     header('Location: configuracion.php');
     exit();
 }
 
-// ✅ Guardar cambios si se envía formulario
+// ✅ Si envió el formulario
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-
-    $tema               = $_POST['tema'] ?? 'claro';
-    $notificaciones     = isset($_POST['notificaciones']) ? 1 : 0;
-    $idioma             = $_POST['idioma'] ?? 'es-MX';
-    $zona               = $_POST['zona_horaria'] ?? 'America/Mexico_City';
+    $idioma = $_POST['idioma'] ?? 'es-MX';
 
     $conn = getDBConnection();
-
-    $sql = "UPDATE usuarios 
-            SET tema=?, notificaciones_email=?, idioma=?, zona_horaria=?
-            WHERE id=?";
-
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("sissi", $tema, $notificaciones, $idioma, $zona, $usuario_id);
+    $stmt = $conn->prepare("UPDATE usuarios SET idioma=? WHERE id=?");
+    $stmt->bind_param("si", $idioma, $usuario_id);
 
     if ($stmt->execute()) {
-        $_SESSION['success'] = "✅ Preferencias guardadas correctamente.";
+        $_SESSION['success'] = "Idioma actualizado correctamente.";
     } else {
-        $_SESSION['error'] = "❌ Error al guardar preferencias.";
+        $_SESSION['error'] = "Error al actualizar el idioma.";
     }
 
-    header('Location: configuracion-preferencias.php');
+    header("Location: configuracion-preferencias.php");
     exit();
 }
 
-$page_title = "Preferencias del Sistema";
+$page_title = "Preferencias";
 ?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= $page_title ?> - LumiSpace</title>
+    <title>Preferencias - LumiSpace</title>
     <link rel="stylesheet" href="../css/dashboard.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        .settings-card {
-            background: #fff;
-            padding: 28px;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            max-width: 650px;
-            margin: 0 auto;
-        }
-        .form-group {
-            margin-bottom: 20px;
-        }
-        label {
-            font-weight: 600;
-            color: #374151;
-            margin-bottom: 6px;
-            display: block;
-        }
-        select, input[type="checkbox"] {
-            padding: 10px;
-            width: 100%;
-            border-radius: 8px;
-            border: 1px solid #d1d5db;
-        }
-        .btn-primary {
-            background: #4f46e5;
-            color: #fff;
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-weight: 600;
-            border: none;
-            cursor: pointer;
-        }
-        .btn-primary:hover {
-            background: #4338ca;
-        }
-        .alert {
-            padding: 14px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-weight: 600;
-        }
-        .alert-success {
-            background: #d1fae5;
-            color: #065f46;
-        }
-        .alert-error {
-            background: #fee2e2;
-            color: #991b1b;
-        }
-    </style>
 </head>
 <body>
 
 <?php include '../includes/sidebar-admin.php'; ?>
-
 <main class="main">
-    <?php include '../includes/header-admin.php'; ?>
+<?php include '../includes/header-admin.php'; ?>
 
-    <section class="content">
+<section class="content">
 
-        <h1 class="page-title"><i class="fas fa-sliders-h"></i> Preferencias del Sistema</h1>
-        <p class="page-subtitle">Personaliza tu experiencia en LumiSpace</p>
+    <h1 class="page-title"><i class="fas fa-sliders-h"></i> Preferencias del Sistema</h1>
 
-        <?php if (isset($_SESSION['success'])): ?>
-            <div class="alert alert-success"><?= $_SESSION['success']; ?></div>
-            <?php unset($_SESSION['success']); ?>
-        <?php endif; ?>
+    <?php if (isset($_SESSION['success'])): ?>
+        <p style="background:#d1fae5;padding:10px;border-radius:6px;color:#065f46;">
+            ✅ <?= $_SESSION['success'] ?>
+        </p>
+        <?php unset($_SESSION['success']); ?>
+    <?php endif; ?>
 
-        <?php if (isset($_SESSION['error'])): ?>
-            <div class="alert alert-error"><?= $_SESSION['error']; ?></div>
-            <?php unset($_SESSION['error']); ?>
-        <?php endif; ?>
+    <?php if (isset($_SESSION['error'])): ?>
+        <p style="background:#fee2e2;padding:10px;border-radius:6px;color:#991b1b;">
+            ❌ <?= $_SESSION['error'] ?>
+        </p>
+        <?php unset($_SESSION['error']); ?>
+    <?php endif; ?>
 
-        <div class="settings-card">
-            <form method="POST">
+    <form method="POST" style="margin-top:20px;">
+        <label style="font-weight:600;">Idioma de la interfaz:</label>
+        <select name="idioma" style="padding:10px;border-radius:6px;margin-top:6px;">
+            <option value="es-MX" <?= $admin['idioma'] === 'es-MX' ? 'selected' : '' ?>>Español (México)</option>
+            <option value="en-US" <?= $admin['idioma'] === 'en-US' ? 'selected' : '' ?>>Inglés (Estados Unidos)</option>
+        </select>
 
-                <div class="form-group">
-                    <label>Tema visual</label>
-                    <select name="tema">
-                        <option value="claro" <?= ($admin['tema'] ?? 'claro') === 'claro' ? 'selected' : '' ?>>Claro</option>
-                        <option value="oscuro" <?= ($admin['tema'] ?? '') === 'oscuro' ? 'selected' : '' ?>>Oscuro</option>
-                    </select>
-                </div>
+        <button type="submit" style="margin-top:15px;padding:10px 20px;background:#4f46e5;color:#fff;border:none;border-radius:6px;cursor:pointer;">
+            Guardar cambios
+        </button>
+    </form>
 
-                <div class="form-group">
-                    <label>Notificaciones por correo</label>
-                    <input type="checkbox" name="notificaciones" <?= ($admin['notificaciones_email'] ?? 1) == 1 ? 'checked' : '' ?>>
-                </div>
-
-                <div class="form-group">
-                    <label>Idioma</label>
-                    <select name="idioma">
-                        <option value="es-MX" <?= ($admin['idioma'] ?? 'es-MX') === 'es-MX' ? 'selected' : '' ?>>Español (México)</option>
-                        <option value="es-ES" <?= ($admin['idioma'] ?? '') === 'es-ES' ? 'selected' : '' ?>>Español (España)</option>
-                        <option value="en-US" <?= ($admin['idioma'] ?? '') === 'en-US' ? 'selected' : '' ?>>Inglés (Estados Unidos)</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label>Zona Horaria</label>
-                    <select name="zona_horaria">
-                        <option value="America/Mexico_City" <?= ($admin['zona_horaria'] ?? '') === 'America/Mexico_City' ? 'selected' : '' ?>>GMT-6 México</option>
-                        <option value="America/Bogota">GMT-5 Colombia</option>
-                        <option value="America/Santiago">GMT-4 Chile</option>
-                    </select>
-                </div>
-
-                <button type="submit" class="btn-primary">
-                    <i class="fas fa-save"></i> Guardar Preferencias
-                </button>
-
-            </form>
-        </div>
-    </section>
-
+</section>
 </main>
+
 </body>
 </html>
