@@ -1,10 +1,6 @@
 <?php
 if (session_status() === PHP_SESSION_NONE)
   session_start();
-
-// Definir BASE igual que en header.php
-$root = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? '/'), '/');
-$BASE = ($root === '' || $root === '/') ? '/' : $root . '/';
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -40,6 +36,7 @@ $BASE = ($root === '' || $root === '/') ? '/' : $root . '/';
       <?php include "includes/hero.php"; ?>
       <?php include "includes/features.php"; ?>
       <?php include "includes/categories.php"; ?>
+      <?php include "includes/catalog.php"; ?>
       <?php include "includes/statistics.php"; ?>
       <?php include "includes/collection.php"; ?>
 
@@ -50,43 +47,13 @@ $BASE = ($root === '' || $root === '/') ? '/' : $root . '/';
 
   <!-- ✅ Scripts (deben ir al final del body) -->
   <script>
-    // Definir BASE_URL para product-actions.js (igual que en catálogo)
-    window.BASE_URL = "<?= $BASE ?>";
+    // Definir BASE_URL para product-actions.js
+    const bodyBase = document.body.getAttribute('data-base');
+    window.BASE_URL = bodyBase || '/';
   </script>
-  <script src="<?= $BASE ?>js/product-actions.js"></script>
-  <script>
-    // Inicializar badge del carrito al cargar la página
-    (function() {
-      function initCartBadge() {
-        // Usar la función de product-actions.js si está disponible
-        if (typeof updateCartBadge === 'function') {
-          updateCartBadge();
-        } else {
-          // Fallback: usar fetch directo
-          fetch("<?= $BASE ?>api/carrito/count.php")
-            .then(res => res.json())
-            .then(data => {
-              const badge = document.querySelector('#cart-badge, .cart-badge');
-              if (badge && data.count !== undefined) {
-                badge.textContent = data.count;
-                badge.style.display = data.count > 0 ? '' : 'none';
-              }
-            })
-            .catch(err => console.error('Error inicializando badge del carrito:', err));
-        }
-      }
-      
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function() {
-          setTimeout(initCartBadge, 200);
-        });
-      } else {
-        setTimeout(initCartBadge, 200);
-      }
-    })();
-  </script>
-  <script src="<?= $BASE ?>js/header.js" defer></script>
-  <script src="<?= $BASE ?>js/script.js" defer></script>
+  <script src="js/header.js" defer></script>
+  <script src="js/product-actions.js"></script>
+  <script src="js/script.js" defer></script>
 </body>
 
 </html>
