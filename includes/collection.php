@@ -772,8 +772,9 @@ function getRating($prodId, $conn) {
                     <?php endif; ?>
                 </div>
                 
-                <button class="btn-carrito" 
+                <button class="btn-carrito js-cart" 
                         data-id="<?= $id ?>" 
+                        data-product-id="<?= $id ?>"
                         data-nombre="<?= $nombre ?>" 
                         data-precio="<?= $precio ?>" 
                         data-img="<?= $img ?>"
@@ -796,14 +797,36 @@ function getRating($prodId, $conn) {
 <script>
 const BASE = '<?= $BASE ?>';
 const USER_ID = <?= $usuario_id ?>;
-const CART_KEY = 'lumispace_cart';
 
 // Utilidades
-const getCart = () => JSON.parse(localStorage.getItem(CART_KEY) || '[]');
-const saveCart = c => { localStorage.setItem(CART_KEY, JSON.stringify(c)); updateCartBadge(); };
 const updateCartBadge = () => {
-    const count = getCart().reduce((s, i) => s + i.cantidad, 0);
-    document.querySelectorAll('.cart-badge, [data-cart-count]').forEach(b => b.textContent = count);
+    // Actualizar desde la API del servidor
+    fetch(BASE + 'api/carrito/count.php')
+        .then(res => res.json())
+        .then(data => {
+            const count = data.count || 0;
+            document.querySelectorAll('.cart-badge, [data-cart-count], #cart-badge').forEach(b => {
+                b.textContent = count;
+                b.style.display = count > 0 ? '' : 'none';
+            });
+        })
+        .catch(err => {
+            console.error('Error actualizando badge del carrito:', err);
+            // Fallback: intentar desde localStorage si existe (solo como último recurso)
+            try {
+                const CART_KEY = 'lumispace_cart';
+                const localCart = JSON.parse(localStorage.getItem(CART_KEY) || '[]');
+                const count = localCart.reduce((s, i) => s + (i.cantidad || 1), 0);
+                if (count > 0) {
+                    document.querySelectorAll('.cart-badge, [data-cart-count], #cart-badge').forEach(b => {
+                        b.textContent = count;
+                        b.style.display = count > 0 ? '' : 'none';
+                    });
+                }
+            } catch (e) {
+                // Ignorar errores de localStorage
+            }
+        });
 };
 
 function toast(msg, type = 'info') {
@@ -872,49 +895,122 @@ grid.addEventListener('click', async e => {
     const favBtn = e.target.closest('.btn-fav');
     if (favBtn) {
         e.preventDefault();
-        if (!USER_ID) { toast('Inicia sesión para favoritos', 'warning'); return; }
+        e.stopPropagation();
+        if (!USER_ID) { 
+            toast('Inicia sesión para favoritos', 'warning'); 
+            setTimeout(() => {
+                const next = encodeURIComponent(window.location.pathname + window.location.search);
+                window.location.href = `${BASE}views/login.php?next=${next}`;
+            }, 1500);
+            return; 
+        }
         
         favBtn.disabled = true;
         try {
-            const res = await fetch(BASE + 'api/wishlist/toggle.php', {
+            const res = await fetch(BASE + 'api/favoritos/toggle.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ producto_id: parseInt(card.dataset.id) })
             });
+            
+            if (res.status === 401) {
+                toast('Debes iniciar sesión para guardar favoritos', 'warning');
+                setTimeout(() => {
+                    const next = encodeURIComponent(window.location.pathname + window.location.search);
+                    window.location.href = `${BASE}views/login.php?next=${next}`;
+                }, 1500);
+                favBtn.disabled = false;
+                return;
+            }
+            
             const data = await res.json();
             if (data.ok) {
                 favBtn.classList.toggle('fav-active', data.in_wishlist);
                 toast(data.in_wishlist ? 'Agregado a favoritos' : 'Eliminado de favoritos', 'success');
+            } else {
+                throw new Error(data.msg || 'Error al actualizar favoritos');
             }
-        } catch (err) { toast('Error', 'error'); }
+        } catch (err) { 
+            console.error('Error en favoritos:', err);
+            toast('Error al actualizar favoritos', 'error'); 
+        }
         favBtn.disabled = false;
         return;
     }
     
-    // Carrito
+    // Carrito - Usar API del servidor en lugar de localStorage
     const cartBtn = e.target.closest('.btn-carrito');
     if (cartBtn && !cartBtn.disabled) {
         e.preventDefault();
-        const id = parseInt(cartBtn.dataset.id);
-        const stock = parseInt(card.dataset.stock);
-        const cart = getCart();
-        const existing = cart.find(i => i.id === id);
+        e.stopPropagation();
         
-        if (existing) {
-            if (existing.cantidad >= stock) { toast('Stock máximo alcanzado', 'warning'); return; }
-            existing.cantidad++;
-        } else {
-            cart.push({ id, nombre: cartBtn.dataset.nombre, precio: parseFloat(cartBtn.dataset.precio), imagen: cartBtn.dataset.img, cantidad: 1 });
+        const id = parseInt(cartBtn.dataset.id || cartBtn.dataset.productId || '0', 10);
+        if (!id) {
+            toast('Producto no válido', 'error');
+            return;
         }
         
-        saveCart(cart);
-        toast('¡Agregado al carrito!', 'success');
+        const stock = parseInt(card.dataset.stock || '0', 10);
+        if (stock <= 0) {
+            toast('Producto agotado', 'warning');
+            return;
+        }
         
-        // Efecto visual
-        cartBtn.classList.add('added');
-        const icon = cartBtn.querySelector('i');
-        icon.className = 'fas fa-check';
-        setTimeout(() => { cartBtn.classList.remove('added'); icon.className = 'fas fa-shopping-cart'; }, 1000);
+        // Mostrar estado de carga
+        const originalHTML = cartBtn.innerHTML;
+        cartBtn.disabled = true;
+        cartBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Agregando...';
+        
+        try {
+            const response = await fetch(BASE + 'api/carrito/add.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    producto_id: id,
+                    product_id: id,
+                    cantidad: 1,
+                    qty: 1
+                })
+            });
+            
+            // Verificar si la respuesta es JSON válido
+            let data;
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                data = await response.json();
+            } else {
+                const text = await response.text();
+                console.error('Respuesta no JSON:', text);
+                throw new Error('Error del servidor: La respuesta no es válida');
+            }
+            
+            if (response.ok && data.ok !== false) {
+                toast('¡Producto agregado al carrito!', 'success');
+                
+                // Actualizar contador del carrito
+                updateCartBadge();
+                
+                // Efecto visual
+                cartBtn.classList.add('added');
+                const icon = cartBtn.querySelector('i');
+                if (icon) {
+                    icon.className = 'fas fa-check';
+                }
+                setTimeout(() => { 
+                    cartBtn.classList.remove('added'); 
+                    if (icon) icon.className = 'fas fa-shopping-cart';
+                    cartBtn.innerHTML = originalHTML;
+                    cartBtn.disabled = false;
+                }, 1500);
+            } else {
+                throw new Error(data.msg || 'Error al agregar al carrito');
+            }
+        } catch (error) {
+            console.error('Error al agregar al carrito:', error);
+            toast('Error al agregar al carrito. Intenta de nuevo.', 'error');
+            cartBtn.innerHTML = originalHTML;
+            cartBtn.disabled = false;
+        }
         return;
     }
 });
