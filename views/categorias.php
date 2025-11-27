@@ -732,7 +732,6 @@ function getCategoryImage($imagen, $BASE) {
             <button class="filter-chip">Interior</button>
             <button class="filter-chip">Exterior</button>
             <button class="filter-chip">Decorativas</button>
-            <button class="filter-chip">Smart</button>
           </div>
 
           <?php
