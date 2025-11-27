@@ -703,14 +703,13 @@ function getRating($prodId, $conn) {
                 if ((int)$c['id'] === $catId) { $catNombre = htmlspecialchars($c['nombre']); break; }
             }
         ?>
-        <article class="producto product-card" 
+        <article class="producto" 
                  data-id="<?= $id ?>" 
                  data-nombre="<?= $nombre ?>" 
                  data-precio="<?= $precio ?>" 
                  data-cat="<?= $catId ?>"
                  data-stock="<?= $cantidad ?>"
-                 data-rating="<?= $rating['avg'] ?>"
-                 data-category="<?= $catId ?>">
+                 data-rating="<?= $rating['avg'] ?>">
             
             <div class="producto-img">
                 <img src="<?= $img ?>" 
@@ -773,14 +772,12 @@ function getRating($prodId, $conn) {
                     <?php endif; ?>
                 </div>
                 
-                <button class="btn-carrito js-cart" 
+                <button class="btn-carrito" 
                         data-id="<?= $id ?>" 
-                        data-product-id="<?= $id ?>"
                         data-nombre="<?= $nombre ?>" 
                         data-precio="<?= $precio ?>" 
                         data-img="<?= $img ?>"
-                        <?= $cantidad === 0 ? 'disabled' : '' ?>
-                        title="<?= $cantidad === 0 ? 'Agotado' : 'Agregar al carrito' ?>">
+                        <?= $cantidad === 0 ? 'disabled' : '' ?>>
                     <i class="fas fa-shopping-cart"></i>
                     <?= $cantidad === 0 ? 'Agotado' : 'Agregar al carrito' ?>
                 </button>
@@ -799,9 +796,15 @@ function getRating($prodId, $conn) {
 <script>
 const BASE = '<?= $BASE ?>';
 const USER_ID = <?= $usuario_id ?>;
+const CART_KEY = 'lumispace_cart';
 
-// El carrito ahora se maneja mediante product-actions.js que usa la API del servidor
-// Las funciones de localStorage ya no son necesarias
+// Utilidades
+const getCart = () => JSON.parse(localStorage.getItem(CART_KEY) || '[]');
+const saveCart = c => { localStorage.setItem(CART_KEY, JSON.stringify(c)); updateCartBadge(); };
+const updateCartBadge = () => {
+    const count = getCart().reduce((s, i) => s + i.cantidad, 0);
+    document.querySelectorAll('.cart-badge, [data-cart-count]').forEach(b => b.textContent = count);
+};
 
 function toast(msg, type = 'info') {
     const t = document.createElement('div');
@@ -888,9 +891,35 @@ grid.addEventListener('click', async e => {
         return;
     }
     
-    // Carrito - Ahora manejado por product-actions.js
-    // El botón con clase js-cart será manejado automáticamente por product-actions.js
+    // Carrito
+    const cartBtn = e.target.closest('.btn-carrito');
+    if (cartBtn && !cartBtn.disabled) {
+        e.preventDefault();
+        const id = parseInt(cartBtn.dataset.id);
+        const stock = parseInt(card.dataset.stock);
+        const cart = getCart();
+        const existing = cart.find(i => i.id === id);
+        
+        if (existing) {
+            if (existing.cantidad >= stock) { toast('Stock máximo alcanzado', 'warning'); return; }
+            existing.cantidad++;
+        } else {
+            cart.push({ id, nombre: cartBtn.dataset.nombre, precio: parseFloat(cartBtn.dataset.precio), imagen: cartBtn.dataset.img, cantidad: 1 });
+        }
+        
+        saveCart(cart);
+        toast('¡Agregado al carrito!', 'success');
+        
+        // Efecto visual
+        cartBtn.classList.add('added');
+        const icon = cartBtn.querySelector('i');
+        icon.className = 'fas fa-check';
+        setTimeout(() => { cartBtn.classList.remove('added'); icon.className = 'fas fa-shopping-cart'; }, 1000);
+        return;
+    }
 });
+
+updateCartBadge();
 
 // Debug de imágenes - descomentar si hay problemas
 // console.log('Imágenes del catálogo:');

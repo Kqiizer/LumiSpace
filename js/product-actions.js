@@ -146,14 +146,9 @@
                     badge.textContent = data.count;
                     badge.style.display = data.count > 0 ? '' : 'none';
                 }
-                // Disparar evento para que header.js también actualice
-                window.dispatchEvent(new CustomEvent('cart:updated'));
             })
             .catch(err => console.error('Error updating cart badge:', err));
     }
-    
-    // Exponer función globalmente para que pueda ser llamada desde otras partes
-    window.updateCartBadge = updateCartBadge;
 
     // Update favorites badge
     function updateFavoritesBadge(nextCount) {
