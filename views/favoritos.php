@@ -57,7 +57,7 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="container">
             <?php if (empty($favoritos)): ?>
                 <!-- Empty State -->
-                <div class="empty-state-container">
+                <div class="empty-state-container" id="emptyStateContainer">
                     <div class="empty-state">
                         <div class="empty-icon-container">
                             <div class="empty-icon-circle">
@@ -71,10 +71,16 @@ require_once __DIR__ . '/../includes/header.php';
                             Aún no has guardado productos en tus favoritos.<br>
                             Explora nuestra colección y descubre las piezas perfectas para iluminar tu espacio.
                         </p>
-                        <a href="<?= $BASE ?>views/catalogo.php" class="empty-cta">
-                            <i class="fas fa-search"></i>
-                            <span>Explorar Catálogo</span>
-                        </a>
+                        <div class="empty-actions">
+                            <a href="<?= $BASE ?>views/catalogo.php" class="empty-cta empty-cta-primary">
+                                <i class="fas fa-search"></i>
+                                <span>Explorar más productos</span>
+                            </a>
+                            <button onclick="window.history.back()" class="empty-cta empty-cta-secondary">
+                                <i class="fas fa-arrow-left"></i>
+                                <span>Volver</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
             <?php else: ?>
