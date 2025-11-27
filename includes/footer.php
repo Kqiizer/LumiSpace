@@ -73,24 +73,6 @@ $BASE = defined('BASE_URL') ? rtrim(BASE_URL, '/') . '/' : '/';
     </div>
   </div>
 
-  <!-- Newsletter -->
-  <div class="newsletter-section">
-    <div class="container">
-      <div class="newsletter-content">
-        <div class="newsletter-text">
-          <h3>Suscríbete a nuestro boletín</h3>
-          <p>Recibe ofertas exclusivas y las últimas novedades en iluminación</p>
-        </div>
-        <form class="newsletter-form">
-          <input type="email" placeholder="Tu correo electrónico" class="newsletter-input" required>
-          <button type="submit" class="newsletter-btn">
-            Suscribirse <i class="fas fa-paper-plane"></i>
-          </button>
-        </form>
-      </div>
-    </div>
-  </div>
-
   <!-- Bottom -->
   <div class="footer-bottom">
     <div class="container">
