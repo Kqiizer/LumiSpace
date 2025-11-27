@@ -67,6 +67,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
    💰 DATOS DEL CARRITO
    ============================================================ */
 $carrito = carritoObtener();
+// Debug: verificar que el carrito tenga datos
+if (empty($carrito) && !empty($_SESSION['carrito'])) {
+    // Si carritoObtener() devuelve vacío pero hay datos en sesión, forzar recarga
+    error_log("Carrito vacío pero sesión tiene datos: " . print_r($_SESSION['carrito'], true));
+}
 $subtotal = carritoTotal();
 $iva = $subtotal * 0.16;
 $envio = $subtotal > 1000 ? 0 : 150;

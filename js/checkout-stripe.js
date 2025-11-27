@@ -1,72 +1,196 @@
-document.addEventListener('DOMContentLoaded', () => {
-  const form = document.getElementById('checkout-form');
-  const button = document.getElementById('stripe-pay-button');
-  const errorBox = document.getElementById('stripe-error');
+/**
+ * ========================================
+ * STRIPE CHECKOUT - LumiSpace
+ * ========================================
+ * Maneja el proceso de pago con Stripe Elements
+ */
 
-  if (!form || !button) return;
+(function() {
+    'use strict';
 
-  const publishableKey = form.dataset.stripeKey;
-  const createSessionUrl = form.dataset.createSession;
+    const BASE = window.BASE_URL || document.body.dataset.base || '/';
+    let stripe = null;
+    let elements = null;
+    let cardElement = null;
+    let paymentIntentClientSecret = null;
+    let paymentIntentId = null;
 
-  if (!publishableKey || !createSessionUrl) return;
+    // Inicializar cuando el DOM esté listo
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('checkout-form');
+        const stripeKey = form?.dataset.stripeKey;
 
-  const stripe = Stripe(publishableKey);
+        if (!form || !stripeKey) {
+            console.error('Stripe no configurado correctamente');
+            return;
+        }
 
-  form.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    if (button.disabled) return;
+        // Inicializar Stripe
+        stripe = Stripe(stripeKey);
+        elements = stripe.elements();
 
-    setLoading(true);
-    showError('');
+        // Crear elemento de tarjeta
+        const cardContainer = document.getElementById('card-element');
+        if (cardContainer) {
+            cardElement = elements.create('card', {
+                style: {
+                    base: {
+                        fontSize: '16px',
+                        color: '#424770',
+                        '::placeholder': {
+                            color: '#aab7c4',
+                        },
+                        fontFamily: 'Inter, system-ui, sans-serif',
+                    },
+                    invalid: {
+                        color: '#9e2146',
+                    },
+                },
+            });
 
-    try {
-      const body = new FormData(form);
-      const response = await fetch(createSessionUrl, {
-        method: 'POST',
-        body,
-        headers: { 'X-Requested-With': 'XMLHttpRequest' },
-      });
+            cardElement.mount('#card-element');
 
-      const payload = await response.json();
+            // Manejar errores en tiempo real
+            cardElement.on('change', function(event) {
+                const displayError = document.getElementById('card-errors');
+                if (event.error) {
+                    displayError.textContent = event.error.message;
+                    displayError.style.display = 'block';
+                } else {
+                    displayError.textContent = '';
+                    displayError.style.display = 'none';
+                }
+            });
+        }
 
-      if (!response.ok || payload.error) {
-        throw new Error(payload.error || 'No pudimos iniciar el pago.');
-      }
+        // Manejar envío del formulario
+        form.addEventListener('submit', handleFormSubmit);
+    });
 
-      if (payload.url) {
-        window.location.href = payload.url;
-        return;
-      }
+    /**
+     * Manejar envío del formulario
+     */
+    async function handleFormSubmit(event) {
+        event.preventDefault();
 
-      if (payload.sessionId) {
-        const { error } = await stripe.redirectToCheckout({
-          sessionId: payload.sessionId,
-        });
-        if (error) throw error;
-      }
-    } catch (error) {
-      showError(error.message || 'Ocurrió un error inesperado.');
-      setLoading(false);
+        const form = event.target;
+        const submitButton = form.querySelector('button[type="submit"]');
+        const errorDiv = document.getElementById('stripe-error');
+
+        // Validar formulario
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+
+        // Deshabilitar botón
+        if (submitButton) {
+            submitButton.disabled = true;
+            const originalText = submitButton.innerHTML;
+            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+
+            try {
+                // Obtener datos del formulario
+                const formData = new FormData(form);
+                const nombre = formData.get('nombre');
+                const correo = formData.get('correo');
+                const direccion = formData.get('direccion');
+
+                // Crear Payment Intent
+                const response = await fetch(BASE + 'api/stripe/create-payment-intent.php', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (!response.ok || data.error) {
+                    throw new Error(data.error || 'Error al crear el pago');
+                }
+
+                paymentIntentClientSecret = data.clientSecret;
+                paymentIntentId = data.paymentIntentId;
+
+                // Confirmar el pago
+                await confirmPayment();
+
+            } catch (error) {
+                console.error('Error:', error);
+                showError(error.message || 'Error al procesar el pago. Por favor intenta de nuevo.');
+                
+                if (submitButton) {
+                    submitButton.disabled = false;
+                    submitButton.innerHTML = originalText;
+                }
+            }
+        }
     }
-  });
 
-  function setLoading(isLoading) {
-    button.disabled = isLoading;
-    button.dataset.loading = isLoading ? 'true' : 'false';
-    button.innerHTML = isLoading
-      ? '<i class="fas fa-spinner fa-spin"></i> Redirigiendo...'
-      : '<i class="fas fa-lock"></i> Pagar con Stripe';
-  }
+    /**
+     * Confirmar el pago con Stripe
+     */
+    async function confirmPayment() {
+        const submitButton = document.querySelector('button[type="submit"]');
+        const errorDiv = document.getElementById('stripe-error');
 
-  function showError(message) {
-    if (!errorBox) return;
-    if (!message) {
-      errorBox.style.display = 'none';
-      errorBox.textContent = '';
-      return;
+        try {
+            // Confirmar el pago
+            const {error, paymentIntent} = await stripe.confirmCardPayment(
+                paymentIntentClientSecret,
+                {
+                    payment_method: {
+                        card: cardElement,
+                        billing_details: {
+                            name: document.querySelector('input[name="nombre"]').value,
+                            email: document.querySelector('input[name="correo"]').value,
+                        },
+                    },
+                }
+            );
+
+            if (error) {
+                // Mostrar error al usuario
+                showError(error.message);
+                
+                if (submitButton) {
+                    submitButton.disabled = false;
+                    submitButton.innerHTML = '<i class="fas fa-lock"></i> Pagar con Stripe';
+                }
+            } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+                // Pago exitoso - redirigir a página de éxito
+                window.location.href = BASE + 'views/checkout-success.php?payment_intent=' + paymentIntent.id;
+            }
+        } catch (error) {
+            console.error('Error confirmando pago:', error);
+            showError('Error inesperado al procesar el pago. Por favor intenta de nuevo.');
+            
+            if (submitButton) {
+                submitButton.disabled = false;
+                submitButton.innerHTML = '<i class="fas fa-lock"></i> Pagar con Stripe';
+            }
+        }
     }
-    errorBox.textContent = message;
-    errorBox.style.display = 'block';
-  }
-});
 
+    /**
+     * Mostrar error
+     */
+    function showError(message) {
+        const errorDiv = document.getElementById('stripe-error');
+        if (errorDiv) {
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            errorDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    }
+
+    /**
+     * Ocultar error
+     */
+    function hideError() {
+        const errorDiv = document.getElementById('stripe-error');
+        if (errorDiv) {
+            errorDiv.style.display = 'none';
+        }
+    }
+
+})();
