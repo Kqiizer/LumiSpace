@@ -38,6 +38,17 @@ h6 {
   margin: 0;
 }
 
+body.dark {
+  --blog-primary: #f4d2a4;
+  --blog-accent: #d0a97d;
+  --blog-dark: #f5f0e6;
+  --blog-light: #2a2520;
+  --blog-bg: #111013;
+  --blog-card-bg: #1b1816;
+  --blog-text: rgba(245, 240, 232, 0.9);
+  --blog-border: rgba(255, 255, 255, 0.08);
+}
+
 /* === HERO SECTION === */
 .blog-hero {
   position: relative;
@@ -84,6 +95,10 @@ h6 {
   color: #fff;
   max-width: 800px;
   animation: fadeInUp 1s ease-out;
+}
+
+body.dark .hero-content {
+  color: #fff;
 }
 
 .hero-tag {
@@ -192,6 +207,11 @@ h6 {
   border-color: var(--blog-accent);
 }
 
+body.dark .blog-card {
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.65);
+  border-color: var(--blog-border);
+}
+
 .card-image-wrapper {
   position: relative;
   overflow: hidden;
@@ -254,13 +274,17 @@ h6 {
 
 .blog-meta {
   font-size: 0.8rem;
-  color: #999;
+  color: rgba(85, 80, 75, 0.75);
   margin-bottom: 1rem;
   display: flex;
   gap: 15px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   font-weight: 600;
+}
+
+body.dark .blog-meta {
+  color: rgba(245, 240, 232, 0.85);
 }
 
 .blog-meta i {
@@ -289,12 +313,24 @@ h6 {
   background-size: 100% 2px;
 }
 
+body.dark .blog-title a {
+  color: var(--blog-dark);
+}
+
+body.dark .blog-title a:hover {
+  color: var(--blog-primary);
+}
+
 .blog-excerpt {
   font-size: 0.95rem;
   line-height: 1.6;
   color: var(--blog-text);
   margin-bottom: 1.5rem;
   flex: 1;
+}
+
+body.dark .blog-excerpt {
+  color: var(--blog-text);
 }
 
 .blog-footer {
@@ -317,6 +353,14 @@ h6 {
   letter-spacing: 2px;
 }
 
+body.dark .read-more-link {
+  color: var(--blog-primary);
+}
+
+body.dark .read-more-link:hover {
+  color: var(--blog-accent);
+}
+
 /* === SIDEBAR === */
 .sidebar {
   display: flex;
@@ -325,11 +369,15 @@ h6 {
 }
 
 .widget {
-  background: #fff;
+  background: var(--blog-card-bg);
   padding: 2rem;
   border-radius: var(--radius);
   border: 1px solid var(--blog-border);
   box-shadow: var(--shadow-sm);
+}
+
+body.dark .widget {
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.55);
 }
 
 .widget-title {
@@ -350,6 +398,15 @@ h6 {
   background: var(--blog-primary);
 }
 
+body.dark .widget-title {
+  color: var(--blog-dark);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+body.dark .widget-title::after {
+  background: var(--blog-primary);
+}
+
 /* Search Widget */
 .search-form {
   position: relative;
@@ -362,6 +419,16 @@ h6 {
   border-radius: 8px;
   font-family: 'Inter', sans-serif;
   transition: var(--transition);
+}
+
+body.dark .search-form input {
+  background: #221f1c;
+  color: var(--blog-dark);
+  border-color: var(--blog-border);
+}
+
+body.dark .search-form input::placeholder {
+  color: rgba(245, 240, 232, 0.5);
 }
 
 .search-form input:focus {
@@ -414,12 +481,22 @@ h6 {
   padding-left: 5px;
 }
 
+body.dark .category-list a {
+  color: var(--blog-dark);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
 .category-list span {
   background: var(--blog-light);
   padding: 2px 8px;
   border-radius: 10px;
   font-size: 0.8rem;
   color: var(--blog-accent);
+}
+
+body.dark .category-list span {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--blog-primary);
 }
 
 /* Newsletter Widget */
@@ -441,6 +518,12 @@ h6 {
   border-radius: 8px;
 }
 
+body.dark .newsletter-form input {
+  background: #221f1c;
+  color: var(--blog-dark);
+  border-color: var(--blog-border);
+}
+
 .newsletter-form button {
   background: var(--blog-primary);
   color: #fff;
@@ -450,6 +533,10 @@ h6 {
   font-weight: 600;
   cursor: pointer;
   transition: var(--transition);
+}
+
+body.dark .newsletter-form button {
+  color: #1a120b;
 }
 
 .newsletter-form button:hover {
@@ -479,6 +566,11 @@ h6 {
   transform: translateY(-2px);
 }
 
+body.dark .tag-cloud a {
+  color: var(--blog-dark);
+  background: rgba(255, 255, 255, 0.08);
+}
+
 /* Pagination */
 .pagination-wrapper {
   display: flex;
@@ -504,6 +596,11 @@ h6 {
 .page-btn:hover {
   border-color: var(--blog-primary);
   color: var(--blog-primary);
+}
+
+body.dark .page-btn {
+  background: #1f1a17;
+  color: var(--blog-dark);
 }
 
 /* Animations */
