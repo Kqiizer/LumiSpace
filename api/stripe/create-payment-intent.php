@@ -1,6 +1,13 @@
 <?php
 declare(strict_types=1);
 
+// Desactivar visualización de errores para evitar HTML en la respuesta JSON
+ini_set('display_errors', '0');
+error_reporting(E_ALL);
+
+// Iniciar buffer de salida para capturar cualquier output inesperado
+ob_start();
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -10,10 +17,14 @@ header("Content-Type: application/json; charset=UTF-8");
 require_once __DIR__ . "/../../config/functions.php";
 require_once __DIR__ . "/../../config/stripe.php";
 
+// Limpiar cualquier output previo después de incluir archivos
+ob_clean();
+
 // Solo permitir POST
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    ob_clean();
     http_response_code(405);
-    echo json_encode(['error' => 'Método no permitido']);
+    echo json_encode(['error' => 'Método no permitido'], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -21,8 +32,9 @@ try {
     // Validar carrito
     $carrito = carritoObtener();
     if (empty($carrito)) {
+        ob_clean();
         http_response_code(400);
-        echo json_encode(['error' => 'El carrito está vacío']);
+        echo json_encode(['error' => 'El carrito está vacío'], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
@@ -33,8 +45,9 @@ try {
     $usuario_id = (int)($_SESSION['usuario_id'] ?? 0);
 
     if (empty($nombre) || empty($correo) || empty($direccion)) {
+        ob_clean();
         http_response_code(400);
-        echo json_encode(['error' => 'Faltan datos del cliente']);
+        echo json_encode(['error' => 'Faltan datos del cliente'], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
@@ -49,8 +62,9 @@ try {
     $amountInCents = (int)round($total * 100);
 
     if ($amountInCents < 50) { // Mínimo $0.50 MXN
+        ob_clean();
         http_response_code(400);
-        echo json_encode(['error' => 'El monto mínimo es $0.50 MXN']);
+        echo json_encode(['error' => 'El monto mínimo es $0.50 MXN'], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
@@ -142,18 +156,31 @@ try {
         'carrito' => $carrito
     ];
 
+    // Limpiar buffer antes de enviar JSON
+    ob_clean();
     echo json_encode([
         'clientSecret' => $paymentIntent->client_secret,
         'paymentIntentId' => $paymentIntent->id
-    ]);
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    exit;
 
 } catch (\Stripe\Exception\ApiErrorException $e) {
     error_log("Stripe API Error: " . $e->getMessage());
+    ob_clean();
     http_response_code(500);
-    echo json_encode(['error' => 'Error al procesar el pago: ' . $e->getMessage()]);
+    echo json_encode(['error' => 'Error al procesar el pago: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);
+    exit;
 } catch (\Exception $e) {
     error_log("Error en create-payment-intent: " . $e->getMessage());
+    ob_clean();
     http_response_code(500);
-    echo json_encode(['error' => 'Error interno del servidor']);
+    echo json_encode(['error' => 'Error interno del servidor'], JSON_UNESCAPED_UNICODE);
+    exit;
+} catch (\Throwable $e) {
+    error_log("Fatal Error en create-payment-intent: " . $e->getMessage());
+    ob_clean();
+    http_response_code(500);
+    echo json_encode(['error' => 'Error interno del servidor'], JSON_UNESCAPED_UNICODE);
+    exit;
 }
 
