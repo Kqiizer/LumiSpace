@@ -52,23 +52,32 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 try {
+    error_log("=== Iniciando create-payment-intent ===");
+    
     // Validar que Stripe esté configurado
+    error_log("Validando configuración de Stripe...");
     $config = stripeConfig();
     if (empty($config['secret_key'])) {
+        error_log("ERROR: STRIPE_SECRET_KEY no configurado");
         throw new RuntimeException('Stripe no está configurado. Verifica STRIPE_SECRET_KEY en tu archivo .env');
     }
     if (empty($config['publishable_key'])) {
+        error_log("ERROR: STRIPE_PUBLISHABLE_KEY no configurado");
         throw new RuntimeException('Stripe no está configurado. Verifica STRIPE_PUBLISHABLE_KEY en tu archivo .env');
     }
+    error_log("✓ Configuración de Stripe válida");
 
     // Validar carrito
+    error_log("Obteniendo carrito...");
     $carrito = carritoObtener();
     if (empty($carrito)) {
+        error_log("ERROR: Carrito vacío");
         ob_clean();
         http_response_code(400);
         echo json_encode(['error' => 'El carrito está vacío'], JSON_UNESCAPED_UNICODE);
         exit;
     }
+    error_log("✓ Carrito obtenido: " . count($carrito) . " productos");
 
     // Obtener datos del cliente
     $nombre = trim($_POST['nombre'] ?? '');
@@ -113,10 +122,13 @@ try {
     }
 
     // Crear cliente de Stripe
+    error_log("Creando cliente de Stripe...");
     try {
         $stripe = stripeClient();
+        error_log("✓ Cliente de Stripe creado");
     } catch (\Throwable $e) {
-        error_log("Error al crear cliente Stripe: " . $e->getMessage());
+        error_log("ERROR al crear cliente Stripe: " . $e->getMessage());
+        error_log("ERROR Trace: " . $e->getTraceAsString());
         ob_clean();
         http_response_code(500);
         echo json_encode(['error' => 'Error al inicializar Stripe. Verifica la configuración.'], JSON_UNESCAPED_UNICODE);
@@ -124,9 +136,10 @@ try {
     }
 
     // Crear o recuperar cliente de Stripe
+    error_log("Creando/recuperando cliente de Stripe (usuario_id: $usuario_id)...");
     $stripeCustomer = null;
-            try {
-                if ($usuario_id > 0) {
+    try {
+        if ($usuario_id > 0) {
                     // Buscar si ya existe un customer_id para este usuario
                     try {
                         $conn = getDBConnection();
@@ -214,7 +227,9 @@ try {
     }
 
     // Crear Payment Intent
-    $paymentIntent = $stripe->paymentIntents->create([
+    error_log("Creando Payment Intent (monto: $amountInCents centavos, currency: " . ($config['currency'] ?? 'mxn') . ")...");
+    try {
+        $paymentIntent = $stripe->paymentIntents->create([
         'amount' => $amountInCents,
         'currency' => strtolower($config['currency'] ?? 'mxn'),
         'customer' => $stripeCustomer->id,
@@ -231,6 +246,12 @@ try {
         'description' => 'Compra en LumiSpace - ' . count($carrito) . ' producto(s)',
         'receipt_email' => $correo,
     ]);
+        error_log("✓ Payment Intent creado: " . $paymentIntent->id);
+    } catch (\Stripe\Exception\ApiErrorException $e) {
+        error_log("ERROR al crear Payment Intent: " . $e->getMessage());
+        error_log("Stripe Code: " . $e->getStripeCode());
+        throw $e; // Re-lanzar para que sea capturado por el catch general
+    }
 
     // Guardar Payment Intent ID en sesión para referencia
     $_SESSION['stripe_payment_intent_id'] = $paymentIntent->id;
@@ -252,7 +273,13 @@ try {
 
 } catch (\Stripe\Exception\ApiErrorException $e) {
     $errorMsg = $e->getMessage();
-    error_log("Stripe API Error: " . $errorMsg . " | Code: " . $e->getStripeCode() . " | File: " . $e->getFile() . ":" . $e->getLine());
+    $stripeCode = $e->getStripeCode();
+    $errorFile = $e->getFile();
+    $errorLine = $e->getLine();
+    
+    error_log("Stripe API Error: " . $errorMsg . " | Code: " . $stripeCode . " | File: " . $errorFile . ":" . $errorLine);
+    error_log("Stripe Error Trace: " . $e->getTraceAsString());
+    
     ob_clean();
     http_response_code(500);
     
@@ -260,45 +287,117 @@ try {
     $userMessage = 'Error al procesar el pago';
     if (strpos($errorMsg, 'No such customer') !== false) {
         $userMessage = 'Error al recuperar información del cliente';
-    } elseif (strpos($errorMsg, 'Invalid API Key') !== false) {
+    } elseif (strpos($errorMsg, 'Invalid API Key') !== false || strpos($errorMsg, 'No API key provided') !== false) {
         $userMessage = 'Error de configuración de Stripe. Contacta al administrador';
-    } elseif (strpos($errorMsg, 'No API key provided') !== false) {
-        $userMessage = 'Stripe no está configurado correctamente';
+    } elseif (strpos($errorMsg, 'No such payment_intent') !== false) {
+        $userMessage = 'Error al crear la intención de pago';
+    } elseif (strpos($errorMsg, 'rate_limit') !== false) {
+        $userMessage = 'Demasiadas solicitudes. Por favor intenta de nuevo en un momento';
     }
     
-    echo json_encode(['error' => $userMessage], JSON_UNESCAPED_UNICODE);
+    // En desarrollo, incluir más detalles
+    $isDevelopment = (strpos($_SERVER['HTTP_HOST'] ?? '', 'localhost') !== false || 
+                      strpos($_SERVER['HTTP_HOST'] ?? '', '127.0.0.1') !== false ||
+                      strpos($_SERVER['HTTP_HOST'] ?? '', '.local') !== false);
+    
+    $response = ['error' => $userMessage];
+    if ($isDevelopment) {
+        $response['debug'] = [
+            'stripe_error' => $errorMsg,
+            'stripe_code' => $stripeCode,
+            'file' => basename($errorFile),
+            'line' => $errorLine
+        ];
+    }
+    
+    echo json_encode($response, JSON_UNESCAPED_UNICODE);
     exit;
 } catch (\RuntimeException $e) {
     $errorMsg = $e->getMessage();
-    error_log("Runtime Error en create-payment-intent: " . $errorMsg . " | File: " . $e->getFile() . ":" . $e->getLine());
+    $errorFile = $e->getFile();
+    $errorLine = $e->getLine();
+    
+    error_log("Runtime Error en create-payment-intent: " . $errorMsg . " | File: " . $errorFile . ":" . $errorLine);
+    error_log("Runtime Error Trace: " . $e->getTraceAsString());
+    
     ob_clean();
     http_response_code(500);
-    echo json_encode(['error' => $errorMsg], JSON_UNESCAPED_UNICODE);
+    
+    // En desarrollo, incluir más detalles
+    $isDevelopment = (strpos($_SERVER['HTTP_HOST'] ?? '', 'localhost') !== false || 
+                      strpos($_SERVER['HTTP_HOST'] ?? '', '127.0.0.1') !== false ||
+                      strpos($_SERVER['HTTP_HOST'] ?? '', '.local') !== false);
+    
+    $response = ['error' => $errorMsg];
+    if ($isDevelopment) {
+        $response['debug'] = [
+            'file' => basename($errorFile),
+            'line' => $errorLine,
+            'trace' => explode("\n", $e->getTraceAsString())
+        ];
+    }
+    
+    echo json_encode($response, JSON_UNESCAPED_UNICODE);
     exit;
 } catch (\Exception $e) {
     $errorMsg = $e->getMessage();
     $errorFile = $e->getFile();
     $errorLine = $e->getLine();
-    error_log("Error en create-payment-intent: " . $errorMsg . " | File: " . $errorFile . ":" . $errorLine . " | Trace: " . $e->getTraceAsString());
+    
+    error_log("Error en create-payment-intent: " . $errorMsg . " | File: " . $errorFile . ":" . $errorLine);
+    error_log("Exception Trace: " . $e->getTraceAsString());
+    
     ob_clean();
     http_response_code(500);
     
-    // En desarrollo, mostrar más detalles (cambiar en producción)
-    $isDevelopment = (strpos($_SERVER['HTTP_HOST'] ?? '', 'localhost') !== false || strpos($_SERVER['HTTP_HOST'] ?? '', '127.0.0.1') !== false);
+    // En desarrollo, mostrar más detalles
+    $isDevelopment = (strpos($_SERVER['HTTP_HOST'] ?? '', 'localhost') !== false || 
+                      strpos($_SERVER['HTTP_HOST'] ?? '', '127.0.0.1') !== false ||
+                      strpos($_SERVER['HTTP_HOST'] ?? '', '.local') !== false);
+    
     $message = $isDevelopment 
         ? 'Error interno: ' . $errorMsg . ' (Ver logs para más detalles)'
         : 'Error interno del servidor. Por favor intenta de nuevo o contacta al soporte.';
     
-    echo json_encode(['error' => $message], JSON_UNESCAPED_UNICODE);
+    $response = ['error' => $message];
+    if ($isDevelopment) {
+        $response['debug'] = [
+            'message' => $errorMsg,
+            'file' => basename($errorFile),
+            'line' => $errorLine,
+            'type' => get_class($e)
+        ];
+    }
+    
+    echo json_encode($response, JSON_UNESCAPED_UNICODE);
     exit;
 } catch (\Throwable $e) {
     $errorMsg = $e->getMessage();
     $errorFile = $e->getFile();
     $errorLine = $e->getLine();
-    error_log("Fatal Error en create-payment-intent: " . $errorMsg . " | File: " . $errorFile . ":" . $errorLine . " | Trace: " . $e->getTraceAsString());
+    
+    error_log("Fatal Error en create-payment-intent: " . $errorMsg . " | File: " . $errorFile . ":" . $errorLine);
+    error_log("Fatal Error Trace: " . $e->getTraceAsString());
+    
     ob_clean();
     http_response_code(500);
-    echo json_encode(['error' => 'Error crítico del servidor. Contacta al administrador.'], JSON_UNESCAPED_UNICODE);
+    
+    // En desarrollo, incluir más detalles
+    $isDevelopment = (strpos($_SERVER['HTTP_HOST'] ?? '', 'localhost') !== false || 
+                      strpos($_SERVER['HTTP_HOST'] ?? '', '127.0.0.1') !== false ||
+                      strpos($_SERVER['HTTP_HOST'] ?? '', '.local') !== false);
+    
+    $response = ['error' => 'Error crítico del servidor. Contacta al administrador.'];
+    if ($isDevelopment) {
+        $response['debug'] = [
+            'message' => $errorMsg,
+            'file' => basename($errorFile),
+            'line' => $errorLine,
+            'type' => get_class($e)
+        ];
+    }
+    
+    echo json_encode($response, JSON_UNESCAPED_UNICODE);
     exit;
 }
 
