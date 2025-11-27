@@ -60,35 +60,7 @@ try {
         ];
     }
 
-    $iva   = $subtotal * 0.16;
-    $envio = $subtotal > 0 ? 50.0 : 0.0;
-    $total = $subtotal + $iva + $envio;
-
-    if ($iva > 0) {
-        $lineItems[] = [
-            'price_data' => [
-                'currency' => $config['currency'],
-                'unit_amount' => (int) round($iva * 100),
-                'product_data' => [
-                    'name' => 'IVA (16%)',
-                ],
-            ],
-            'quantity' => 1,
-        ];
-    }
-
-    if ($envio > 0) {
-        $lineItems[] = [
-            'price_data' => [
-                'currency' => $config['currency'],
-                'unit_amount' => (int) round($envio * 100),
-                'product_data' => [
-                    'name' => 'Envío',
-                ],
-            ],
-            'quantity' => 1,
-        ];
-    }
+    $total = $subtotal;
 
     $client = stripeClient();
     $session = $client->checkout->sessions->create([
@@ -119,8 +91,6 @@ try {
         'items' => $carrito,
         'totals' => [
             'subtotal' => round($subtotal, 2),
-            'iva'      => round($iva, 2),
-            'envio'    => round($envio, 2),
             'total'    => round($total, 2),
         ],
         'metodo' => $metodo,

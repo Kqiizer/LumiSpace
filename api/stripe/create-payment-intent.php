@@ -43,9 +43,7 @@ try {
     foreach ($carrito as $item) {
         $subtotal += (float)$item['precio'] * (int)$item['cantidad'];
     }
-    $iva = $subtotal * 0.16;
-    $envio = $subtotal > 1000 ? 0 : 150;
-    $total = $subtotal + $iva + $envio;
+    $total = $subtotal;
 
     // Convertir a centavos (Stripe usa la moneda más pequeña)
     $amountInCents = (int)round($total * 100);
@@ -128,8 +126,6 @@ try {
             'direccion' => $direccion,
             'items' => implode(',', $itemsMetadata),
             'subtotal' => (string)$subtotal,
-            'iva' => (string)$iva,
-            'envio' => (string)$envio,
             'total' => (string)$total
         ],
         'description' => 'Compra en LumiSpace - ' . count($carrito) . ' producto(s)',
