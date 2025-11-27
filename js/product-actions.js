@@ -81,7 +81,7 @@
     // Toggle favorites function
     async function toggleFavorite(productId, button) {
         try {
-            const response = await fetch(BASE + 'api/wishlist/toggle.php', {
+            const response = await fetch(BASE + 'api/favoritos/toggle.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ producto_id: productId })
@@ -159,8 +159,9 @@
             return;
         }
 
-        fetch(BASE + 'api/wishlist/count.php')
-            .then(res => res.json())
+        // Intentar usar el endpoint de favoritos primero, luego el de wishlist como fallback
+        fetch(BASE + 'api/favoritos/count.php')
+            .then(res => res.ok ? res.json() : fetch(BASE + 'api/wishlist/count.php').then(r => r.json()))
             .then(data => {
                 if (badge && data.count !== undefined) {
                     badge.textContent = data.count;
