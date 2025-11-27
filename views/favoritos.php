@@ -15,6 +15,110 @@ if ($uid <= 0) {
 $favoritos = getFavoritos($uid);
 $favoritosCount = count($favoritos);
 
+// Obtener conexión y datos adicionales
+$conn = getDBConnection();
+
+/**
+ * Función para obtener imagen del producto (igual que en collection.php)
+ */
+function getImagenProductoFav($img, $base) {
+    $img = trim((string)$img);
+    
+    // Si está vacía, devolver imagen por defecto
+    if (empty($img) || $img === 'null' || $img === 'undefined') {
+        return $base . 'images/productos/default.png';
+    }
+    
+    // Normalizar barras
+    $img = str_replace('\\', '/', $img);
+    
+    // Si ya es una URL completa (http o https)
+    if (preg_match('#^https?://#i', $img)) {
+        return $img;
+    }
+    
+    // Si empieza con // (protocolo relativo)
+    if (strpos($img, '//') === 0) {
+        return 'https:' . $img;
+    }
+    
+    // Quitar BASE duplicado si existe
+    $img = preg_replace('#^' . preg_quote($base, '#') . '#', '', $img);
+    
+    // Quitar slash inicial
+    $img = ltrim($img, '/');
+    
+    // Si viene de uploads/
+    if (strpos($img, 'uploads/') === 0 || strpos($img, 'uploads\\') === 0) {
+        return $base . $img;
+    }
+    
+    // Si viene de images/productos/ (limpiar rutas duplicadas)
+    if (strpos($img, 'images/productos/') !== false) {
+        $img = preg_replace('#.*images/productos/#', 'images/productos/', $img);
+        return $base . $img;
+    }
+    
+    // Si viene de images/ pero no de productos
+    if (strpos($img, 'images/') === 0) {
+        return $base . $img;
+    }
+    
+    // Si tiene alguna carpeta en la ruta, extraer solo el nombre del archivo
+    if (strpos($img, '/') !== false) {
+        $img = basename($img);
+    }
+    
+    // Agregar extensión por defecto si no tiene
+    if (!preg_match('/\.(jpg|jpeg|png|gif|webp|svg)$/i', $img)) {
+        // Verificar si existe con diferentes extensiones
+        $extensiones = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+        foreach ($extensiones as $ext) {
+            $testPath = $_SERVER['DOCUMENT_ROOT'] . '/' . $base . 'images/productos/' . $img . '.' . $ext;
+            if (file_exists($testPath)) {
+                $img .= '.' . $ext;
+                break;
+            }
+        }
+    }
+    
+    // Ruta por defecto: images/productos/
+    return $base . 'images/productos/' . $img;
+}
+
+// Mejorar datos de favoritos con inventario y categorías
+$productIds = [];
+foreach ($favoritos as $fav) {
+    $prodId = (int)($fav['id'] ?? $fav['producto_id'] ?? 0);
+    if ($prodId > 0) {
+        $productIds[] = $prodId;
+    }
+}
+
+// Obtener inventario
+$inventarioMap = [];
+if ($conn && !empty($productIds)) {
+    $placeholders = implode(',', array_fill(0, count($productIds), '?'));
+    $stmt = $conn->prepare("SELECT producto_id, cantidad FROM inventario WHERE producto_id IN ($placeholders)");
+    if ($stmt) {
+        $stmt->bind_param(str_repeat('i', count($productIds)), ...$productIds);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        while ($row = $result->fetch_assoc()) {
+            $inventarioMap[(int)$row['producto_id']] = (int)$row['cantidad'];
+        }
+        $stmt->close();
+    }
+}
+
+// Mejorar favoritos con inventario y imágenes corregidas
+foreach ($favoritos as &$fav) {
+    $prodId = (int)($fav['id'] ?? $fav['producto_id'] ?? 0);
+    $fav['cantidad_inventario'] = $inventarioMap[$prodId] ?? 0;
+    $fav['imagen'] = getImagenProductoFav($fav['imagen'] ?? '', $BASE);
+}
+unset($fav);
+
 require_once __DIR__ . '/../includes/header.php';
 ?>
 <!DOCTYPE html>
@@ -36,6 +140,12 @@ require_once __DIR__ . '/../includes/header.php';
             <div class="hero-pattern"></div>
         </div>
         <div class="hero-content">
+            <!-- Botón de regreso al inicio -->
+            <a href="<?= $BASE ?>" class="back-home-btn">
+                <i class="fas fa-arrow-left"></i>
+                <span>Volver al inicio</span>
+            </a>
+            
             <div class="hero-badge">
                 <i class="fas fa-heart"></i>
                 <span>Tu Colección Personal</span>
@@ -70,10 +180,16 @@ require_once __DIR__ . '/../includes/header.php';
                         <p class="empty-description">
                             Comienza a explorar y guarda tus luminarias favoritas
                         </p>
-                        <a href="<?= $BASE ?>views/catalogo.php" class="empty-cta">
-                            <i class="fas fa-search"></i>
-                            <span>Explorar más productos</span>
-                        </a>
+                        <div class="empty-actions">
+                            <a href="<?= $BASE ?>" class="empty-cta primary">
+                                <i class="fas fa-home"></i>
+                                <span>Volver al inicio</span>
+                            </a>
+                            <a href="<?= $BASE ?>views/catalogo.php" class="empty-cta secondary">
+                                <i class="fas fa-search"></i>
+                                <span>Explorar catálogo</span>
+                            </a>
+                        </div>
                     </div>
                 </div>
             <?php else: ?>
@@ -144,9 +260,13 @@ require_once __DIR__ . '/../includes/header.php';
                         $producto_id = (int)($producto['id'] ?? $producto['producto_id'] ?? 0);
                         if ($producto_id <= 0) continue;
                         
-                        $imagen = !empty($producto['imagen']) ? htmlspecialchars($producto['imagen']) : ($BASE . 'images/default.png');
+                        // Usar la función mejorada de imagen
+                        $imagen = $producto['imagen'] ?? ($BASE . 'images/productos/default.png');
                         $descuento = isset($producto['descuento']) ? (int)$producto['descuento'] : 0;
-                        $stock = isset($producto['stock'] ?? $producto['stock_real'] ?? 0) ? (int)($producto['stock'] ?? $producto['stock_real'] ?? 0) : 0;
+                        
+                        // Priorizar cantidad_inventario sobre stock
+                        $stock = (int)($producto['cantidad_inventario'] ?? $producto['stock'] ?? $producto['stock_real'] ?? 0);
+                        
                         $categoria = !empty($producto['categoria']) ? htmlspecialchars($producto['categoria']) : 'Sin categoría';
                         $nombre = !empty($producto['nombre']) ? htmlspecialchars($producto['nombre']) : 'Producto sin nombre';
                         $precio = isset($producto['precio']) ? (float)$producto['precio'] : 0.0;
@@ -156,13 +276,26 @@ require_once __DIR__ . '/../includes/header.php';
                         if ($descuento === 0 && $precio_original && $precio_original > $precio) {
                             $descuento = (int)round((($precio_original - $precio) / $precio_original) * 100);
                         }
+                        
+                        // Preparar datos para atributos data
+                        $nombreLower = strtolower($nombre);
+                        $categoriaLower = strtolower($categoria);
                     ?>
-                        <article class="favorite-card" data-id="<?= $producto_id ?>" data-category="<?= strtolower($categoria) ?>" data-name="<?= strtolower($nombre) ?>" data-price="<?= $precio ?>" data-stock="<?= $stock ?>">
+                        <article class="favorite-card product-card" 
+                                 data-id="<?= $producto_id ?>" 
+                                 data-product-id="<?= $producto_id ?>"
+                                 data-category="<?= $categoriaLower ?>" 
+                                 data-name="<?= htmlspecialchars($nombreLower, ENT_QUOTES, 'UTF-8') ?>" 
+                                 data-price="<?= $precio ?>" 
+                                 data-stock="<?= $stock ?>">
                             <div class="card-image-container">
                                 <a href="<?= $BASE ?>views/productos-detal.php?id=<?= $producto_id ?>" class="card-image-link">
-                                    <div class="card-image" style="background-image: url('<?= $imagen ?>');">
-                                        <div class="image-overlay"></div>
-                                    </div>
+                                    <img src="<?= htmlspecialchars($imagen, ENT_QUOTES, 'UTF-8') ?>" 
+                                         alt="<?= htmlspecialchars($nombre, ENT_QUOTES, 'UTF-8') ?>"
+                                         class="card-image"
+                                         loading="lazy"
+                                         onerror="this.onerror=null; this.src='<?= $BASE ?>images/productos/default.png'; this.classList.add('error');">
+                                    <div class="image-overlay"></div>
                                 </a>
                                 
                                 <!-- Badges -->
@@ -189,15 +322,17 @@ require_once __DIR__ . '/../includes/header.php';
                                 <!-- Quick Actions -->
                                 <div class="card-actions">
                                     <button 
-                                        class="action-btn action-remove" 
+                                        class="action-btn action-remove js-wish" 
+                                        data-id="<?= $producto_id ?>"
                                         data-product-id="<?= $producto_id ?>"
                                         title="Eliminar de favoritos"
                                         aria-label="Eliminar de favoritos"
                                     >
-                                        <i class="fas fa-heart-broken"></i>
+                                        <i class="fas fa-heart"></i>
                                     </button>
                                     <button 
-                                        class="action-btn action-cart <?= $stock <= 0 ? 'disabled' : '' ?>" 
+                                        class="action-btn action-cart js-cart <?= $stock <= 0 ? 'disabled' : '' ?>" 
+                                        data-id="<?= $producto_id ?>"
                                         data-product-id="<?= $producto_id ?>"
                                         title="Agregar al carrito"
                                         aria-label="Agregar al carrito"
@@ -239,12 +374,13 @@ require_once __DIR__ . '/../includes/header.php';
                                         <?php endif; ?>
                                     </div>
                                     <button 
-                                        class="card-add-btn <?= $stock <= 0 ? 'disabled' : '' ?>" 
+                                        class="card-add-btn js-cart <?= $stock <= 0 ? 'disabled' : '' ?>" 
+                                        data-id="<?= $producto_id ?>"
                                         data-product-id="<?= $producto_id ?>"
                                         <?= $stock <= 0 ? 'disabled' : '' ?>
                                     >
                                         <i class="fas fa-shopping-cart"></i>
-                                        <span>Agregar</span>
+                                        <span><?= $stock <= 0 ? 'Agotado' : 'Agregar' ?></span>
                                     </button>
                                 </div>
                             </div>
@@ -297,7 +433,12 @@ require_once __DIR__ . '/../includes/header.php';
         window.FAVORITES_DATA = <?= json_encode($favoritos, JSON_UNESCAPED_UNICODE) ?>;
         window.BASE_URL = <?= json_encode($BASE, JSON_UNESCAPED_UNICODE) ?>;
         window.USER_ID = <?= $uid ?>;
+        
+        // Definir BASE_URL para product-actions.js
+        const bodyBase = document.body.getAttribute('data-base');
+        window.BASE_URL = bodyBase || window.BASE_URL || '/';
     </script>
+    <script src="<?= $BASE ?>js/product-actions.js"></script>
     <script src="<?= $BASE ?>js/favoritos.js" defer></script>
 </body>
 </html>
