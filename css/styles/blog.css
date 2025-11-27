@@ -26,6 +26,11 @@ body {
   padding: 0;
 }
 
+body.single-post-page {
+  background: var(--blog-bg);
+  color: var(--blog-text);
+}
+
 h1,
 h2,
 h3,
@@ -47,6 +52,11 @@ body.dark {
   --blog-card-bg: #1b1816;
   --blog-text: rgba(245, 240, 232, 0.9);
   --blog-border: rgba(255, 255, 255, 0.08);
+}
+
+body.dark.single-post-page {
+  background: var(--blog-bg);
+  color: var(--blog-text);
 }
 
 /* === HERO SECTION === */
@@ -681,6 +691,10 @@ body.dark .page-btn {
   z-index: 1;
 }
 
+body.dark .post-hero-overlay {
+  background: linear-gradient(to bottom, rgba(5, 5, 5, 0.6), rgba(0, 0, 0, 0.85));
+}
+
 .post-hero-content {
   position: relative;
   z-index: 2;
@@ -785,6 +799,10 @@ body.dark .page-btn {
   margin-bottom: 10px;
 }
 
+body.dark .share-text {
+  color: rgba(245, 240, 232, 0.6);
+}
+
 .share-btn {
   width: 40px;
   height: 40px;
@@ -797,6 +815,11 @@ body.dark .page-btn {
   transition: var(--transition);
   text-decoration: none;
   font-size: 0.9rem;
+}
+
+body.dark .share-btn {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--blog-dark);
 }
 
 .share-btn:hover {
@@ -823,6 +846,10 @@ body.dark .page-btn {
   font-size: 1.15rem;
   line-height: 1.8;
   color: #444;
+}
+
+body.dark .typography-elite {
+  color: rgba(245, 240, 232, 0.9);
 }
 
 .typography-elite p {
@@ -855,6 +882,10 @@ body.dark .page-btn {
   background: var(--blog-light);
   border-radius: var(--radius);
   position: relative;
+}
+
+body.dark .typography-elite blockquote {
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .typography-elite blockquote::before {
@@ -896,6 +927,14 @@ body.dark .page-btn {
   transition: var(--transition);
 }
 
+body.dark .post-tags span {
+  color: var(--blog-dark);
+}
+
+body.dark .post-tags a {
+  color: var(--blog-primary);
+}
+
 .post-tags a:hover {
   color: var(--blog-primary);
 }
@@ -911,6 +950,11 @@ body.dark .page-btn {
   gap: 2rem;
   align-items: center;
   box-shadow: var(--shadow-sm);
+}
+
+body.dark .author-bio-card {
+  background: var(--blog-card-bg);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.55);
 }
 
 .bio-avatar img {
@@ -936,6 +980,10 @@ body.dark .page-btn {
   font-weight: 600;
   text-decoration: none;
   font-size: 0.9rem;
+}
+
+body.dark .bio-social a {
+  color: var(--blog-primary);
 }
 
 /* Navigation */
@@ -967,11 +1015,26 @@ body.dark .page-btn {
   box-shadow: var(--shadow-sm);
 }
 
+body.dark .nav-prev,
+body.dark .nav-next {
+  background: var(--blog-card-bg);
+}
+
+body.dark .nav-prev:hover,
+body.dark .nav-next:hover {
+  background: #1f1a17;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+}
+
 .nav-label {
   font-size: 0.8rem;
   text-transform: uppercase;
   color: #999;
   letter-spacing: 1px;
+}
+
+body.dark .nav-label {
+  color: rgba(245, 240, 232, 0.7);
 }
 
 .nav-title {
@@ -1017,6 +1080,10 @@ body.dark .page-btn {
   border: 1px solid var(--blog-border);
 }
 
+body.dark .comment-content {
+  background: var(--blog-card-bg);
+}
+
 .comment-header {
   display: flex;
   justify-content: space-between;
@@ -1031,6 +1098,10 @@ body.dark .page-btn {
 .comment-date {
   font-size: 0.8rem;
   color: #999;
+}
+
+body.dark .comment-date {
+  color: rgba(245, 240, 232, 0.6);
 }
 
 .comment-content p {
@@ -1054,6 +1125,10 @@ body.dark .page-btn {
   margin-top: 3rem;
 }
 
+body.dark .comment-form-wrapper {
+  background: var(--blog-card-bg);
+}
+
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1069,6 +1144,12 @@ body.dark .page-btn {
   border-radius: 8px;
   font-family: 'Inter', sans-serif;
   transition: var(--transition);
+}
+
+body.dark .form-input,
+body.dark .form-textarea {
+  background: #221f1c;
+  color: var(--blog-dark);
 }
 
 .form-textarea {
@@ -1103,6 +1184,10 @@ body.dark .page-btn {
   background: #fff;
   padding: 4rem 0;
   border-top: 1px solid var(--blog-border);
+}
+
+body.dark .related-posts-section {
+  background: #141214;
 }
 
 .section-title-center {
@@ -1150,6 +1235,10 @@ body.dark .page-btn {
   font-size: 1.2rem;
   color: var(--blog-dark);
   transition: var(--transition);
+}
+
+body.dark .related-content h4 {
+  color: var(--blog-dark);
 }
 
 .related-card:hover h4 {
