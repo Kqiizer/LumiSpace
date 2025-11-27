@@ -863,7 +863,7 @@ function getCategoryImage($imagen, $BASE) {
     <?php include __DIR__ . "/../includes/footer.php"; ?>
   </div>
 
-  <script src="<?= $BASE ?>js/header.js" defer></script>
+  <script src="<?= $BASE ?>js/header.js"></script>
   <script src="<?= $BASE ?>js/search-overlay.js" defer></script>
   <script>
   (()=>{
@@ -949,6 +949,108 @@ function getCategoryImage($imagen, $BASE) {
 
     console.log('✅ Catálogo cargado');
   })();
+
+  // Asegurar que el menú funcione en categorías
+  document.addEventListener('DOMContentLoaded', () => {
+    const menuBtn = document.getElementById('menu-btn');
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('overlay');
+
+    if (menuBtn && sidebar && overlay) {
+      // Función para abrir/cerrar menú
+      const toggleMenu = () => {
+        const isActive = sidebar.classList.toggle('active');
+        overlay.classList.toggle('active', isActive);
+        menuBtn.classList.toggle('open', isActive);
+        menuBtn.setAttribute('aria-expanded', isActive ? 'true' : 'false');
+        document.body.style.overflow = isActive ? 'hidden' : '';
+      };
+
+      // Evento del botón hamburguesa
+      menuBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleMenu();
+      });
+
+      // Cerrar al hacer clic en overlay
+      overlay.addEventListener('click', () => {
+        sidebar.classList.remove('active');
+        overlay.classList.remove('active');
+        menuBtn.classList.remove('open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+        document.body.style.overflow = '';
+      });
+
+      // Cerrar al presionar ESC
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && sidebar.classList.contains('active')) {
+          sidebar.classList.remove('active');
+          overlay.classList.remove('active');
+          menuBtn.classList.remove('open');
+          menuBtn.setAttribute('aria-expanded', 'false');
+          document.body.style.overflow = '';
+        }
+      });
+
+      // Cerrar al hacer clic en enlaces dentro del sidebar
+      sidebar.addEventListener('click', (e) => {
+        const link = e.target.closest('a');
+        if (link) {
+          sidebar.classList.remove('active');
+          overlay.classList.remove('active');
+          menuBtn.classList.remove('open');
+          menuBtn.setAttribute('aria-expanded', 'false');
+          document.body.style.overflow = '';
+        }
+      });
+    }
+
+    // Asegurar que el botón de modo oscuro/claro funcione en categorías
+    const themeToggle = document.getElementById('theme-toggle');
+    if (themeToggle) {
+      const themeIcon = themeToggle.querySelector('[data-theme-icon]');
+      const themeText = themeToggle.querySelector('[data-theme-text]');
+      const iconLightMode = themeToggle.dataset.iconLightMode || '';
+      const iconDarkMode = themeToggle.dataset.iconDarkMode || '';
+
+      const syncThemeButton = (isDark) => {
+        const label = isDark ? 'Modo Claro' : 'Modo Oscuro';
+        if (themeText) {
+          themeText.textContent = label;
+          themeText.classList.add('no-translate');
+        }
+        if (themeIcon) {
+          const nextIcon = isDark ? iconDarkMode : iconLightMode;
+          if (nextIcon) themeIcon.src = nextIcon;
+          themeIcon.alt = label;
+        }
+      };
+
+      const setTheme = (dark) => {
+        if (dark) {
+          document.body.classList.add('dark');
+        } else {
+          document.body.classList.remove('dark');
+        }
+        syncThemeButton(dark);
+        localStorage.setItem('theme', dark ? 'dark' : 'light');
+      };
+
+      // Cargar tema guardado
+      const savedTheme = localStorage.getItem('theme');
+      const isDark = savedTheme === 'dark';
+      setTheme(isDark);
+
+      // Evento del botón
+      themeToggle.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const currentIsDark = document.body.classList.contains('dark');
+        setTheme(!currentIsDark);
+      });
+    }
+  });
   </script>
   <script src="<?= $BASE ?>js/translator.js" defer></script>
 </body>
