@@ -13,7 +13,7 @@
     // ========================================
     const BASE = window.BASE_URL || document.body.dataset.base || '/';
     const USER_ID = window.USER_ID || parseInt(document.body.dataset.userId || '0', 10);
-    const FAVORITES_ENDPOINT = `${BASE}api/favoritos/toggle.php`;
+    const FAVORITES_ENDPOINT = `${BASE}api/wishlist/toggle.php`;
     const CART_ENDPOINT = `${BASE}api/carrito/add.php`;
     const CART_COUNT_ENDPOINT = `${BASE}api/carrito/count.php`;
 
@@ -110,30 +110,19 @@ function setupEventListeners() {
     }
 
     function handleCardAction(e) {
-        // Permitir que product-actions.js maneje js-cart y js-wish
-        if (e.target.closest('.js-cart') || e.target.closest('.js-wish')) {
-            // product-actions.js manejará estos
-            return;
-        }
-        
         const target = e.target.closest('[data-product-id]');
         if (!target) return;
 
-        const productId = parseInt(target.dataset.productId || target.dataset.id || '0', 10);
+        const productId = parseInt(target.dataset.productId, 10);
         if (!productId) return;
 
-        if (target.classList.contains('action-remove')) {
+        if (target.classList.contains('action-remove') || target.classList.contains('card-remove')) {
             e.preventDefault();
-            e.stopPropagation();
             removeFavorite(productId);
         } else if (target.classList.contains('action-cart') || target.classList.contains('card-add-btn')) {
-            // Solo manejar si NO tiene js-cart (para evitar duplicados)
-            if (!target.classList.contains('js-cart')) {
-                e.preventDefault();
-                e.stopPropagation();
-                if (!target.disabled && !target.classList.contains('disabled')) {
-                    addToCart(productId, target);
-                }
+            e.preventDefault();
+            if (!target.disabled && !target.classList.contains('disabled')) {
+                addToCart(productId, target);
             }
         }
     }
@@ -364,33 +353,29 @@ function renderProducts() {
         const id = parseInt(product.id || product.producto_id || 0, 10);
         if (!id) return '';
 
-        const imagen = product.imagen || `${BASE}images/productos/default.png`;
+        const imagen = product.imagen || `${BASE}images/default.png`;
         const nombre = escapeHtml(product.nombre || 'Producto sin nombre');
         const categoria = escapeHtml(product.categoria || 'Sin categoría');
         const precio = parseFloat(product.precio || 0);
         const precioOriginal = product.precio_original ? parseFloat(product.precio_original) : null;
-        const stock = parseInt(product.cantidad_inventario || product.stock || product.stock_real || 0, 10);
+        const stock = parseInt(product.stock || product.stock_real || 0, 10);
         const descuento = calcularDescuento(precio, precioOriginal);
 
         const isOutOfStock = stock <= 0;
         const isLowStock = stock > 0 && stock < 10;
 
         return `
-            <article class="favorite-card product-card" 
+            <article class="favorite-card" 
                 data-id="${id}" 
-                data-product-id="${id}"
                 data-category="${categoria.toLowerCase()}" 
                 data-name="${nombre.toLowerCase()}" 
                 data-price="${precio}" 
                 data-stock="${stock}">
                 <div class="card-image-container">
                     <a href="${BASE}views/productos-detal.php?id=${id}" class="card-image-link">
-                        <img src="${escapeHtml(imagen)}" 
-                             alt="${nombre}"
-                             class="card-image"
-                             loading="lazy"
-                             onerror="this.onerror=null; this.src='${BASE}images/productos/default.png'; this.classList.add('error');">
-                        <div class="image-overlay"></div>
+                        <div class="card-image" style="background-image: url('${escapeHtml(imagen)}');">
+                            <div class="image-overlay"></div>
+                        </div>
                     </a>
                     
                     <div class="card-badges">
@@ -415,17 +400,15 @@ function renderProducts() {
                 
                     <div class="card-actions">
                         <button 
-                            class="action-btn action-remove js-wish" 
-                            data-id="${id}"
+                            class="action-btn action-remove" 
                             data-product-id="${id}"
                             title="Eliminar de favoritos"
                             aria-label="Eliminar de favoritos"
                         >
-                            <i class="fas fa-heart"></i>
+                            <i class="fas fa-heart-broken"></i>
                         </button>
                         <button 
-                            class="action-btn action-cart js-cart ${isOutOfStock ? 'disabled' : ''}" 
-                            data-id="${id}"
+                            class="action-btn action-cart ${isOutOfStock ? 'disabled' : ''}" 
                             data-product-id="${id}"
                             title="Agregar al carrito"
                             aria-label="Agregar al carrito"
@@ -467,13 +450,12 @@ function renderProducts() {
                     ` : ''}
                 </div>
                     <button 
-                            class="card-add-btn js-cart ${isOutOfStock ? 'disabled' : ''}" 
-                            data-id="${id}"
+                            class="card-add-btn ${isOutOfStock ? 'disabled' : ''}" 
                             data-product-id="${id}"
                             ${isOutOfStock ? 'disabled' : ''}
                         >
                             <i class="fas fa-shopping-cart"></i>
-                            <span>${isOutOfStock ? 'Agotado' : 'Agregar'}</span>
+                            <span>Agregar</span>
                     </button>
                 </div>
             </div>
@@ -571,9 +553,6 @@ function renderProducts() {
                 return id !== productId;
             });
 
-            // Actualizar contador global de favoritos si existe
-            updateFavoritesBadgeGlobal(data.count || favoritesData.length);
-
             // Animar eliminación
             const card = document.querySelector(`.favorite-card[data-id="${productId}"]`);
             if (card) {
@@ -584,12 +563,12 @@ function renderProducts() {
                 setTimeout(() => {
                     renderCategories();
                     renderProducts();
-                    updateFavoritesCount(data.count || favoritesData.length);
+                    updateFavoritesCount(data.count);
                 }, 400);
             } else {
                 renderCategories();
                 renderProducts();
-                updateFavoritesCount(data.count || favoritesData.length);
+                updateFavoritesCount(data.count);
             }
 
             showToast('Producto eliminado de favoritos', 'success');
@@ -662,15 +641,9 @@ function renderProducts() {
             return;
         }
 
-        const stock = parseInt(product.cantidad_inventario || product.stock || product.stock_real || 0, 10);
+        const stock = parseInt(product.stock || product.stock_real || 0, 10);
         if (stock <= 0) {
             showToast('Producto agotado', 'warning');
-            if (button) {
-                button.disabled = false;
-                button.innerHTML = button.dataset.originalHTML || '<i class="fas fa-shopping-cart"></i>';
-                button.classList.remove('loading');
-            }
-            isProcessing = false;
             return;
         }
 
@@ -752,19 +725,9 @@ function renderProducts() {
     }
 
     function updateCartBadge(count) {
-        const badges = document.querySelectorAll('#cart-badge, .cart-badge, [data-cart-count]');
-        badges.forEach(badge => {
-            if (badge) {
-                badge.textContent = count;
-                badge.style.display = count > 0 ? '' : 'none';
-            }
-        });
-        
-        // También intentar actualizar desde product-actions si está disponible
-        if (typeof window.updateCartBadge === 'function') {
-            window.updateCartBadge();
-        }
-    }
+        const badge = document.getElementById('cart-badge') || document.getElementById('fav-badge');
+        if (badge) {
+            badge.textContent = count;
             badge.style.display = count > 0 ? 'flex' : 'none';
         }
     }
@@ -784,31 +747,12 @@ function renderProducts() {
             }
         });
 
-        updateFavoritesBadgeGlobal(count);
-    }
-
-    function updateFavoritesBadgeGlobal(count) {
         // Actualizar badge en header si existe
-        const headerBadge = document.querySelector('#fav-badge, .fav-badge');
+        const headerBadge = document.getElementById('fav-badge');
         if (headerBadge) {
             headerBadge.textContent = count;
-            headerBadge.style.display = count > 0 ? '' : 'none';
+            headerBadge.style.display = count > 0 ? 'flex' : 'none';
         }
-        
-        // Intentar usar API para obtener el count real
-        fetch(`${BASE}api/favoritos/count.php`)
-            .then(res => res.ok ? res.json() : null)
-            .then(data => {
-                if (data && data.count !== undefined) {
-                    const realCount = data.count;
-                    const badges = document.querySelectorAll('#fav-badge, .fav-badge');
-                    badges.forEach(b => {
-                        b.textContent = realCount;
-                        b.style.display = realCount > 0 ? '' : 'none';
-                    });
-                }
-            })
-            .catch(err => console.error('Error actualizando badge de favoritos:', err));
     }
 
     function animateCards() {
