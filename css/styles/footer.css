@@ -70,6 +70,15 @@
   margin-bottom: 25px;
 }
 
+.footer-stars {
+  display: inline-block;
+  height: 20px;
+  width: auto;
+  margin: 0 6px;
+  vertical-align: middle;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.25));
+}
+
 .footer-social {
   display: flex;
   gap: 15px;

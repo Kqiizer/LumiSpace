@@ -17,13 +17,15 @@ $BASE = defined('BASE_URL') ? rtrim(BASE_URL, '/') . '/' : '/';
             <span>LumiSpace</span>
           </div>
           <p class="footer-description">
-            Ilumina tu hogar con estilo ✨. Diseños modernos y funcionales que transforman cualquier espacio.
+            Ilumina tu hogar con estilo
+            <img src="<?= $BASE ?>imagenes/estrellas.png" alt="Decoración de estrellas" class="footer-stars">
+            Diseños modernos y funcionales que transforman cualquier espacio.
           </p>
           <div class="footer-social">
-            <a href="#" class="social-link"><i class="fab fa-facebook-f"></i></a>
-            <a href="#" class="social-link"><i class="fab fa-twitter"></i></a>
-            <a href="#" class="social-link"><i class="fab fa-instagram"></i></a>
-            <a href="#" class="social-link"><i class="fab fa-youtube"></i></a>
+            <a href="https://www.facebook.com/profile.php?id=61582646287277&sk=about_contact_and_basic_info" class="social-link" target="_blank" rel="noopener"><i class="fab fa-facebook-f"></i></a>
+            <a href="https://twitter.com/LumiSapce_" class="social-link" target="_blank" rel="noopener"><i class="fab fa-twitter"></i></a>
+            <a href="https://www.instagram.com/lumi_space0/?utm_source=ig_web_button_share_sheet" class="social-link" target="_blank" rel="noopener"><i class="fab fa-instagram"></i></a>
+            <a href="https://www.youtube.com/@LumiSpace0" class="social-link" target="_blank" rel="noopener"><i class="fab fa-youtube"></i></a>
           </div>
         </div>
 
@@ -41,9 +43,9 @@ $BASE = defined('BASE_URL') ? rtrim(BASE_URL, '/') . '/' : '/';
         <div class="footer-section">
           <h4 class="footer-title">Categorías</h4>
           <ul class="footer-links">
-            <li><a href="#">Interior</a></li>
-            <li><a href="#">Exterior</a></li>
-            <li><a href="#">Decorativo</a></li>
+            <li><a href="<?= $BASE ?>views/catalogo.php?categoria=interior">Interior</a></li>
+            <li><a href="<?= $BASE ?>views/catalogo.php?categoria=exterior">Exterior</a></li>
+            <li><a href="<?= $BASE ?>views/catalogo.php?categoria=decorativo">Decorativo</a></li>
           </ul>
         </div>
 
@@ -73,24 +75,6 @@ $BASE = defined('BASE_URL') ? rtrim(BASE_URL, '/') . '/' : '/';
     </div>
   </div>
 
-  <!-- Newsletter -->
-  <div class="newsletter-section">
-    <div class="container">
-      <div class="newsletter-content">
-        <div class="newsletter-text">
-          <h3>Suscríbete a nuestro boletín</h3>
-          <p>Recibe ofertas exclusivas y las últimas novedades en iluminación</p>
-        </div>
-        <form class="newsletter-form">
-          <input type="email" placeholder="Tu correo electrónico" class="newsletter-input" required>
-          <button type="submit" class="newsletter-btn">
-            Suscribirse <i class="fas fa-paper-plane"></i>
-          </button>
-        </form>
-      </div>
-    </div>
-  </div>
-
   <!-- Bottom -->
   <div class="footer-bottom">
     <div class="container">
@@ -103,16 +87,14 @@ $BASE = defined('BASE_URL') ? rtrim(BASE_URL, '/') . '/' : '/';
           <div class="payment-icons">
             <i class="fab fa-cc-visa"></i>
             <i class="fab fa-cc-mastercard"></i>
-            <i class="fab fa-cc-paypal"></i>
-            <i class="fab fa-cc-amex"></i>
           </div>
         </div>
         <div class="footer-policies">
-          <a href="#">Política de Privacidad</a>
+          <a href="<?= $BASE ?>docs/politica-privacidad.html" target="_blank" rel="noopener">Política de Privacidad</a>
           <span>|</span>
-          <a href="#">Términos de Uso</a>
+          <a href="<?= $BASE ?>docs/terminos-condiciones.html" target="_blank" rel="noopener">Términos de Uso</a>
           <span>|</span>
-          <a href="#">Cookies</a>
+          <a href="<?= $BASE ?>docs/politica-privacidad.html#cookies" target="_blank" rel="noopener">Cookies</a>
         </div>
       </div>
     </div>

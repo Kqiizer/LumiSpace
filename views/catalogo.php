@@ -1073,7 +1073,8 @@ function img_url($path, $BASE, $folder = 'productos')
                 function aplicarFiltros() {
                     const texto = searchInput.value.toLowerCase();
                     const chipActivo = document.querySelector(".filter-chip.active");
-                    const categoria = chipActivo ? chipActivo.dataset.category : "";
+            const urlCategory = new URLSearchParams(window.location.search).get('categoria') || "";
+            const categoria = (chipActivo ? chipActivo.dataset.category : "") || urlCategory;
 
                     let visibles = 0;
 
@@ -1100,9 +1101,26 @@ function img_url($path, $BASE, $folder = 'productos')
                     chip.addEventListener("click", () => {
                         chips.forEach(c => c.classList.remove("active"));
                         chip.classList.add("active");
+                        const params = new URLSearchParams(window.location.search);
+                        if (chip.dataset.category) {
+                            params.set('categoria', chip.dataset.category);
+                        } else {
+                            params.delete('categoria');
+                        }
+                        const newUrl = `${window.location.pathname}?${params.toString()}`;
+                        window.history.replaceState({}, "", newUrl);
                         aplicarFiltros();
                     });
                 });
+
+                const initialCategory = new URLSearchParams(window.location.search).get('categoria');
+                if (initialCategory) {
+                    const defaultChip = document.querySelector(`.filter-chip[data-category="${initialCategory}"]`);
+                    if (defaultChip) {
+                        chips.forEach(c => c.classList.remove("active"));
+                        defaultChip.classList.add("active");
+                    }
+                }
 
                 searchInput.addEventListener("keyup", aplicarFiltros);
 

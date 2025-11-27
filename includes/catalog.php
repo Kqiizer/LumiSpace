@@ -159,7 +159,7 @@ if (empty($productos) && !empty($categorias_db)) {
           $categoryImage = $producto['imagen'] ?? '';
           $imagen = getCategoryImage($categoryImage, $BASE);
         ?>
-          <div class="catalog-card" data-product-id="<?= $producto_id ?>">
+          <div class="catalog-card product-card" data-id="<?= $producto_id ?>">
             <div class="catalog-card-image">
               <img src="<?= htmlspecialchars($imagen, ENT_QUOTES, 'UTF-8') ?>" 
                    alt="<?= $nombre ?>"
@@ -167,7 +167,7 @@ if (empty($productos) && !empty($categorias_db)) {
             </div>
             <h3 class="catalog-card-title"><?= $nombre ?></h3>
             <?php if ($precio > 0): ?>
-              <button class="catalog-card-price" onclick="window.location.href='<?= $BASE ?>views/productos-detal.php?id=<?= $producto_id ?>'">
+              <button class="catalog-card-price js-cart" data-product-id="<?= $producto_id ?>" data-id="<?= $producto_id ?>" title="Agregar al carrito">
                 $<?= number_format($precio, 2) ?>
               </button>
             <?php else: ?>
