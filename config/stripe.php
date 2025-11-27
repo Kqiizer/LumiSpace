@@ -3,7 +3,15 @@ declare(strict_types=1);
 
 use Stripe\StripeClient;
 
-require_once __DIR__ . '/../vendor/autoload.php';
+// Verificar que Composer esté instalado
+$autoloadPath = __DIR__ . '/../vendor/autoload.php';
+if (!file_exists($autoloadPath)) {
+    throw new RuntimeException(
+        'Composer no está instalado. Ejecuta: composer require stripe/stripe-php'
+    );
+}
+
+require_once $autoloadPath;
 
 // ============================================================
 //  Cargar variables de entorno (.env)

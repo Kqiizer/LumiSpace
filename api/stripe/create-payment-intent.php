@@ -14,8 +14,31 @@ if (session_status() === PHP_SESSION_NONE) {
 
 header("Content-Type: application/json; charset=UTF-8");
 
-require_once __DIR__ . "/../../config/functions.php";
-require_once __DIR__ . "/../../config/stripe.php";
+try {
+    require_once __DIR__ . "/../../config/functions.php";
+} catch (\Throwable $e) {
+    ob_clean();
+    error_log("Error cargando functions.php: " . $e->getMessage());
+    http_response_code(500);
+    echo json_encode(['error' => 'Error al cargar configuración del sistema'], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+try {
+    require_once __DIR__ . "/../../config/stripe.php";
+} catch (\RuntimeException $e) {
+    ob_clean();
+    error_log("Error cargando stripe.php: " . $e->getMessage());
+    http_response_code(500);
+    echo json_encode(['error' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+    exit;
+} catch (\Throwable $e) {
+    ob_clean();
+    error_log("Error crítico cargando stripe.php: " . $e->getMessage());
+    http_response_code(500);
+    echo json_encode(['error' => 'Error al inicializar Stripe. Verifica la instalación de Composer.'], JSON_UNESCAPED_UNICODE);
+    exit;
+}
 
 // Limpiar cualquier output previo después de incluir archivos
 ob_clean();
@@ -29,6 +52,15 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 try {
+    // Validar que Stripe esté configurado
+    $config = stripeConfig();
+    if (empty($config['secret_key'])) {
+        throw new RuntimeException('Stripe no está configurado. Verifica STRIPE_SECRET_KEY en tu archivo .env');
+    }
+    if (empty($config['publishable_key'])) {
+        throw new RuntimeException('Stripe no está configurado. Verifica STRIPE_PUBLISHABLE_KEY en tu archivo .env');
+    }
+
     // Validar carrito
     $carrito = carritoObtener();
     if (empty($carrito)) {
@@ -51,10 +83,22 @@ try {
         exit;
     }
 
+    // Validar formato de correo
+    if (!filter_var($correo, FILTER_VALIDATE_EMAIL)) {
+        ob_clean();
+        http_response_code(400);
+        echo json_encode(['error' => 'El correo electrónico no es válido'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
     // Calcular totales
     $subtotal = 0;
     foreach ($carrito as $item) {
-        $subtotal += (float)$item['precio'] * (int)$item['cantidad'];
+        $precio = (float)($item['precio'] ?? 0);
+        $cantidad = (int)($item['cantidad'] ?? 1);
+        if ($precio > 0 && $cantidad > 0) {
+            $subtotal += $precio * $cantidad;
+        }
     }
     $total = $subtotal;
 
@@ -68,57 +112,84 @@ try {
         exit;
     }
 
-    // Crear cliente en Stripe (opcional, para historial)
+    // Crear cliente de Stripe
     $stripe = stripeClient();
-    $config = stripeConfig();
 
     // Crear o recuperar cliente de Stripe
     $stripeCustomer = null;
-    if ($usuario_id > 0) {
-        // Buscar si ya existe un customer_id para este usuario
-        $conn = getDBConnection();
-        $stmt = $conn->prepare("SELECT stripe_customer_id FROM usuarios WHERE id = ?");
-        $stmt->bind_param("i", $usuario_id);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $user = $result->fetch_assoc();
-        $stmt->close();
-
-        if ($user && !empty($user['stripe_customer_id'])) {
+    try {
+        if ($usuario_id > 0) {
+            // Buscar si ya existe un customer_id para este usuario
             try {
-                $stripeCustomer = $stripe->customers->retrieve($user['stripe_customer_id']);
-            } catch (\Exception $e) {
-                // Si el customer no existe en Stripe, crear uno nuevo
-                $stripeCustomer = null;
-            }
-        }
+                $conn = getDBConnection();
+                $stmt = $conn->prepare("SELECT stripe_customer_id FROM usuarios WHERE id = ?");
+                if (!$stmt) {
+                    throw new RuntimeException('Error al preparar consulta: ' . $conn->error);
+                }
+                $stmt->bind_param("i", $usuario_id);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                $user = $result->fetch_assoc();
+                $stmt->close();
 
-        if (!$stripeCustomer) {
+                if ($user && !empty($user['stripe_customer_id'])) {
+                    try {
+                        $stripeCustomer = $stripe->customers->retrieve($user['stripe_customer_id']);
+                    } catch (\Stripe\Exception\InvalidRequestException $e) {
+                        // Si el customer no existe en Stripe, crear uno nuevo
+                        $stripeCustomer = null;
+                    }
+                }
+
+                if (!$stripeCustomer) {
+                    $stripeCustomer = $stripe->customers->create([
+                        'email' => $correo,
+                        'name' => $nombre,
+                        'metadata' => [
+                            'usuario_id' => (string)$usuario_id,
+                            'direccion' => $direccion
+                        ]
+                    ]);
+
+                    // Guardar customer_id en la BD (opcional, no crítico si falla)
+                    try {
+                        $stmt = $conn->prepare("UPDATE usuarios SET stripe_customer_id = ? WHERE id = ?");
+                        if ($stmt) {
+                            $stmt->bind_param("si", $stripeCustomer->id, $usuario_id);
+                            $stmt->execute();
+                            $stmt->close();
+                        }
+                    } catch (\Exception $e) {
+                        error_log("No se pudo guardar stripe_customer_id: " . $e->getMessage());
+                        // Continuar aunque falle guardar el customer_id
+                    }
+                }
+            } catch (\Exception $e) {
+                error_log("Error al consultar BD para customer: " . $e->getMessage());
+                // Si falla la BD, crear customer sin guardar en BD
+                $stripeCustomer = $stripe->customers->create([
+                    'email' => $correo,
+                    'name' => $nombre,
+                    'metadata' => [
+                        'usuario_id' => (string)$usuario_id,
+                        'direccion' => $direccion
+                    ]
+                ]);
+            }
+        } else {
+            // Cliente invitado - crear customer temporal
             $stripeCustomer = $stripe->customers->create([
                 'email' => $correo,
                 'name' => $nombre,
                 'metadata' => [
-                    'usuario_id' => (string)$usuario_id,
+                    'tipo' => 'invitado',
                     'direccion' => $direccion
                 ]
             ]);
-
-            // Guardar customer_id en la BD
-            $stmt = $conn->prepare("UPDATE usuarios SET stripe_customer_id = ? WHERE id = ?");
-            $stmt->bind_param("si", $stripeCustomer->id, $usuario_id);
-            $stmt->execute();
-            $stmt->close();
         }
-    } else {
-        // Cliente invitado - crear customer temporal
-        $stripeCustomer = $stripe->customers->create([
-            'email' => $correo,
-            'name' => $nombre,
-            'metadata' => [
-                'tipo' => 'invitado',
-                'direccion' => $direccion
-            ]
-        ]);
+    } catch (\Stripe\Exception\ApiErrorException $e) {
+        error_log("Stripe Customer Error: " . $e->getMessage());
+        throw new RuntimeException('Error al crear cliente en Stripe: ' . $e->getMessage());
     }
 
     // Preparar items para metadata
@@ -165,22 +236,54 @@ try {
     exit;
 
 } catch (\Stripe\Exception\ApiErrorException $e) {
-    error_log("Stripe API Error: " . $e->getMessage());
+    $errorMsg = $e->getMessage();
+    error_log("Stripe API Error: " . $errorMsg . " | Code: " . $e->getStripeCode() . " | File: " . $e->getFile() . ":" . $e->getLine());
     ob_clean();
     http_response_code(500);
-    echo json_encode(['error' => 'Error al procesar el pago: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);
+    
+    // Mensaje más amigable para el usuario
+    $userMessage = 'Error al procesar el pago';
+    if (strpos($errorMsg, 'No such customer') !== false) {
+        $userMessage = 'Error al recuperar información del cliente';
+    } elseif (strpos($errorMsg, 'Invalid API Key') !== false) {
+        $userMessage = 'Error de configuración de Stripe. Contacta al administrador';
+    } elseif (strpos($errorMsg, 'No API key provided') !== false) {
+        $userMessage = 'Stripe no está configurado correctamente';
+    }
+    
+    echo json_encode(['error' => $userMessage], JSON_UNESCAPED_UNICODE);
+    exit;
+} catch (\RuntimeException $e) {
+    $errorMsg = $e->getMessage();
+    error_log("Runtime Error en create-payment-intent: " . $errorMsg . " | File: " . $e->getFile() . ":" . $e->getLine());
+    ob_clean();
+    http_response_code(500);
+    echo json_encode(['error' => $errorMsg], JSON_UNESCAPED_UNICODE);
     exit;
 } catch (\Exception $e) {
-    error_log("Error en create-payment-intent: " . $e->getMessage());
+    $errorMsg = $e->getMessage();
+    $errorFile = $e->getFile();
+    $errorLine = $e->getLine();
+    error_log("Error en create-payment-intent: " . $errorMsg . " | File: " . $errorFile . ":" . $errorLine . " | Trace: " . $e->getTraceAsString());
     ob_clean();
     http_response_code(500);
-    echo json_encode(['error' => 'Error interno del servidor'], JSON_UNESCAPED_UNICODE);
+    
+    // En desarrollo, mostrar más detalles (cambiar en producción)
+    $isDevelopment = (strpos($_SERVER['HTTP_HOST'] ?? '', 'localhost') !== false || strpos($_SERVER['HTTP_HOST'] ?? '', '127.0.0.1') !== false);
+    $message = $isDevelopment 
+        ? 'Error interno: ' . $errorMsg . ' (Ver logs para más detalles)'
+        : 'Error interno del servidor. Por favor intenta de nuevo o contacta al soporte.';
+    
+    echo json_encode(['error' => $message], JSON_UNESCAPED_UNICODE);
     exit;
 } catch (\Throwable $e) {
-    error_log("Fatal Error en create-payment-intent: " . $e->getMessage());
+    $errorMsg = $e->getMessage();
+    $errorFile = $e->getFile();
+    $errorLine = $e->getLine();
+    error_log("Fatal Error en create-payment-intent: " . $errorMsg . " | File: " . $errorFile . ":" . $errorLine . " | Trace: " . $e->getTraceAsString());
     ob_clean();
     http_response_code(500);
-    echo json_encode(['error' => 'Error interno del servidor'], JSON_UNESCAPED_UNICODE);
+    echo json_encode(['error' => 'Error crítico del servidor. Contacta al administrador.'], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
