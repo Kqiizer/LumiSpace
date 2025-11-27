@@ -533,8 +533,35 @@ if ($q) {
       const buyBtn = document.getElementById('buyNowBtn');
       const getQty = () => Math.max(1, parseInt(qtyInput.value || '1', 10));
 
+      // Función para actualizar el contador del carrito
+      function updateCartBadge(addedQty = 0) {
+        // Intentar actualizar desde la API primero
+        fetch(BASE + 'api/carrito/count.php')
+          .then(res => res.json())
+          .then(data => {
+            const cartBadge = document.querySelector('.fa-shopping-cart .cart-badge, .fa-shopping-cart + .cart-badge, [data-cart-count], #cart-badge, .cart-badge');
+            if (cartBadge && data.count !== undefined) {
+              cartBadge.textContent = String(data.count);
+              cartBadge.style.display = data.count > 0 ? 'inline-block' : 'none';
+            }
+          })
+          .catch(() => {
+            // Fallback: actualizar manualmente
+            const cartBadge = document.querySelector('.fa-shopping-cart .cart-badge, .fa-shopping-cart + .cart-badge, [data-cart-count], #cart-badge, .cart-badge');
+            if (cartBadge && addedQty > 0) {
+              const current = parseInt(cartBadge.textContent || '0', 10);
+              cartBadge.textContent = String(current + addedQty);
+              cartBadge.style.display = 'inline-block';
+            }
+          });
+      }
+
       // Función para agregar al carrito con cantidad personalizada
       async function addToCartWithQuantity(qty, thenGo = false) {
+        if (!pid || qty <= 0) {
+          throw new Error('Producto o cantidad inválida');
+        }
+        
         try {
           const response = await fetch(BASE + 'api/carrito/add.php', {
             method: 'POST',
@@ -547,16 +574,20 @@ if ($q) {
             })
           });
 
-          const data = await response.json();
+          // Verificar si la respuesta es JSON válido
+          let data;
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            data = await response.json();
+          } else {
+            const text = await response.text();
+            console.error('Respuesta no JSON:', text);
+            throw new Error('Error del servidor: La respuesta no es válida');
+          }
 
           if (response.ok && data.ok !== false) {
             // Actualizar contador de carrito en el header
-            const cartBadge = document.querySelector('.fa-shopping-cart .cart-badge, .fa-shopping-cart + .cart-badge, [data-cart-count], #cart-badge, .cart-badge');
-            if (cartBadge) {
-              const current = parseInt(cartBadge.textContent || '0', 10);
-              cartBadge.textContent = String(current + qty);
-              cartBadge.style.display = 'inline-block';
-            }
+            updateCartBadge(qty);
             
             if (thenGo) {
               location.href = BASE + 'includes/carrito.php';
@@ -567,36 +598,68 @@ if ($q) {
           }
         } catch (error) {
           console.error('Error al agregar al carrito:', error);
-          // Fallback: GET al carrito para agregar
-          const url = BASE + 'includes/carrito.php?add=' + encodeURIComponent(pid) + '&qty=' + encodeURIComponent(qty);
-          if (thenGo) {
+          
+          // Fallback: Intentar agregar vía GET
+          if (!thenGo) {
+            // Solo retornar false si no vamos a redirigir
+            return false;
+          } else {
+            // Si thenGo es true, redirigir con GET
+            const url = BASE + 'includes/carrito.php?add=' + encodeURIComponent(pid) + '&qty=' + encodeURIComponent(qty);
             location.href = url;
+            return false; // No esperar, ya redirigimos
           }
-          return false;
         }
       }
 
       // Override del evento del botón para usar cantidad del input
       addBtn?.addEventListener('click', async function(e) {
         // Prevenir que product-actions.js maneje este evento
+        e.preventDefault();
         e.stopPropagation();
         
-        if (!pid) return;
+        if (!pid) {
+          console.error('Error: Producto no válido');
+          return;
+        }
+        
         const qty = getQty();
+        if (qty <= 0) {
+          alert('Por favor selecciona una cantidad válida');
+          return;
+        }
+        
         const original = addBtn.innerHTML;
         addBtn.disabled = true;
         addBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Agregando...';
         
-        const ok = await addToCartWithQuantity(qty, false);
-        
-        if (ok) {
-          addBtn.innerHTML = '<i class="fas fa-check"></i> ¡Agregado!';
-          setTimeout(() => { 
-            addBtn.innerHTML = original; 
-            addBtn.disabled = false; 
-          }, 1500);
-        } else {
+        try {
+          const ok = await addToCartWithQuantity(qty, false);
+          
+          if (ok) {
+            addBtn.innerHTML = '<i class="fas fa-check"></i> ¡Agregado!';
+            
+            // Mostrar notificación toast si está disponible
+            if (typeof showToast === 'function') {
+              showToast('Producto agregado al carrito', 'success');
+            }
+            
+            setTimeout(() => { 
+              addBtn.innerHTML = original; 
+              addBtn.disabled = false; 
+            }, 1500);
+          } else {
+            throw new Error('No se pudo agregar al carrito');
+          }
+        } catch (error) {
+          console.error('Error al agregar al carrito:', error);
           addBtn.innerHTML = '<i class="fas fa-exclamation-circle"></i> Error';
+          
+          // Mostrar notificación de error si está disponible
+          if (typeof showToast === 'function') {
+            showToast('Error al agregar al carrito. Intenta de nuevo.', 'error');
+          }
+          
           setTimeout(() => { 
             addBtn.innerHTML = original; 
             addBtn.disabled = false; 
@@ -604,17 +667,57 @@ if ($q) {
         }
       }, true); // Usar capture phase para ejecutar antes que product-actions.js
 
-      buyBtn?.addEventListener('click', async () => {
-        if (!pid) return;
+      buyBtn?.addEventListener('click', async function(e) {
+        // Prevenir que otros handlers manejen este evento
+        e.preventDefault();
+        e.stopPropagation();
+        
+        if (!pid) {
+          alert('Error: Producto no válido');
+          return;
+        }
+        
         const qty = getQty();
+        if (qty <= 0) {
+          alert('Por favor selecciona una cantidad válida');
+          return;
+        }
+        
+        // Si no está logueado, redirigir a login
         if (!USER) {
           const nextAfter = `${BASE}includes/carrito.php?add=${encodeURIComponent(pid)}&qty=${encodeURIComponent(qty)}`;
           location.href = `${BASE}views/login.php?next=${encodeURIComponent(nextAfter)}`;
           return;
         }
+        
+        // Deshabilitar botón y mostrar loading
+        const originalHTML = buyBtn.innerHTML;
         buyBtn.disabled = true;
         buyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
-        await addToCartWithQuantity(qty, true); // redirige al carrito
+        
+        try {
+          // Agregar al carrito
+          const success = await addToCartWithQuantity(qty, false);
+          
+          if (success) {
+            // Si se agregó correctamente, redirigir al checkout
+            buyBtn.innerHTML = '<i class="fas fa-check"></i> Redirigiendo...';
+            setTimeout(() => {
+              location.href = BASE + 'includes/checkout.php';
+            }, 500);
+          } else {
+            // Si falló, intentar agregar vía GET y redirigir
+            const url = BASE + 'includes/carrito.php?add=' + encodeURIComponent(pid) + '&qty=' + encodeURIComponent(qty);
+            location.href = url;
+          }
+        } catch (error) {
+          console.error('Error en Buy Now:', error);
+          buyBtn.innerHTML = '<i class="fas fa-exclamation-circle"></i> Error';
+          setTimeout(() => {
+            buyBtn.innerHTML = originalHTML;
+            buyBtn.disabled = false;
+          }, 2000);
+        }
       });
 
       /* ---------- Favoritos ---------- */
