@@ -310,7 +310,7 @@ if ($q) {
             </div>
 
             <div class="action-buttons">
-              <button class="add-to-cart-btn" id="addToCartBtn" <?= (int) $prod['stock'] <= 0 ? 'disabled' : '' ?>>
+              <button class="add-to-cart-btn js-cart" id="addToCartBtn" data-id="<?= (int)$prod['id'] ?>" <?= (int) $prod['stock'] <= 0 ? 'disabled' : '' ?>>
                 <i class="fas fa-shopping-cart"></i> Add to Cart - $<?= number_format((float) $prod['precio'], 2) ?>
               </button>
               <button class="buy-now-btn" id="buyNowBtn" <?= (int) $prod['stock'] <= 0 ? 'disabled' : '' ?>>Buy Now</button>
@@ -533,43 +533,76 @@ if ($q) {
       const buyBtn = document.getElementById('buyNowBtn');
       const getQty = () => Math.max(1, parseInt(qtyInput.value || '1', 10));
 
-      async function postJSON(url, data) {
+      // Función para agregar al carrito con cantidad personalizada
+      async function addToCartWithQuantity(qty, thenGo = false) {
         try {
-          const res = await fetch(url, {
+          const response = await fetch(BASE + 'api/carrito/add.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
+            body: JSON.stringify({
+              producto_id: pid,
+              product_id: pid,
+              cantidad: qty,
+              qty: qty
+            })
           });
-          const json = await res.json().catch(() => null);
-          return { ok: res.ok, json, status: res.status };
-        } catch (e) { return { ok: false, error: String(e) }; }
-      }
 
-      async function addToCart(qty, thenGo = false) {
-        const payload = { producto_id: pid, product_id: pid, cantidad: qty, qty: qty };
-        const r = await postJSON(BASE + 'api/carrito/add.php', payload);
-        if (r.ok && (!r.json || r.json.ok !== false)) {
-          if (thenGo) location.href = BASE + 'includes/carrito.php';
-          return true;
+          const data = await response.json();
+
+          if (response.ok && data.ok !== false) {
+            // Actualizar contador de carrito en el header
+            const cartBadge = document.querySelector('.fa-shopping-cart .cart-badge, .fa-shopping-cart + .cart-badge, [data-cart-count], #cart-badge, .cart-badge');
+            if (cartBadge) {
+              const current = parseInt(cartBadge.textContent || '0', 10);
+              cartBadge.textContent = String(current + qty);
+              cartBadge.style.display = 'inline-block';
+            }
+            
+            if (thenGo) {
+              location.href = BASE + 'includes/carrito.php';
+            }
+            return true;
+          } else {
+            throw new Error(data.msg || 'Error al agregar al carrito');
+          }
+        } catch (error) {
+          console.error('Error al agregar al carrito:', error);
+          // Fallback: GET al carrito para agregar
+          const url = BASE + 'includes/carrito.php?add=' + encodeURIComponent(pid) + '&qty=' + encodeURIComponent(qty);
+          if (thenGo) {
+            location.href = url;
+          }
+          return false;
         }
-        // Fallback: GET al carrito para agregar
-        const url = BASE + 'includes/carrito.php?add=' + encodeURIComponent(pid) + '&qty=' + encodeURIComponent(qty);
-        location.href = thenGo ? url : (BASE + 'includes/carrito.php');
-        return false;
       }
 
-      addBtn?.addEventListener('click', async () => {
+      // Override del evento del botón para usar cantidad del input
+      addBtn?.addEventListener('click', async function(e) {
+        // Prevenir que product-actions.js maneje este evento
+        e.stopPropagation();
+        
         if (!pid) return;
         const qty = getQty();
         const original = addBtn.innerHTML;
         addBtn.disabled = true;
         addBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Agregando...';
-        const ok = await addToCart(qty, false);
+        
+        const ok = await addToCartWithQuantity(qty, false);
+        
         if (ok) {
           addBtn.innerHTML = '<i class="fas fa-check"></i> ¡Agregado!';
-          setTimeout(() => { addBtn.innerHTML = original; addBtn.disabled = false; }, 900);
+          setTimeout(() => { 
+            addBtn.innerHTML = original; 
+            addBtn.disabled = false; 
+          }, 1500);
+        } else {
+          addBtn.innerHTML = '<i class="fas fa-exclamation-circle"></i> Error';
+          setTimeout(() => { 
+            addBtn.innerHTML = original; 
+            addBtn.disabled = false; 
+          }, 2000);
         }
-      });
+      }, true); // Usar capture phase para ejecutar antes que product-actions.js
 
       buyBtn?.addEventListener('click', async () => {
         if (!pid) return;
@@ -581,8 +614,38 @@ if ($q) {
         }
         buyBtn.disabled = true;
         buyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
-        await addToCart(qty, true); // redirige dentro
+        await addToCartWithQuantity(qty, true); // redirige al carrito
       });
+
+      /* ---------- Favoritos ---------- */
+      // El botón de favoritos ya tiene la clase js-wish, así que product-actions.js lo manejará
+      // Solo necesitamos actualizar el texto del botón cuando cambie el estado
+      const wishBtn = document.getElementById('wishlistBtn');
+      
+      // Observer para actualizar el texto cuando cambie la clase active
+      if (wishBtn) {
+        const observer = new MutationObserver(() => {
+          const isActive = wishBtn.classList.contains('active');
+          const icon = wishBtn.querySelector('i');
+          if (icon) {
+            // Actualizar texto del botón
+            const textNode = Array.from(wishBtn.childNodes).find(node => 
+              node.nodeType === 3 && node.textContent.trim()
+            );
+            if (textNode) {
+              textNode.textContent = isActive ? 'En tus favoritos' : 'Agregar a favoritos';
+            } else {
+              // Si no hay nodo de texto, actualizar todo el contenido
+              wishBtn.innerHTML = `<i class="${isActive ? 'fas' : 'far'} fa-heart"></i> ${isActive ? 'En tus favoritos' : 'Agregar a favoritos'}`;
+            }
+          }
+        });
+        
+        observer.observe(wishBtn, {
+          attributes: true,
+          attributeFilter: ['class']
+        });
+      }
 
       /* ---------- Compare (localStorage) ---------- */
       const LS_COMP = 'ls_compare';
