@@ -50,9 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
   $totals = [
     'subtotal' => carritoTotal(),
-    'iva' => carritoTotal() * 0.16,
-    'envio' => carritoTotal() > 1000 ? 0 : 150,
-    'total' => carritoTotal() * 1.16 + (carritoTotal() > 1000 ? 0 : 150)
+    'total' => carritoTotal()
   ];
 
   echo json_encode([
@@ -73,9 +71,7 @@ if (empty($carrito) && !empty($_SESSION['carrito'])) {
     error_log("Carrito vacío pero sesión tiene datos: " . print_r($_SESSION['carrito'], true));
 }
 $subtotal = carritoTotal();
-$iva = $subtotal * 0.16;
-$envio = $subtotal > 1000 ? 0 : 150;
-$total = $subtotal + $iva + $envio;
+$total = $subtotal;
 
 $checkoutUrl = $USER_ID
   ? "{$BASE}includes/checkout.php"
@@ -197,27 +193,6 @@ $checkoutUrl = $USER_ID
         <h2>Resumen del Pedido</h2>
 
         <div class="summary-details">
-          <div class="summary-row">
-            <span>Subtotal</span>
-            <span class="summary-value" id="subtotalValue">$<?= number_format($subtotal, 2) ?></span>
-          </div>
-          <div class="summary-row">
-            <span>IVA (16%)</span>
-            <span class="summary-value" id="ivaValue">$<?= number_format($iva, 2) ?></span>
-          </div>
-          <div class="summary-row">
-            <span>Envío</span>
-            <span class="summary-value shipping-value" id="envioValue">
-              <?= $envio > 0 ? '$' . number_format($envio, 2) : 'GRATIS' ?>
-            </span>
-          </div>
-          <?php if ($subtotal < 1000): ?>
-            <div class="shipping-notice">
-              <i class="fas fa-info-circle"></i>
-              <span>Envío gratis en compras mayores a $1,000</span>
-            </div>
-          <?php endif; ?>
-
           <div class="summary-divider"></div>
 
           <div class="summary-row total">

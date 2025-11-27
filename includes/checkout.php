@@ -15,13 +15,9 @@ if (!function_exists('computeTotals')) {
             $cantidad = max(1, (int)($item['cantidad'] ?? 1));
             $subtotal += $precio * $cantidad;
         }
-        $iva = $subtotal * 0.16;
-        $envio = $subtotal > 1000 ? 0 : 150;
-        $total = $subtotal + $iva + $envio;
+        $total = $subtotal;
         return [
             'subtotal' => round($subtotal, 2),
-            'iva'      => round($iva, 2),
-            'envio'    => round($envio, 2),
             'total'    => round($total, 2),
         ];
     }
@@ -41,8 +37,6 @@ if (empty($carrito)) {
 // ====================================
 $totals = computeTotals($carrito);
 $subtotal = $totals['subtotal'];
-$iva      = $totals['iva'];
-$envio    = $totals['envio'];
 $total    = $totals['total'];
 
 $BASE = defined('BASE_URL') ? rtrim(BASE_URL, '/') . '/' : '/';
@@ -210,24 +204,6 @@ $fechaEntrega = date('Y-m-d', strtotime('+5 weekdays'));
                         <i class="fas fa-receipt"></i> Resumen del Pedido
                     </h2>
                     <div class="checkout-summary-details">
-                        <div class="summary-row">
-                            <span>Subtotal</span>
-                            <span>$<?= number_format($subtotal, 2) ?></span>
-                        </div>
-                        <div class="summary-row">
-                            <span>IVA (16%)</span>
-                            <span>$<?= number_format($iva, 2) ?></span>
-                        </div>
-                        <div class="summary-row">
-                            <span>Envío</span>
-                            <span><?= $envio > 0 ? '$' . number_format($envio, 2) : 'GRATIS' ?></span>
-                        </div>
-                        <?php if ($subtotal < 1000): ?>
-                            <div class="shipping-notice">
-                                <i class="fas fa-info-circle"></i>
-                                <span>Envío gratis en compras mayores a $1,000</span>
-                            </div>
-                        <?php endif; ?>
                         <div class="summary-divider"></div>
                         <div class="summary-row total">
                             <span>Total</span>
