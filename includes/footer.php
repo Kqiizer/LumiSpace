@@ -1,6 +1,26 @@
 <!-- Footer -->
 <?php
 $BASE = defined('BASE_URL') ? rtrim(BASE_URL, '/') . '/' : '/';
+
+// Obtener ID de la categoría "Exterior" para el enlace
+$categoria_exterior_id = null;
+if (function_exists('getDBConnection')) {
+    try {
+        $conn = getDBConnection();
+        // Buscar categoría que contenga "Exterior" en el nombre
+        $stmt = $conn->prepare("SELECT id FROM categorias WHERE nombre LIKE ? LIMIT 1");
+        $nombre_exterior = '%Exterior%';
+        $stmt->bind_param("s", $nombre_exterior);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        if ($row = $result->fetch_assoc()) {
+            $categoria_exterior_id = (int)$row['id'];
+        }
+        $stmt->close();
+    } catch (Exception $e) {
+        // Si hay error, dejar null
+    }
+}
 ?>
 <link rel="stylesheet" href="<?= $BASE ?>css/styles/footer.css">
 
@@ -44,7 +64,7 @@ $BASE = defined('BASE_URL') ? rtrim(BASE_URL, '/') . '/' : '/';
           <h4 class="footer-title">Categorías</h4>
           <ul class="footer-links">
             <li><a href="#">Interior</a></li>
-            <li><a href="#">Exterior</a></li>
+            <li><a href="<?= $categoria_exterior_id ? $BASE . 'views/catalogo.php?categoria=' . $categoria_exterior_id : '#' ?>">Exterior</a></li>
             <li><a href="#">Decorativo</a></li>
             <li><a href="#">Iluminación LED</a></li>
             <li><a href="#">Smart Home</a></li>
