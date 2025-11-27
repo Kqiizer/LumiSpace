@@ -1,6 +1,19 @@
 <!-- Footer -->
 <?php
 $BASE = defined('BASE_URL') ? rtrim(BASE_URL, '/') . '/' : '/';
+
+// Obtener categorías para los enlaces del footer
+$categorias_footer = [];
+if (function_exists('getCategorias')) {
+    try {
+        $categorias_footer = getCategorias();
+        // Limitar a las primeras 3 categorías para el footer
+        $categorias_footer = array_slice($categorias_footer, 0, 3);
+    } catch (Exception $e) {
+        // Si hay error, dejar vacío
+        $categorias_footer = [];
+    }
+}
 ?>
 <link rel="stylesheet" href="<?= $BASE ?>css/styles/footer.css">
 
@@ -43,9 +56,24 @@ $BASE = defined('BASE_URL') ? rtrim(BASE_URL, '/') . '/' : '/';
         <div class="footer-section">
           <h4 class="footer-title">Categorías</h4>
           <ul class="footer-links">
-            <li><a href="<?= $BASE ?>views/catalogo.php?categoria=interior">Interior</a></li>
-            <li><a href="<?= $BASE ?>views/catalogo.php?categoria=exterior">Exterior</a></li>
-            <li><a href="<?= $BASE ?>views/catalogo.php?categoria=decorativo">Decorativo</a></li>
+            <?php if (!empty($categorias_footer)): ?>
+              <?php foreach ($categorias_footer as $cat): ?>
+                <li><a href="<?= $BASE ?>views/catalogo.php?categoria=<?= (int)$cat['id'] ?>"><?= htmlspecialchars($cat['nombre']) ?></a></li>
+              <?php endforeach; ?>
+            <?php else: ?>
+              <li><a href="<?= $BASE ?>views/catalogo.php">Ver catálogo</a></li>
+            <?php endif; ?>
+          </ul>
+        </div>
+
+        <!-- Atención al cliente -->
+        <div class="footer-section">
+          <h4 class="footer-title">Atención al cliente</h4>
+          <ul class="footer-links">
+            <li><a href="#">Preguntas frecuentes</a></li>
+            <li><a href="#">Envíos</a></li>
+            <li><a href="#">Devoluciones</a></li>
+            <li><a href="#">Soporte</a></li>
           </ul>
         </div>
 

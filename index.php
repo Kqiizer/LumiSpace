@@ -1,6 +1,10 @@
 <?php
 if (session_status() === PHP_SESSION_NONE)
   session_start();
+
+// Definir BASE igual que en header.php
+$root = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? '/'), '/');
+$BASE = ($root === '' || $root === '/') ? '/' : $root . '/';
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -46,13 +50,33 @@ if (session_status() === PHP_SESSION_NONE)
 
   <!-- ✅ Scripts (deben ir al final del body) -->
   <script>
-    // Definir BASE_URL para product-actions.js
-    const bodyBase = document.body.getAttribute('data-base');
-    window.BASE_URL = bodyBase || '/';
+    // Definir BASE_URL para product-actions.js (igual que en catálogo)
+    window.BASE_URL = "<?= $BASE ?>";
   </script>
-  <script src="js/header.js" defer></script>
-  <script src="js/product-actions.js"></script>
-  <script src="js/script.js" defer></script>
+  <script src="<?= $BASE ?>js/product-actions.js"></script>
+  <script>
+    // Verificar que product-actions.js se haya cargado y funcionar
+    (function() {
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+          setTimeout(verifyCartButtons, 100);
+        });
+      } else {
+        setTimeout(verifyCartButtons, 100);
+      }
+      
+      function verifyCartButtons() {
+        const buttons = document.querySelectorAll('.catalog-card .js-cart');
+        console.log('Botones de carrito encontrados:', buttons.length);
+        buttons.forEach(function(btn) {
+          const id = btn.getAttribute('data-id') || btn.closest('.product-card')?.getAttribute('data-id');
+          console.log('Botón ID:', id);
+        });
+      }
+    })();
+  </script>
+  <script src="<?= $BASE ?>js/header.js" defer></script>
+  <script src="<?= $BASE ?>js/script.js" defer></script>
 </body>
 
 </html>
