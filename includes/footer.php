@@ -22,10 +22,10 @@ $BASE = defined('BASE_URL') ? rtrim(BASE_URL, '/') . '/' : '/';
             Diseños modernos y funcionales que transforman cualquier espacio.
           </p>
           <div class="footer-social">
-            <a href="#" class="social-link"><i class="fab fa-facebook-f"></i></a>
-            <a href="#" class="social-link"><i class="fab fa-twitter"></i></a>
-            <a href="#" class="social-link"><i class="fab fa-instagram"></i></a>
-            <a href="#" class="social-link"><i class="fab fa-youtube"></i></a>
+            <a href="https://www.facebook.com/profile.php?id=61582646287277&sk=about_contact_and_basic_info" class="social-link" target="_blank" rel="noopener"><i class="fab fa-facebook-f"></i></a>
+            <a href="https://twitter.com/LumiSapce_" class="social-link" target="_blank" rel="noopener"><i class="fab fa-twitter"></i></a>
+            <a href="https://www.instagram.com/lumi_space0/?utm_source=ig_web_button_share_sheet" class="social-link" target="_blank" rel="noopener"><i class="fab fa-instagram"></i></a>
+            <a href="https://www.youtube.com/@LumiSpace0" class="social-link" target="_blank" rel="noopener"><i class="fab fa-youtube"></i></a>
           </div>
         </div>
 
