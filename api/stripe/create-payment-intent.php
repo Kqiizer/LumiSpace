@@ -113,15 +113,26 @@ try {
     }
 
     // Crear cliente de Stripe
-    $stripe = stripeClient();
+    try {
+        $stripe = stripeClient();
+    } catch (\Throwable $e) {
+        error_log("Error al crear cliente Stripe: " . $e->getMessage());
+        ob_clean();
+        http_response_code(500);
+        echo json_encode(['error' => 'Error al inicializar Stripe. Verifica la configuración.'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
 
     // Crear o recuperar cliente de Stripe
     $stripeCustomer = null;
-    try {
-        if ($usuario_id > 0) {
-            // Buscar si ya existe un customer_id para este usuario
             try {
-                $conn = getDBConnection();
+                if ($usuario_id > 0) {
+                    // Buscar si ya existe un customer_id para este usuario
+                    try {
+                        $conn = getDBConnection();
+                        if (!$conn) {
+                            throw new RuntimeException('No se pudo conectar a la base de datos');
+                        }
                 $stmt = $conn->prepare("SELECT stripe_customer_id FROM usuarios WHERE id = ?");
                 if (!$stmt) {
                     throw new RuntimeException('Error al preparar consulta: ' . $conn->error);
@@ -195,7 +206,11 @@ try {
     // Preparar items para metadata
     $itemsMetadata = [];
     foreach ($carrito as $item) {
-        $itemsMetadata[] = $item['producto_id'] . ':' . $item['cantidad'];
+        $productoId = $item['producto_id'] ?? $item['id'] ?? 0;
+        $cantidad = $item['cantidad'] ?? 1;
+        if ($productoId > 0) {
+            $itemsMetadata[] = $productoId . ':' . $cantidad;
+        }
     }
 
     // Crear Payment Intent
