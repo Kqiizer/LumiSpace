@@ -292,16 +292,6 @@ if ($usuariosCount > 1) {
   <?php include '../includes/sidebar-admin.php'; ?>
   <main class="main">
     <?php include '../includes/header-admin.php'; ?>
-
-    <section class="content">
-      <div class="page-header">
-        <div>
-          <h1 class="page-title">Panel Administrativo</h1>
-          <p class="page-subtitle">Última sesión: <?= htmlspecialchars(date('d/m/Y H:i', strtotime($ultimaConexion))) ?></p>
-        </div>
-        <span class="badge-pill">Estado · Operativo</span>
-      </div>
-
       <div class="grid grid-4">
         <article class="metric-card">
           <span class="metric-label">Usuarios Totales</span>
