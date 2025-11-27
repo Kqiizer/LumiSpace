@@ -17,7 +17,9 @@ $BASE = defined('BASE_URL') ? rtrim(BASE_URL, '/') . '/' : '/';
             <span>LumiSpace</span>
           </div>
           <p class="footer-description">
-            Ilumina tu hogar con estilo. Diseños modernos y funcionales que transforman cualquier espacio.
+            Ilumina tu hogar con estilo
+            <img src="<?= $BASE ?>imagenes/estrellas.png" alt="Decoración de estrellas" class="footer-stars">
+            Diseños modernos y funcionales que transforman cualquier espacio.
           </p>
           <div class="footer-social">
             <a href="#" class="social-link"><i class="fab fa-facebook-f"></i></a>
