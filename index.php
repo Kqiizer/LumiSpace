@@ -55,23 +55,33 @@ $BASE = ($root === '' || $root === '/') ? '/' : $root . '/';
   </script>
   <script src="<?= $BASE ?>js/product-actions.js"></script>
   <script>
-    // Verificar que product-actions.js se haya cargado y funcionar
+    // Inicializar badge del carrito al cargar la página
     (function() {
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function() {
-          setTimeout(verifyCartButtons, 100);
-        });
-      } else {
-        setTimeout(verifyCartButtons, 100);
+      function initCartBadge() {
+        // Usar la función de product-actions.js si está disponible
+        if (typeof updateCartBadge === 'function') {
+          updateCartBadge();
+        } else {
+          // Fallback: usar fetch directo
+          fetch("<?= $BASE ?>api/carrito/count.php")
+            .then(res => res.json())
+            .then(data => {
+              const badge = document.querySelector('#cart-badge, .cart-badge');
+              if (badge && data.count !== undefined) {
+                badge.textContent = data.count;
+                badge.style.display = data.count > 0 ? '' : 'none';
+              }
+            })
+            .catch(err => console.error('Error inicializando badge del carrito:', err));
+        }
       }
       
-      function verifyCartButtons() {
-        const buttons = document.querySelectorAll('.catalog-card .js-cart');
-        console.log('Botones de carrito encontrados:', buttons.length);
-        buttons.forEach(function(btn) {
-          const id = btn.getAttribute('data-id') || btn.closest('.product-card')?.getAttribute('data-id');
-          console.log('Botón ID:', id);
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+          setTimeout(initCartBadge, 200);
         });
+      } else {
+        setTimeout(initCartBadge, 200);
       }
     })();
   </script>
