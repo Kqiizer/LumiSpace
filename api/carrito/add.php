@@ -33,6 +33,12 @@ if (!$producto) {
 // Esta función maneja tanto usuarios logueados (BD) como invitados (sesión)
 carritoAgregar($producto_id, $cantidad);
 
+// Verificar que se agregó correctamente
+if (!isset($_SESSION['carrito'][$producto_id])) {
+    echo json_encode(['ok' => false, 'msg' => 'Error al agregar el producto al carrito']);
+    exit;
+}
+
 // Obtener el carrito actualizado para contar productos
 $carrito_actualizado = carritoObtener();
 $count = 0;

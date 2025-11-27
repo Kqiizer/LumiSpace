@@ -52,22 +52,23 @@ function carritoAgregar(int $producto_id, int $cantidad = 1): void
     $_SESSION['carrito'] = $_SESSION['carrito'] ?? [];
 
     // Si ya existe, sumar cantidad
-    if (isset($_SESSION['carrito'][$producto_id])) {
-        $_SESSION['carrito'][$producto_id]['cantidad'] += $cantidad;
+    if (isset($_SESSION['carrito'][$producto_id]) && is_array($_SESSION['carrito'][$producto_id])) {
+        $_SESSION['carrito'][$producto_id]['cantidad'] = (int)($_SESSION['carrito'][$producto_id]['cantidad'] ?? 0) + $cantidad;
         // Actualizar subtotal
-        $_SESSION['carrito'][$producto_id]['subtotal'] = (float) $_SESSION['carrito'][$producto_id]['precio'] * $_SESSION['carrito'][$producto_id]['cantidad'];
+        $precio = (float)($_SESSION['carrito'][$producto_id]['precio'] ?? 0);
+        $_SESSION['carrito'][$producto_id]['subtotal'] = $precio * $_SESSION['carrito'][$producto_id]['cantidad'];
     } else {
         $producto = getProductoById($producto_id);
-        if ($producto) {
+        if ($producto && isset($producto['id'], $producto['nombre'], $producto['precio'])) {
             $_SESSION['carrito'][$producto_id] = [
-                'producto_id' => $producto['id'],
-                'id' => $producto['id'],
-                'nombre' => $producto['nombre'],
-                'precio' => (float) $producto['precio'],
+                'producto_id' => (int)$producto['id'],
+                'id' => (int)$producto['id'],
+                'nombre' => (string)$producto['nombre'],
+                'precio' => (float)$producto['precio'],
                 'imagen' => $producto['imagen'] ?? 'images/default.png',
-                'cantidad' => $cantidad,
+                'cantidad' => max(1, (int)$cantidad),
                 'categoria' => $producto['categoria'] ?? '',
-                'subtotal' => (float) $producto['precio'] * $cantidad
+                'subtotal' => (float)$producto['precio'] * max(1, (int)$cantidad)
             ];
         }
     }
@@ -98,16 +99,36 @@ function carritoObtener(): array
     $resultado = [];
 
     foreach ($carrito as $id => $item) {
-        if (!isset($item['precio'], $item['cantidad']))
+        // Asegurar que $id sea numérico
+        $id = is_numeric($id) ? (int)$id : (int)($item['producto_id'] ?? $item['id'] ?? 0);
+        
+        // Validar que el item tenga los datos necesarios
+        if (empty($item) || !is_array($item)) {
             continue;
+        }
+        
+        // Verificar que tenga precio y cantidad
+        if (!isset($item['precio']) || !isset($item['cantidad'])) {
+            continue;
+        }
 
-        $subtotal = $item['precio'] * $item['cantidad'];
+        $precio = (float)($item['precio'] ?? 0);
+        $cantidad = (int)($item['cantidad'] ?? 1);
+        
+        if ($precio <= 0 || $cantidad <= 0) {
+            continue;
+        }
+
+        $subtotal = $precio * $cantidad;
+        $imagenRaw = $item['imagen'] ?? '';
         $resultado[] = [
             'producto_id' => $id,
-            'nombre' => $item['nombre'],
-            'precio' => $item['precio'],
-            'imagen' => publicImageUrl($item['imagen']),
-            'cantidad' => $item['cantidad'],
+            'id' => $id,
+            'nombre' => $item['nombre'] ?? 'Producto sin nombre',
+            'precio' => $precio,
+            'imagen' => publicImageUrl($imagenRaw ?: 'images/default.png'),
+            'cantidad' => $cantidad,
+            'categoria' => $item['categoria'] ?? '',
             'subtotal' => $subtotal
         ];
     }

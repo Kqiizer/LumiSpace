@@ -67,6 +67,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
    💰 DATOS DEL CARRITO
    ============================================================ */
 $carrito = carritoObtener();
+// Debug: verificar que el carrito tenga datos
+if (empty($carrito) && !empty($_SESSION['carrito'])) {
+    // Si carritoObtener() devuelve vacío pero hay datos en sesión, forzar recarga
+    error_log("Carrito vacío pero sesión tiene datos: " . print_r($_SESSION['carrito'], true));
+}
 $subtotal = carritoTotal();
 $iva = $subtotal * 0.16;
 $envio = $subtotal > 1000 ? 0 : 150;
@@ -144,7 +149,8 @@ $checkoutUrl = $USER_ID
             $qty = (int) ($item['cantidad'] ?? 1);
             $precio = (float) ($item['precio'] ?? 0);
             $nombre = htmlspecialchars($item['nombre'] ?? 'Producto sin nombre');
-            $imagen = htmlspecialchars(publicImageUrl($item['imagen'] ?? 'images/default.png'));
+            // carritoObtener() ya procesa la imagen con publicImageUrl(), así que la usamos directamente
+            $imagen = htmlspecialchars($item['imagen'] ?? $BASE . 'images/default.png');
             $totalItem = $precio * $qty;
             ?>
             <article class="cart-card reveal-on-scroll" data-id="<?= $id ?>">
