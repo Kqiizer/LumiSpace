@@ -33,8 +33,6 @@ $BASE = defined('BASE_URL') ? rtrim(BASE_URL, '/') . '/' : '/';
           <ul class="footer-links">
             <li><a href="../index.php">Inicio</a></li>
             <li><a href="../views/catalogo.php">Catálogo</a></li>
-            <li><a href="../views/proyectos.php">Proyectos</a></li>
-            <li><a href="../views/servicios.php">Servicios</a></li>
             <li><a href="../views/contacto.php">Contacto</a></li>
           </ul>
         </div>
@@ -46,19 +44,6 @@ $BASE = defined('BASE_URL') ? rtrim(BASE_URL, '/') . '/' : '/';
             <li><a href="#">Interior</a></li>
             <li><a href="#">Exterior</a></li>
             <li><a href="#">Decorativo</a></li>
-            <li><a href="#">Iluminación LED</a></li>
-            <li><a href="#">Smart Home</a></li>
-          </ul>
-        </div>
-
-        <!-- Atención al cliente -->
-        <div class="footer-section">
-          <h4 class="footer-title">Atención al cliente</h4>
-          <ul class="footer-links">
-            <li><a href="#">Preguntas frecuentes</a></li>
-            <li><a href="#">Envíos</a></li>
-            <li><a href="#">Devoluciones</a></li>
-            <li><a href="#">Soporte</a></li>
           </ul>
         </div>
 
