@@ -410,3 +410,4 @@ body.dark .catalog-card-price:hover {
 }
 </style>
 
+

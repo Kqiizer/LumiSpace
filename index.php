@@ -54,6 +54,27 @@ $BASE = ($root === '' || $root === '/') ? '/' : $root . '/';
     window.BASE_URL = "<?= $BASE ?>";
   </script>
   <script src="<?= $BASE ?>js/product-actions.js"></script>
+  <script>
+    // Verificar que product-actions.js se haya cargado y funcionar
+    (function() {
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+          setTimeout(verifyCartButtons, 100);
+        });
+      } else {
+        setTimeout(verifyCartButtons, 100);
+      }
+      
+      function verifyCartButtons() {
+        const buttons = document.querySelectorAll('.catalog-card .js-cart');
+        console.log('Botones de carrito encontrados:', buttons.length);
+        buttons.forEach(function(btn) {
+          const id = btn.getAttribute('data-id') || btn.closest('.product-card')?.getAttribute('data-id');
+          console.log('Botón ID:', id);
+        });
+      }
+    })();
+  </script>
   <script src="<?= $BASE ?>js/header.js" defer></script>
   <script src="<?= $BASE ?>js/script.js" defer></script>
 </body>
